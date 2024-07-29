@@ -58,5 +58,14 @@ contract L1Controller is UpgradeableProxied {
         active = active_;
     }
 
+    /**********************************************************************************************/
+    /*** Relayer Functions                                                                      ***/
+    /**********************************************************************************************/
+
+    // TODO: Placeholder for relayer functions
+    function doAction() external isRelayer {
+        // Do something
+    }
+
 }
 

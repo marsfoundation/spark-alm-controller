@@ -78,4 +78,12 @@ contract L1ControllerACLTests is UnitTestBase {
         l1Controller.setActive(true);
     }
 
+    function test_doAction() public {
+        vm.expectRevert("L1Controller/not-relayer");
+        l1Controller.doAction();
+
+        vm.prank(relayer);
+        l1Controller.doAction();
+    }
+
 }
