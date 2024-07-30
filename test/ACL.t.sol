@@ -5,21 +5,6 @@ import "./UnitTestBase.t.sol";
 
 contract L1ControllerACLTests is UnitTestBase {
 
-    address admin   = makeAddr("admin");
-    address freezer = makeAddr("freezer");
-    address relayer = makeAddr("relayer");
-
-    function setUp() public override {
-        super.setUp();
-
-        l1Controller.setFreezer(freezer);
-        l1Controller.setRelayer(relayer);
-
-        // TODO: Move this into base
-        UpgradeableProxy(address(l1Controller)).rely(admin);
-        UpgradeableProxy(address(l1Controller)).deny(address(this));
-    }
-
     function test_rely() public {
         vm.expectRevert("UpgradeableProxy/not-authorized");
         UpgradeableProxy(address(l1Controller)).rely(address(1));

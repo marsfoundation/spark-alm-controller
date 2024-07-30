@@ -19,6 +19,10 @@ import { L1Controller } from "src/L1Controller.sol";
 
 contract UnitTestBase is Test {
 
+    address admin   = makeAddr("admin");
+    address freezer = makeAddr("freezer");
+    address relayer = makeAddr("relayer");
+
     AllocatorBuffer buffer;
     AllocatorRoles  roles;
     AllocatorVault  vault;
@@ -56,9 +60,13 @@ contract UnitTestBase is Test {
 
         l1Controller = L1Controller(address(l1ControllerProxy));
 
+        l1Controller.setFreezer(freezer);
+        l1Controller.setRelayer(relayer);
         l1Controller.setRoles(address(roles));
-        l1Controller.setRelayer(address(this));
         l1Controller.setVault(address(vault));
+
+        UpgradeableProxy(address(l1Controller)).rely(admin);
+        UpgradeableProxy(address(l1Controller)).deny(address(this));
 
         vault.rely(address(l1Controller));
         vault.file("jug", address(jug));

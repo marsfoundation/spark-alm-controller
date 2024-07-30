@@ -5,6 +5,7 @@ import { UpgradeableProxied } from "lib/upgradeable-proxy/src/UpgradeableProxied
 
 interface IVaultLike {
     function draw(uint256 wad) external;
+    function wipe(uint256 wad) external;
 }
 
 contract L1Controller is UpgradeableProxied {
@@ -72,9 +73,12 @@ contract L1Controller is UpgradeableProxied {
     /*** Relayer Functions                                                                      ***/
     /**********************************************************************************************/
 
-    // TODO: Placeholder for relayer functions
     function draw(uint256 wad) external isRelayer {
         vault.draw(wad);
+    }
+
+    function wipe(uint256 wad) external isRelayer {
+        vault.wipe(wad);
     }
 
 }
