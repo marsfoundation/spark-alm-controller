@@ -13,6 +13,8 @@ import { MockERC20 } from "lib/erc20-helpers/src/MockERC20.sol";
 
 import { NstJoin } from "lib/nst/src/NstJoin.sol";
 
+import { SNst } from "lib/sdai/src/SNst.sol";
+
 import { UpgradeableProxy } from "lib/upgradeable-proxy/src/UpgradeableProxy.sol";
 
 import { L1Controller } from "src/L1Controller.sol";
@@ -32,6 +34,7 @@ contract UnitTestBase is Test {
     VatMock vat;
 
     MockERC20 nst;
+    SNst      sNst;
 
     L1Controller     l1Controller;
     L1Controller     l1ControllerImplementation;
@@ -46,6 +49,8 @@ contract UnitTestBase is Test {
         nst = new MockERC20("NST", "NST", 18);
 
         nstJoin = new NstJoin(address(vat), address(nst));
+
+        sNst = new SNst(address(nstJoin), makeAddr("vow"));  // No calls made to vow
 
         buffer = new AllocatorBuffer();
         roles  = new AllocatorRoles();
@@ -64,6 +69,7 @@ contract UnitTestBase is Test {
         l1Controller.setRelayer(relayer);
         l1Controller.setRoles(address(roles));
         l1Controller.setVault(address(vault));
+        l1Controller.setSNst(address(sNst));
 
         UpgradeableProxy(address(l1Controller)).rely(admin);
         UpgradeableProxy(address(l1Controller)).deny(address(this));

@@ -3,6 +3,10 @@ pragma solidity >=0.8.0;
 
 import { UpgradeableProxied } from "lib/upgradeable-proxy/src/UpgradeableProxied.sol";
 
+interface ISNstLike {
+    function deposit(uint256 assets, address receiver) external;
+}
+
 interface IVaultLike {
     function draw(uint256 wad) external;
     function wipe(uint256 wad) external;
@@ -18,6 +22,7 @@ contract L1Controller is UpgradeableProxied {
     address public freezer;
     address public roles;
 
+    ISNstLike  public sNst;
     IVaultLike public vault;
 
     bool public active;
@@ -61,6 +66,10 @@ contract L1Controller is UpgradeableProxied {
         vault = IVaultLike(vault_);
     }
 
+    function setSNst(address sNst_) external auth {
+        sNst = ISNstLike(sNst_);
+    }
+
     /**********************************************************************************************/
     /*** Freezer Functions                                                                      ***/
     /**********************************************************************************************/
@@ -79,6 +88,11 @@ contract L1Controller is UpgradeableProxied {
 
     function wipe(uint256 wad) external isRelayer {
         vault.wipe(wad);
+    }
+
+    // TODO: Use referral?
+    function depositNstToSNst(uint256 assets, address receiver) external isRelayer {
+        sNst.deposit(assets, receiver);
     }
 
 }
