@@ -7,7 +7,7 @@ import { AllocatorBuffer } from "lib/dss-allocator/src/AllocatorBuffer.sol";
 import { AllocatorRoles }  from "lib/dss-allocator/src/AllocatorRoles.sol";
 import { AllocatorVault }  from "lib/dss-allocator/src/AllocatorVault.sol";
 
-import { VatMock } from "lib/dss-allocator/test/mocks/VatMock.sol";
+import { JugMock, VatMock } from "lib/dss-allocator/test/mocks/JugMock.sol";
 
 import { MockERC20 } from "lib/erc20-helpers/src/MockERC20.sol";
 
@@ -24,8 +24,10 @@ contract UnitTestBase is Test {
     AllocatorVault  vault;
     NstJoin         nstJoin;
 
+    JugMock jug;
+    VatMock vat;
+
     MockERC20 nst;
-    VatMock   vat;
 
     L1Controller     l1Controller;
     L1Controller     l1ControllerImplementation;
@@ -35,6 +37,8 @@ contract UnitTestBase is Test {
 
     function setUp() public virtual {
         vat = new VatMock();
+        jug = new JugMock(vat);
+
         nst = new MockERC20("NST", "NST", 18);
 
         nstJoin = new NstJoin(address(vat), address(nst));
@@ -57,6 +61,7 @@ contract UnitTestBase is Test {
         l1Controller.setVault(address(vault));
 
         vault.rely(address(l1Controller));
+        vault.file("jug", address(jug));
     }
 
 }

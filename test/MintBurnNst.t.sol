@@ -6,6 +6,6 @@ import "./UnitTestBase.t.sol";
 contract L1ControllerDrawTests is UnitTestBase {
 
     function test_draw() external {
-
+        l1Controller.draw(1);
     }
 }
