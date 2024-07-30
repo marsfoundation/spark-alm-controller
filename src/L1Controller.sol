@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0;
 
 import { UpgradeableProxied } from "lib/upgradeable-proxy/src/UpgradeableProxied.sol";
+
+interface IVaultLike {
+    function draw(uint256 wad) external;
+}
 
 contract L1Controller is UpgradeableProxied {
 
@@ -12,6 +16,8 @@ contract L1Controller is UpgradeableProxied {
     address public relayer;
     address public freezer;
     address public roles;
+
+    IVaultLike public vault;
 
     bool public active;
 
@@ -38,16 +44,20 @@ contract L1Controller is UpgradeableProxied {
     /*** Admin Functions                                                                        ***/
     /**********************************************************************************************/
 
-    function setRoles(address roles_) external auth {
-        roles = roles_;
+    function setFreezer(address freezer_) external auth {
+        freezer = freezer_;
     }
 
     function setRelayer(address relayer_) external auth {
         relayer = relayer_;
     }
 
-    function setFreezer(address freezer_) external auth {
-        freezer = freezer_;
+    function setRoles(address roles_) external auth {
+        roles = roles_;
+    }
+
+    function setVault(address vault_) external auth {
+        vault = IVaultLike(vault_);
     }
 
     /**********************************************************************************************/
@@ -63,8 +73,8 @@ contract L1Controller is UpgradeableProxied {
     /**********************************************************************************************/
 
     // TODO: Placeholder for relayer functions
-    function doAction() external isRelayer {
-        // Do something
+    function draw(uint256 wad) external isRelayer {
+        vault.draw(wad);
     }
 
 }

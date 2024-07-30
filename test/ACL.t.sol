@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0;
 
 import "./UnitTestBase.t.sol";
 
@@ -78,12 +78,12 @@ contract L1ControllerACLTests is UnitTestBase {
         l1Controller.setActive(true);
     }
 
-    function test_doAction() public {
-        vm.expectRevert("L1Controller/not-relayer");
-        l1Controller.doAction();
+    // function test_doAction() public {
+    //     vm.expectRevert("L1Controller/not-relayer");
+    //     l1Controller.doAction();
 
-        vm.prank(relayer);
-        l1Controller.doAction();
-    }
+    //     vm.prank(relayer);
+    //     l1Controller.doAction();
+    // }
 
 }
