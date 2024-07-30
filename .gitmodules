@@ -7,3 +7,6 @@
 [submodule "lib/dss-allocator"]
 	path = lib/dss-allocator
 	url = https://github.com/makerdao/dss-allocator
+[submodule "lib/nst"]
+	path = lib/nst
+	url = https://github.com/makerdao/nst
