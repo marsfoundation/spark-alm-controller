@@ -4,3 +4,6 @@
 [submodule "lib/upgradeable-proxy"]
 	path = lib/upgradeable-proxy
 	url = https://github.com/marsfoundation/upgradeable-proxy
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/openzeppelin/openzeppelin-contracts
