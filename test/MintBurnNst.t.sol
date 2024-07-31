@@ -12,11 +12,12 @@ contract L1ControllerDrawTests is UnitTestBase {
 
     function test_draw() external {
         ( uint256 ink, uint256 art ) = vat.urns(ilk, address(vault));
+        ( uint256 Art,,,, )          = vat.ilks(ilk);
 
         assertEq(vat.dai(address(nstJoin)), 0);
-        assertEq(vat.Art(),                 0);
 
-        assertEq(ink, 0);
+        assertEq(Art, 0);
+        assertEq(ink, 1_000_000e18);
         assertEq(art, 0);
 
         assertEq(nst.balanceOf(address(buffer)), 0);
@@ -26,11 +27,12 @@ contract L1ControllerDrawTests is UnitTestBase {
         l1Controller.draw(1e18);
 
         ( ink, art ) = vat.urns(ilk, address(vault));
+        ( Art,,,, )  = vat.ilks(ilk);
 
         assertEq(vat.dai(address(nstJoin)), 1e45);
-        assertEq(vat.Art(),                 1e18);
 
-        assertEq(ink, 0);
+        assertEq(Art, 1e18);
+        assertEq(ink, 1_000_000e18);
         assertEq(art, 1e18);
 
         assertEq(nst.balanceOf(address(buffer)), 1e18);
@@ -43,7 +45,7 @@ contract L1ControllerWipeTests is UnitTestBase {
 
     function test_wipe_notRelayer() external {
         vm.expectRevert("L1Controller/not-relayer");
-        l1Controller.wipe(1);
+        l1Controller.wipe(1e18);
     }
 
     function test_wipe() external {
@@ -52,11 +54,12 @@ contract L1ControllerWipeTests is UnitTestBase {
         l1Controller.draw(1e18);
 
         ( uint256 ink, uint256 art ) = vat.urns(ilk, address(vault));
+        ( uint256 Art,,,, )          = vat.ilks(ilk);
 
         assertEq(vat.dai(address(nstJoin)), 1e45);
-        assertEq(vat.Art(),                 1e18);
 
-        assertEq(ink, 0);
+        assertEq(Art, 1e18);
+        assertEq(ink, 1_000_000e18);
         assertEq(art, 1e18);
 
         assertEq(nst.balanceOf(address(buffer)), 1e18);
@@ -66,11 +69,12 @@ contract L1ControllerWipeTests is UnitTestBase {
         l1Controller.wipe(1e18);
 
         ( ink, art ) = vat.urns(ilk, address(vault));
+        ( Art,,,, )  = vat.ilks(ilk);
 
         assertEq(vat.dai(address(nstJoin)), 0);
-        assertEq(vat.Art(),                 0);
 
-        assertEq(ink, 0);
+        assertEq(Art, 0);
+        assertEq(ink, 1_000_000e18);
         assertEq(art, 0);
 
         assertEq(nst.balanceOf(address(buffer)), 0);
