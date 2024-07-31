@@ -18,8 +18,9 @@ contract L1Controller is UpgradeableProxied {
     /*** State Variables                                                                        ***/
     /**********************************************************************************************/
 
-    address public relayer;
+    address public buffer;
     address public freezer;
+    address public relayer;
     address public roles;
 
     ISNstLike  public sNst;
@@ -49,6 +50,10 @@ contract L1Controller is UpgradeableProxied {
     /**********************************************************************************************/
     /*** Admin Functions                                                                        ***/
     /**********************************************************************************************/
+
+    function setBuffer(address buffer_) external auth {
+        buffer = buffer_;
+    }
 
     function setFreezer(address freezer_) external auth {
         freezer = freezer_;
@@ -92,6 +97,7 @@ contract L1Controller is UpgradeableProxied {
 
     // TODO: Use referral?
     function depositNstToSNst(uint256 assets, address receiver) external isRelayer {
+        nst.transferFrom(buffer, address(this), assets);
         sNst.deposit(assets, receiver);
     }
 

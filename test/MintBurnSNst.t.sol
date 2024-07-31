@@ -17,7 +17,7 @@ contract L1ControllerMintSNstTests is UnitTestBase {
         assertEq(sNst.balanceOf(address(buffer)), 0);
 
         vm.prank(relayer);
-        // l1Controller.depositNstToSNst(1e18, address(buffer));
+        l1Controller.depositNstToSNst(1e18, address(buffer));
     }
 }
 

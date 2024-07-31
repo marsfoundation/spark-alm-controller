@@ -17,7 +17,7 @@ contract L1ControllerDrawTests is UnitTestBase {
         assertEq(vat.dai(address(nstJoin)), 0);
 
         assertEq(Art, 0);
-        assertEq(ink, 1_000_000e18);
+        assertEq(ink, INK);
         assertEq(art, 0);
 
         assertEq(nst.balanceOf(address(buffer)), 0);
@@ -32,7 +32,7 @@ contract L1ControllerDrawTests is UnitTestBase {
         assertEq(vat.dai(address(nstJoin)), 1e45);
 
         assertEq(Art, 1e18);
-        assertEq(ink, 1_000_000e18);
+        assertEq(ink, INK);
         assertEq(art, 1e18);
 
         assertEq(nst.balanceOf(address(buffer)), 1e18);
@@ -59,7 +59,7 @@ contract L1ControllerWipeTests is UnitTestBase {
         assertEq(vat.dai(address(nstJoin)), 1e45);
 
         assertEq(Art, 1e18);
-        assertEq(ink, 1_000_000e18);
+        assertEq(ink, INK);
         assertEq(art, 1e18);
 
         assertEq(nst.balanceOf(address(buffer)), 1e18);
@@ -74,7 +74,7 @@ contract L1ControllerWipeTests is UnitTestBase {
         assertEq(vat.dai(address(nstJoin)), 0);
 
         assertEq(Art, 0);
-        assertEq(ink, 1_000_000e18);
+        assertEq(ink, INK);
         assertEq(art, 0);
 
         assertEq(nst.balanceOf(address(buffer)), 0);
