@@ -17,6 +17,12 @@ contract RolesMock {
 
 contract UnitTestBase is Test {
 
+    address admin   = makeAddr("admin");
+    address freezer = makeAddr("freezer");
+    address relayer = makeAddr("relayer");
+
+    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
+
     L1Controller     l1Controller;
     L1Controller     l1ControllerImplementation;
     UpgradeableProxy l1ControllerProxy;
@@ -32,7 +38,14 @@ contract UnitTestBase is Test {
 
         l1Controller = L1Controller(address(l1ControllerProxy));
 
-        l1Controller.setRoles(address(new RolesMock()));
+        l1Controller.initialize();
+
+        l1Controller.grantRole(DEFAULT_ADMIN_ROLE, admin);
+        l1Controller.grantRole("FREEZER",          freezer);
+        l1Controller.grantRole("RELAYER",          relayer);
+
+        UpgradeableProxy(address(l1Controller)).rely(admin);
+        UpgradeableProxy(address(l1Controller)).deny(address(this));
     }
 
 }
