@@ -32,6 +32,7 @@ contract UnitTestBase is Test {
     VatMock vat;
 
     MockERC20 nst;
+    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
     L1Controller     l1Controller;
     L1Controller     l1ControllerImplementation;
@@ -60,16 +61,17 @@ contract UnitTestBase is Test {
 
         l1Controller = L1Controller(address(l1ControllerProxy));
 
-        l1Controller.setFreezer(freezer);
-        l1Controller.setRelayer(relayer);
-        l1Controller.setRoles(address(roles));
+        l1Controller.initialize();
         l1Controller.setVault(address(vault));
-
-        UpgradeableProxy(address(l1Controller)).rely(admin);
-        UpgradeableProxy(address(l1Controller)).deny(address(this));
+        l1Controller.grantRole(DEFAULT_ADMIN_ROLE, admin);
+        l1Controller.grantRole("FREEZER",          freezer);
+        l1Controller.grantRole("RELAYER",          relayer);
 
         vault.rely(address(l1Controller));
         vault.file("jug", address(jug));
+
+        UpgradeableProxy(address(l1Controller)).rely(admin);
+        UpgradeableProxy(address(l1Controller)).deny(address(this));
     }
 
 }

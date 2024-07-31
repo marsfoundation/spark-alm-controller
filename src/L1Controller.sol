@@ -1,63 +1,39 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import { UpgradeableProxied } from "lib/upgradeable-proxy/src/UpgradeableProxied.sol";
+import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
+
+import { UpgradeableProxied } from "upgradeable-proxy/UpgradeableProxied.sol";
 
 interface IVaultLike {
     function draw(uint256 wad) external;
     function wipe(uint256 wad) external;
 }
 
-contract L1Controller is UpgradeableProxied {
-
-    /**********************************************************************************************/
-    /*** State Variables                                                                        ***/
-    /**********************************************************************************************/
-
-    address public relayer;
-    address public freezer;
-    address public roles;
+contract L1Controller is UpgradeableProxied, AccessControl {
 
     IVaultLike public vault;
 
     bool public active;
 
+    bool initialized;
+
     /**********************************************************************************************/
-    /*** Modifiers                                                                              ***/
+    /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
-    modifier auth {
-        require(wards[msg.sender] == 1, "L1Controller/not-authorized");
-        _;
-    }
-
-    modifier isRelayer {
-        require(msg.sender == relayer, "L1Controller/not-relayer");
-        _;
-    }
-
-    modifier isFreezer {
-        require(msg.sender == freezer, "L1Controller/not-freezer");
-        _;
+    // TODO: Verify this and test if necessary
+    function initialize() public {
+        require(!initialized, "L1Controller/already-initialized");
+        initialized = true;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /**********************************************************************************************/
-    /*** Admin Functions                                                                        ***/
+    /*** Admin Functions                                                                      ***/
     /**********************************************************************************************/
 
-    function setFreezer(address freezer_) external auth {
-        freezer = freezer_;
-    }
-
-    function setRelayer(address relayer_) external auth {
-        relayer = relayer_;
-    }
-
-    function setRoles(address roles_) external auth {
-        roles = roles_;
-    }
-
-    function setVault(address vault_) external auth {
+    function setVault(address vault_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         vault = IVaultLike(vault_);
     }
 
@@ -65,7 +41,7 @@ contract L1Controller is UpgradeableProxied {
     /*** Freezer Functions                                                                      ***/
     /**********************************************************************************************/
 
-    function setActive(bool active_) external isFreezer {
+    function setActive(bool active_) external onlyRole("FREEZER") {
         active = active_;
     }
 
@@ -73,11 +49,11 @@ contract L1Controller is UpgradeableProxied {
     /*** Relayer Functions                                                                      ***/
     /**********************************************************************************************/
 
-    function draw(uint256 wad) external isRelayer {
+    function draw(uint256 wad) external onlyRole("RELAYER") {
         vault.draw(wad);
     }
 
-    function wipe(uint256 wad) external isRelayer {
+    function wipe(uint256 wad) external onlyRole("RELAYER") {
         vault.wipe(wad);
     }
 

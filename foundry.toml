@@ -5,6 +5,11 @@ libs = ["lib"]
 solc_version = '0.8.21'
 optimizer = true
 optimizer_runs = 200
+remappings = [
+    "openzeppelin-contracts=lib/openzeppelin-contracts",
+    "upgradeable-proxy=lib/upgradeable-proxy/src",
+    "forge-std=lib/forge-std/src",
+]
 
 [fuzz]
 runs = 1000
