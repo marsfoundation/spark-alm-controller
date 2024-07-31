@@ -88,18 +88,26 @@ contract L1Controller is UpgradeableProxied {
     /**********************************************************************************************/
 
     function draw(uint256 wad) external isRelayer {
+        // TODO: ALM Proxy instead of buffer
         vault.draw(wad);
+        // nst.transferFrom(almProxy);
     }
 
     function wipe(uint256 wad) external isRelayer {
+        // TODO: ALM Proxy
         vault.wipe(wad);
     }
 
     // TODO: Use referral?
-    function depositNstToSNst(uint256 assets, address receiver) external isRelayer {
+    function depositNstToSNst(uint256 assets) external isRelayer {
+        // TODO: ALM Proxy
         nst.transferFrom(buffer, address(this), assets);
         sNst.deposit(assets, receiver);
     }
+
+    // function
+    // call sNst.withdraw using the proxy
+    // Call proxy with exec to run specified calldata (target + calldata, call and delegatecall)
 
 }
 
