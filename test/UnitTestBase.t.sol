@@ -21,6 +21,9 @@ contract UnitTestBase is Test {
 
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
+    bytes32 public constant FREEZER = keccak256("FREEZER");
+    bytes32 public constant RELAYER = keccak256("RELAYER");
+
     L1Controller l1Controller;
 
     address conduit;
@@ -30,8 +33,9 @@ contract UnitTestBase is Test {
         l1Controller = new L1Controller();
 
         l1Controller.grantRole(DEFAULT_ADMIN_ROLE, admin);
-        l1Controller.grantRole("FREEZER",          freezer);
-        l1Controller.grantRole("RELAYER",          relayer);
+
+        l1Controller.grantRole(FREEZER, freezer);
+        l1Controller.grantRole(RELAYER, relayer);
     }
 
 }

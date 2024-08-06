@@ -5,9 +5,10 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 
 contract L1Controller is AccessControl {
 
-    bool public active;
+    bytes32 public constant FREEZER = keccak256("FREEZER");
+    bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    bool initialized;
+    bool public active;
 
     /**********************************************************************************************/
     /*** Initialization                                                                         ***/
@@ -21,7 +22,7 @@ contract L1Controller is AccessControl {
     /*** Freezer Functions                                                                      ***/
     /**********************************************************************************************/
 
-    function setActive(bool active_) external onlyRole("FREEZER") {
+    function setActive(bool active_) external onlyRole(FREEZER) {
         active = active_;
     }
 
@@ -30,7 +31,7 @@ contract L1Controller is AccessControl {
     /**********************************************************************************************/
 
     // TODO: Placeholder for relayer functions
-    function doAction() external onlyRole("RELAYER") {
+    function doAction() external onlyRole(RELAYER) {
         // Do something
     }
 

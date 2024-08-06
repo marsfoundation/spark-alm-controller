@@ -9,7 +9,7 @@ contract L1ControllerACLTests is UnitTestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            bytes32("FREEZER")
+            FREEZER
         ));
         l1Controller.setActive(true);
 
@@ -21,7 +21,7 @@ contract L1ControllerACLTests is UnitTestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            bytes32("RELAYER")
+            RELAYER
         ));
         l1Controller.doAction();
 
