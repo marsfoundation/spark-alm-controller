@@ -3,9 +3,7 @@ pragma solidity ^0.8.13;
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
-import { UpgradeableProxied } from "upgradeable-proxy/UpgradeableProxied.sol";
-
-contract L1Controller is UpgradeableProxied, AccessControl {
+contract L1Controller is AccessControl {
 
     bool public active;
 
