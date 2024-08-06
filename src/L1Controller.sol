@@ -21,7 +21,7 @@ contract L1Controller is AccessControl {
     /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
-    constructor( address admin_, address vault_) {
+    constructor(address admin_, address vault_) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
         vault = IVaultLike(vault_);
