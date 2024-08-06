@@ -1,26 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import "forge-std/Test.sol";
+import "./UnitTestBase.t.sol";
 
-import { L1Controller } from "src/L1Controller.sol";
-
-contract L1ControllerConstructorTests is Test {
-
-    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
+contract L1ControllerConstructorTests is UnitTestBase {
 
     function test_constructor() public {
-        address admin  = makeAddr("admin");
-        address vault  = makeAddr("vault");
-        address buffer = makeAddr("buffer");
-        address sNst   = makeAddr("sNst");
+        // Deploy another l1Controller to test the constructor
+        L1Controller newL1Controller = new L1Controller(
+            admin,
+            address(vault),
+            address(buffer),
+            address(sNst)
+        );
 
-        L1Controller l1Controller = new L1Controller(admin, vault, buffer, sNst);
+        assertEq(newL1Controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
-        assertEq(l1Controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
-
-        assertEq(address(l1Controller.vault()),  vault);
-        assertEq(address(l1Controller.buffer()), buffer);
-        assertEq(address(l1Controller.sNst()),   sNst);
+        assertEq(address(newL1Controller.buffer()), address(buffer));
+        assertEq(address(newL1Controller.vault()),  address(vault));
+        assertEq(address(newL1Controller.sNst()),   address(sNst));
+        assertEq(address(newL1Controller.nst()),    address(nst));
     }
 }

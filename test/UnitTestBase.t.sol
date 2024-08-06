@@ -67,14 +67,9 @@ contract UnitTestBase is Test {
         roles  = new AllocatorRoles();
         vault  = new AllocatorVault(address(roles), address(buffer), ilk, address(nstJoin));
 
-        buffer.approve(address(nst), address(vault), type(uint256).max);
+        l1Controller = new L1Controller(admin, address(vault), address(buffer), address(sNst));
 
-        l1Controller = new L1Controller(
-            admin,
-            address(vault),
-            address(buffer),
-            address(sNst)
-        );
+        buffer.approve(address(nst), address(l1Controller), type(uint256).max);
 
         // Done with spell by pause proxy
         vm.startPrank(admin);

@@ -3,8 +3,11 @@ pragma solidity ^0.8.21;
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
+import { IERC20 } from "erc20-helpers/interfaces/IERC20.sol";
+
 interface ISNstLike {
     function deposit(uint256 assets, address receiver) external;
+    function nst() external view returns(address);
 }
 
 interface IVaultLike {
@@ -23,8 +26,9 @@ contract L1Controller is AccessControl {
 
     address public immutable buffer;
 
-    ISNstLike  public immutable sNst;
     IVaultLike public immutable vault;
+    ISNstLike  public immutable sNst;
+    IERC20     public immutable nst;
 
     bool public active;
 
@@ -40,9 +44,10 @@ contract L1Controller is AccessControl {
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
-        vault  = IVaultLike(vault_);
         buffer = buffer_;
+        vault  = IVaultLike(vault_);
         sNst   = ISNstLike(sNst_);
+        nst    = IERC20(ISNstLike(sNst_).nst());
 
         active = true;
     }
@@ -73,21 +78,21 @@ contract L1Controller is AccessControl {
     /**********************************************************************************************/
 
     function draw(uint256 wad) external onlyRole(RELAYER) isActive {
-        // TODO: ALM Proxy instead of buffer
+        // TODO: Refactor to use ALM Proxy
         vault.draw(wad);
-        // nst.transferFrom(almProxy);
     }
 
     function wipe(uint256 wad) external onlyRole(RELAYER) isActive {
-        // TODO: ALM Proxy instead of buffer
+        // TODO: Refactor to use ALM Proxy
         vault.wipe(wad);
     }
 
     // TODO: Use referral?
     function depositNstToSNst(uint256 assets) external onlyRole(RELAYER) isActive {
-        // TODO: ALM Proxy
-        // nst.transferFrom(buffer, address(this), assets);
-        // sNst.deposit(assets, receiver);
+        // TODO: Refactor to use ALM Proxy
+        nst.transferFrom(buffer, address(this), assets);
+        nst.approve(address(sNst), assets);
+        sNst.deposit(assets, address(buffer));
     }
 
     // function
