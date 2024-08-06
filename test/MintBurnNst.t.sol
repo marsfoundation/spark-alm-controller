@@ -14,6 +14,15 @@ contract L1ControllerDrawTests is UnitTestBase {
         l1Controller.draw(1e18);
     }
 
+    function test_draw_frozen() external {
+        vm.prank(freezer);
+        l1Controller.freeze();
+
+        vm.prank(relayer);
+        vm.expectRevert("L1Controller/not-active");
+        l1Controller.draw(1e18);
+    }
+
     function test_draw() external {
         ( uint256 ink, uint256 art ) = vat.urns(ilk, address(vault));
         ( uint256 Art,,,, )          = vat.ilks(ilk);
@@ -53,6 +62,15 @@ contract L1ControllerWipeTests is UnitTestBase {
             address(this),
             RELAYER
         ));
+        l1Controller.wipe(1e18);
+    }
+
+    function test_wipe_frozen() external {
+        vm.prank(freezer);
+        l1Controller.freeze();
+
+        vm.prank(relayer);
+        vm.expectRevert("L1Controller/not-active");
         l1Controller.wipe(1e18);
     }
 
