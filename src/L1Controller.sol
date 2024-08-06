@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import { UpgradeableProxied } from "lib/upgradeable-proxy/src/UpgradeableProxied.sol";
+import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
 interface ISNstLike {
     function deposit(uint256 assets, address receiver) external;
@@ -12,11 +12,14 @@ interface IVaultLike {
     function wipe(uint256 wad) external;
 }
 
-contract L1Controller is UpgradeableProxied {
+contract L1Controller is AccessControl {
 
     /**********************************************************************************************/
     /*** State Variables                                                                        ***/
     /**********************************************************************************************/
+
+    bytes32 public constant FREEZER = keccak256("FREEZER");
+    bytes32 public constant RELAYER = keccak256("RELAYER");
 
     address public buffer;
     address public freezer;
@@ -29,49 +32,38 @@ contract L1Controller is UpgradeableProxied {
     bool public active;
 
     /**********************************************************************************************/
-    /*** Modifiers                                                                              ***/
+    /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
-    modifier auth {
-        require(wards[msg.sender] == 1, "L1Controller/not-authorized");
-        _;
-    }
-
-    modifier isRelayer {
-        require(msg.sender == relayer, "L1Controller/not-relayer");
-        _;
-    }
-
-    modifier isFreezer {
-        require(msg.sender == freezer, "L1Controller/not-freezer");
-        _;
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /**********************************************************************************************/
-    /*** Admin Functions                                                                        ***/
+    /*** Admin Functions                                                                      ***/
     /**********************************************************************************************/
 
-    function setBuffer(address buffer_) external auth {
+    function setBuffer(address buffer_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         buffer = buffer_;
     }
 
-    function setFreezer(address freezer_) external auth {
+    function setFreezer(address freezer_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         freezer = freezer_;
     }
 
-    function setRelayer(address relayer_) external auth {
+    function setRelayer(address relayer_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         relayer = relayer_;
     }
 
-    function setRoles(address roles_) external auth {
+    function setRoles(address roles_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         roles = roles_;
     }
 
-    function setVault(address vault_) external auth {
+    function setVault(address vault_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         vault = IVaultLike(vault_);
     }
 
-    function setSNst(address sNst_) external auth {
+    function setSNst(address sNst_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         sNst = ISNstLike(sNst_);
     }
 
@@ -79,7 +71,7 @@ contract L1Controller is UpgradeableProxied {
     /*** Freezer Functions                                                                      ***/
     /**********************************************************************************************/
 
-    function setActive(bool active_) external isFreezer {
+    function setActive(bool active_) external onlyRole(FREEZER) {
         active = active_;
     }
 
@@ -87,22 +79,22 @@ contract L1Controller is UpgradeableProxied {
     /*** Relayer Functions                                                                      ***/
     /**********************************************************************************************/
 
-    function draw(uint256 wad) external isRelayer {
+    function draw(uint256 wad) external onlyRole(RELAYER) {
         // TODO: ALM Proxy instead of buffer
         vault.draw(wad);
         // nst.transferFrom(almProxy);
     }
 
-    function wipe(uint256 wad) external isRelayer {
-        // TODO: ALM Proxy
+    function wipe(uint256 wad) external onlyRole(RELAYER) {
+        // TODO: ALM Proxy instead of buffer
         vault.wipe(wad);
     }
 
     // TODO: Use referral?
-    function depositNstToSNst(uint256 assets) external isRelayer {
+    function depositNstToSNst(uint256 assets) external onlyRole(RELAYER) {
         // TODO: ALM Proxy
-        nst.transferFrom(buffer, address(this), assets);
-        sNst.deposit(assets, receiver);
+        // nst.transferFrom(buffer, address(this), assets);
+        // sNst.deposit(assets, receiver);
     }
 
     // function

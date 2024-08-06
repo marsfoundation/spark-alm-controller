@@ -13,11 +13,9 @@ import { MockERC20 } from "lib/erc20-helpers/src/MockERC20.sol";
 
 import { NstJoin } from "lib/nst/src/NstJoin.sol";
 
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ERC1967Proxy } from "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { SNst } from "lib/sdai/src/SNst.sol";
-
-import { UpgradeableProxy } from "lib/upgradeable-proxy/src/UpgradeableProxy.sol";
 
 import { L1Controller } from "src/L1Controller.sol";
 
@@ -42,9 +40,12 @@ contract UnitTestBase is Test {
     MockERC20 nst;
     SNst      sNst;
 
-    L1Controller     l1Controller;
-    L1Controller     l1ControllerImplementation;
-    UpgradeableProxy l1ControllerProxy;
+    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
+
+    bytes32 public constant FREEZER = keccak256("FREEZER");
+    bytes32 public constant RELAYER = keccak256("RELAYER");
+
+    L1Controller l1Controller;
 
     address vow = makeAddr("vow");
 
@@ -66,22 +67,20 @@ contract UnitTestBase is Test {
         roles  = new AllocatorRoles();
         vault  = new AllocatorVault(address(roles), address(buffer), ilk, address(nstJoin));
 
-        l1ControllerProxy          = new UpgradeableProxy();
-        l1ControllerImplementation = new L1Controller();
+        buffer.approve(address(nst), address(vault), type(uint256).max);
 
-        l1ControllerProxy.setImplementation(address(l1ControllerImplementation));
-
-        l1Controller = L1Controller(address(l1ControllerProxy));
+        l1Controller = new L1Controller();
 
         l1Controller.setBuffer(address(buffer));
         l1Controller.setFreezer(freezer);
         l1Controller.setRelayer(relayer);
         l1Controller.setRoles(address(roles));
-        l1Controller.setVault(address(vault));
         l1Controller.setSNst(address(sNst));
+        l1Controller.setVault(address(vault));
 
-        UpgradeableProxy(address(l1Controller)).rely(admin);
-        UpgradeableProxy(address(l1Controller)).deny(address(this));
+        l1Controller.grantRole(DEFAULT_ADMIN_ROLE, admin);
+        l1Controller.grantRole(FREEZER, freezer);
+        l1Controller.grantRole(RELAYER, relayer);
 
         buffer.approve(address(nst), address(vault), type(uint256).max);
 

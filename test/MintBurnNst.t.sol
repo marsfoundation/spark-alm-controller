@@ -6,8 +6,12 @@ import "./UnitTestBase.t.sol";
 contract L1ControllerDrawTests is UnitTestBase {
 
     function test_draw_notRelayer() external {
-        vm.expectRevert("L1Controller/not-relayer");
-        l1Controller.draw(1);
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        l1Controller.draw(1e18);
     }
 
     function test_draw() external {
@@ -44,7 +48,11 @@ contract L1ControllerDrawTests is UnitTestBase {
 contract L1ControllerWipeTests is UnitTestBase {
 
     function test_wipe_notRelayer() external {
-        vm.expectRevert("L1Controller/not-relayer");
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
         l1Controller.wipe(1e18);
     }
 
