@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.21;
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
@@ -21,10 +21,10 @@ contract L1Controller is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    address public buffer;
+    address public immutable buffer;
 
-    ISNstLike  public sNst;
-    IVaultLike public vault;
+    ISNstLike  public immutable sNst;
+    IVaultLike public immutable vault;
 
     bool public active;
 
