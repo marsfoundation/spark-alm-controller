@@ -69,18 +69,18 @@ contract UnitTestBase is Test {
 
         buffer.approve(address(nst), address(vault), type(uint256).max);
 
-        l1Controller = new L1Controller();
+        l1Controller = new L1Controller(
+            admin,
+            address(vault),
+            address(buffer),
+            address(sNst)
+        );
 
-        l1Controller.setBuffer(address(buffer));
-        l1Controller.setFreezer(freezer);
-        l1Controller.setRelayer(relayer);
-        l1Controller.setRoles(address(roles));
-        l1Controller.setSNst(address(sNst));
-        l1Controller.setVault(address(vault));
-
-        l1Controller.grantRole(DEFAULT_ADMIN_ROLE, admin);
+        // Done with spell by pause proxy
+        vm.startPrank(admin);
         l1Controller.grantRole(FREEZER, freezer);
         l1Controller.grantRole(RELAYER, relayer);
+        vm.stopPrank();
 
         buffer.approve(address(nst), address(vault), type(uint256).max);
 

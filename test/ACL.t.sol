@@ -5,16 +5,28 @@ import "./UnitTestBase.t.sol";
 
 contract L1ControllerACLTests is UnitTestBase {
 
-    function test_setActive() public {
+    function test_freeze() public {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             FREEZER
         ));
-        l1Controller.setActive(true);
+        l1Controller.freeze();
 
         vm.prank(freezer);
-        l1Controller.setActive(true);
+        l1Controller.freeze();
+    }
+
+    function test_reactivate() public {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            DEFAULT_ADMIN_ROLE
+        ));
+        l1Controller.reactivate();
+
+        vm.prank(admin);
+        l1Controller.reactivate();
     }
 
 }

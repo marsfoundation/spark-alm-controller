@@ -22,9 +22,6 @@ contract L1Controller is AccessControl {
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
     address public buffer;
-    address public freezer;
-    address public relayer;
-    address public roles;
 
     ISNstLike  public sNst;
     IVaultLike public vault;
@@ -35,63 +32,59 @@ contract L1Controller is AccessControl {
     /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
-    constructor() {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    }
+    constructor(
+        address admin_,
+        address vault_,
+        address buffer_,
+        address sNst_
+    ) {
+        _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
-    /**********************************************************************************************/
-    /*** Admin Functions                                                                      ***/
-    /**********************************************************************************************/
-
-    function setBuffer(address buffer_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        vault  = IVaultLike(vault_);
         buffer = buffer_;
+        sNst   = ISNstLike(sNst_);
+
+        active = true;
     }
 
-    function setFreezer(address freezer_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        freezer = freezer_;
-    }
+    /**********************************************************************************************/
+    /*** Modifiers                                                                              ***/
+    /**********************************************************************************************/
 
-    function setRelayer(address relayer_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        relayer = relayer_;
-    }
-
-    function setRoles(address roles_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        roles = roles_;
-    }
-
-    function setVault(address vault_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        vault = IVaultLike(vault_);
-    }
-
-    function setSNst(address sNst_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        sNst = ISNstLike(sNst_);
+    modifier isActive {
+        require(active, "L1Controller/not-active");
+        _;
     }
 
     /**********************************************************************************************/
     /*** Freezer Functions                                                                      ***/
     /**********************************************************************************************/
 
-    function setActive(bool active_) external onlyRole(FREEZER) {
-        active = active_;
+    function freeze() external onlyRole(FREEZER) {
+        active = false;
+    }
+
+    function reactivate() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        active = true;
     }
 
     /**********************************************************************************************/
     /*** Relayer Functions                                                                      ***/
     /**********************************************************************************************/
 
-    function draw(uint256 wad) external onlyRole(RELAYER) {
+    function draw(uint256 wad) external onlyRole(RELAYER) isActive {
         // TODO: ALM Proxy instead of buffer
         vault.draw(wad);
         // nst.transferFrom(almProxy);
     }
 
-    function wipe(uint256 wad) external onlyRole(RELAYER) {
+    function wipe(uint256 wad) external onlyRole(RELAYER) isActive {
         // TODO: ALM Proxy instead of buffer
         vault.wipe(wad);
     }
 
     // TODO: Use referral?
-    function depositNstToSNst(uint256 assets) external onlyRole(RELAYER) {
+    function depositNstToSNst(uint256 assets) external onlyRole(RELAYER) isActive {
         // TODO: ALM Proxy
         // nst.transferFrom(buffer, address(this), assets);
         // sNst.deposit(assets, receiver);
