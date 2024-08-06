@@ -13,10 +13,7 @@ contract L1Controller is AccessControl {
     /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
-    // TODO: Verify this and test if necessary
-    function initialize() public {
-        require(!initialized, "L1Controller/already-initialized");
-        initialized = true;
+    constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
