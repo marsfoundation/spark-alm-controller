@@ -14,7 +14,7 @@ contract L1ControllerDepositNstToSNstFailureTests is UnitTestBase {
         l1Controller.depositNstToSNst(1e18);
     }
 
-    function test_draw_frozen() external {
+    function test_depositNstToSNst_frozen() external {
         vm.prank(freezer);
         l1Controller.freeze();
 
