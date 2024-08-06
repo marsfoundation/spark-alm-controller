@@ -9,8 +9,8 @@ contract ALMProxy is AccessControl {
     /*** State variables                                                                        ***/
     /**********************************************************************************************/
 
-    bytes32 public constant FREEZER    = keccak256("FREEZER");
     bytes32 public constant CONTROLLER = keccak256("CONTROLLER");
+    bytes32 public constant FREEZER    = keccak256("FREEZER");
 
     bool public active;
 
@@ -29,7 +29,7 @@ contract ALMProxy is AccessControl {
     /**********************************************************************************************/
 
     modifier isActive {
-        require(active, "L1Controller/not-active");
+        require(active, "ALMProxy/not-active");
         _;
     }
 
@@ -50,16 +50,18 @@ contract ALMProxy is AccessControl {
     /**********************************************************************************************/
 
     function doCall(address target, bytes memory data)
-        external payable onlyRole(CONTROLLER) isActive
+        external payable onlyRole(CONTROLLER) isActive returns (bytes memory result)
     {
-        ( bool success, bytes memory result ) = target.call(data);
+        bool success;
+        ( success, result ) = target.call(data);
         require(success, string(result));
     }
 
     function doDelegateCall(address target, bytes memory data)
-        external payable onlyRole(CONTROLLER) isActive
+        external payable onlyRole(CONTROLLER) isActive returns (bytes memory result)
     {
-        ( bool success, bytes memory result ) = target.call(data);
+        bool success;
+        ( success, result ) = target.delegatecall(data);
         require(success, string(result));
     }
 
