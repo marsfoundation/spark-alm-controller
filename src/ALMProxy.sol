@@ -3,32 +3,14 @@ pragma solidity ^0.8.21;
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
-import { IERC20 } from "erc20-helpers/interfaces/IERC20.sol";
-
-interface ISNstLike {
-    function deposit(uint256 assets, address receiver) external;
-    function nst() external view returns(address);
-}
-
-interface IVaultLike {
-    function draw(uint256 wad) external;
-    function wipe(uint256 wad) external;
-}
-
-contract L1Controller is AccessControl {
+contract ALMProxy is AccessControl {
 
     /**********************************************************************************************/
     /*** State variables                                                                        ***/
     /**********************************************************************************************/
 
-    bytes32 public constant FREEZER = keccak256("FREEZER");
-    bytes32 public constant RELAYER = keccak256("RELAYER");
-
-    address public immutable buffer;
-
-    IVaultLike public immutable vault;
-    ISNstLike  public immutable sNst;
-    IERC20     public immutable nst;
+    bytes32 public constant FREEZER    = keccak256("FREEZER");
+    bytes32 public constant CONTROLLER = keccak256("CONTROLLER");
 
     bool public active;
 
@@ -36,18 +18,8 @@ contract L1Controller is AccessControl {
     /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
-    constructor(
-        address admin_,
-        address vault_,
-        address buffer_,
-        address sNst_
-    ) {
-        _grantRole(DEFAULT_ADMIN_ROLE, admin_);
-
-        buffer = buffer_;
-        vault  = IVaultLike(vault_);
-        sNst   = ISNstLike(sNst_);
-        nst    = IERC20(ISNstLike(sNst_).nst());
+    constructor(address admin) {
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         active = true;
     }
@@ -74,25 +46,21 @@ contract L1Controller is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Relayer functions                                                                      ***/
+    /*** Call functions                                                                      ***/
     /**********************************************************************************************/
 
-    function draw(uint256 wad) external onlyRole(RELAYER) isActive {
-        // TODO: Refactor to use ALM Proxy
-        vault.draw(wad);
+    function doCall(address target, bytes memory data)
+        external payable onlyRole(CONTROLLER) isActive
+    {
+        ( bool success, bytes memory result ) = target.call(data);
+        require(success, string(result));
     }
 
-    function wipe(uint256 wad) external onlyRole(RELAYER) isActive {
-        // TODO: Refactor to use ALM Proxy
-        vault.wipe(wad);
-    }
-
-    function depositNstToSNst(uint256 assets) external onlyRole(RELAYER) isActive {
-        // TODO: Refactor to use ALM Proxy
-        nst.transferFrom(buffer, address(this), assets);
-        nst.approve(address(sNst), assets);
-        sNst.deposit(assets, address(buffer));
+    function doDelegateCall(address target, bytes memory data)
+        external payable onlyRole(CONTROLLER) isActive
+    {
+        ( bool success, bytes memory result ) = target.call(data);
+        require(success, string(result));
     }
 
 }
-
