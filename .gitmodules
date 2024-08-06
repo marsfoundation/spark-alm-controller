@@ -10,9 +10,6 @@
 [submodule "lib/erc20-helpers"]
 	path = lib/erc20-helpers
 	url = https://github.com/marsfoundation/erc20-helpers
-[submodule "lib/sdai"]
-	path = lib/sdai
-	url = https://github.com/makerdao/sdai
 [submodule "lib/dss"]
 	path = lib/dss
 	url = https://github.com/marsfoundation/dss
