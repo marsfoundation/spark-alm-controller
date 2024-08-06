@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.21;
 
 import "forge-std/Test.sol";
 
@@ -30,6 +30,7 @@ contract UnitTestBase is Test {
     VatMock vat;
 
     MockERC20 nst;
+
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
     bytes32 public constant FREEZER = keccak256("FREEZER");
@@ -53,11 +54,12 @@ contract UnitTestBase is Test {
 
         buffer.approve(address(nst), address(vault), type(uint256).max);
 
-        l1Controller = new L1Controller();
-        l1Controller.setVault(address(vault));
-        l1Controller.grantRole(DEFAULT_ADMIN_ROLE, admin);
+        l1Controller = new L1Controller(admin, address(vault));
+
+        vm.startPrank(admin);
         l1Controller.grantRole(FREEZER, freezer);
         l1Controller.grantRole(RELAYER, relayer);
+        vm.stopPrank();
 
         vault.rely(address(l1Controller));
         vault.file("jug", address(jug));

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.21;
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
@@ -13,7 +13,7 @@ contract L1Controller is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    IVaultLike public vault;
+    IVaultLike public immutable vault;
 
     bool public active;
 
@@ -21,15 +21,9 @@ contract L1Controller is AccessControl {
     /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
-    constructor() {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    }
+    constructor( address admin_, address vault_) {
+        _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
-    /**********************************************************************************************/
-    /*** Admin Functions                                                                      ***/
-    /**********************************************************************************************/
-
-    function setVault(address vault_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         vault = IVaultLike(vault_);
     }
 

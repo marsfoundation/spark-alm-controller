@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.21;
 
-import "./UnitTestBase.t.sol";
+import "forge-std/Test.sol";
 
-contract L1ControllerConstructorTests is UnitTestBase {
+import { L1Controller } from "src/L1Controller.sol";
+
+contract L1ControllerConstructorTests is Test {
+
+    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
     function test_constructor() public {
-        // From setUp
-        assertEq(l1Controller.hasRole(DEFAULT_ADMIN_ROLE, address(this)), true);
+        address admin = makeAddr("admin");
+        address vault = makeAddr("vault");
 
-        // Overwrite L1Controller with a new instance
-        vm.prank(admin);
-        l1Controller = new L1Controller();
+        L1Controller l1Controller = new L1Controller(admin, address(vault));
 
-        assertEq(l1Controller.hasRole(DEFAULT_ADMIN_ROLE, address(this)), false);
-        assertEq(l1Controller.hasRole(DEFAULT_ADMIN_ROLE, admin),         true);
+        assertEq(l1Controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+
+        assertEq(address(l1Controller.vault()), vault);
     }
 }
