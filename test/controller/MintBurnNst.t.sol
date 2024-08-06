@@ -33,8 +33,8 @@ contract L1ControllerDrawTests is UnitTestBase {
         assertEq(ink, INK);
         assertEq(art, 0);
 
-        assertEq(nst.balanceOf(address(buffer)), 0);
-        assertEq(nst.totalSupply(),              0);
+        assertEq(nst.balanceOf(address(almProxy)), 0);
+        assertEq(nst.totalSupply(),                0);
 
         vm.prank(relayer);
         l1Controller.draw(1e18);
@@ -48,8 +48,8 @@ contract L1ControllerDrawTests is UnitTestBase {
         assertEq(ink, INK);
         assertEq(art, 1e18);
 
-        assertEq(nst.balanceOf(address(buffer)), 1e18);
-        assertEq(nst.totalSupply(),              1e18);
+        assertEq(nst.balanceOf(address(almProxy)), 1e18);
+        assertEq(nst.totalSupply(),                1e18);
     }
 
 }
@@ -88,8 +88,8 @@ contract L1ControllerWipeTests is UnitTestBase {
         assertEq(ink, INK);
         assertEq(art, 1e18);
 
-        assertEq(nst.balanceOf(address(buffer)), 1e18);
-        assertEq(nst.totalSupply(),              1e18);
+        assertEq(nst.balanceOf(address(almProxy)), 1e18);
+        assertEq(nst.totalSupply(),                1e18);
 
         vm.prank(relayer);
         l1Controller.wipe(1e18);
@@ -103,8 +103,8 @@ contract L1ControllerWipeTests is UnitTestBase {
         assertEq(ink, INK);
         assertEq(art, 0);
 
-        assertEq(nst.balanceOf(address(buffer)), 0);
-        assertEq(nst.totalSupply(),              0);
+        assertEq(nst.balanceOf(address(almProxy)), 0);
+        assertEq(nst.totalSupply(),                0);
     }
 
 }

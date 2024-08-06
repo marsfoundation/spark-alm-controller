@@ -9,6 +9,7 @@ contract L1ControllerConstructorTests is UnitTestBase {
         // Deploy another l1Controller to test the constructor
         L1Controller newL1Controller = new L1Controller(
             admin,
+            address(almProxy),
             address(vault),
             address(buffer),
             address(sNst)
@@ -18,6 +19,7 @@ contract L1ControllerConstructorTests is UnitTestBase {
         assertEq(newL1Controller.active(),                           true);
 
         assertEq(address(newL1Controller.buffer()), address(buffer));
+        assertEq(address(newL1Controller.proxy()),  address(almProxy));
         assertEq(address(newL1Controller.vault()),  address(vault));
         assertEq(address(newL1Controller.sNst()),   address(sNst));
         assertEq(address(newL1Controller.nst()),    address(nst));

@@ -70,11 +70,17 @@ contract UnitTestBase is Test {
         roles  = new AllocatorRoles();
         vault  = new AllocatorVault(address(roles), address(buffer), ilk, address(nstJoin));
 
-        l1Controller = new L1Controller(admin, address(vault), address(buffer), address(sNst));
-
         almProxy = new ALMProxy(admin);
 
-        buffer.approve(address(nst), address(l1Controller), type(uint256).max);
+        l1Controller = new L1Controller(
+            admin,
+            address(almProxy),
+            address(vault),
+            address(buffer),
+            address(sNst)
+        );
+
+        buffer.approve(address(nst), address(almProxy), type(uint256).max);
 
         // Done with spell by pause proxy
         vm.startPrank(admin);
@@ -103,7 +109,7 @@ contract UnitTestBase is Test {
         jug.file("vow",  vow);
         jug.file("base", 1e27);
 
-        vault.rely(address(l1Controller));
+        vault.rely(address(almProxy));
         vault.file("jug", address(jug));
     }
 
