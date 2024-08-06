@@ -9,7 +9,7 @@ contract L1ControllerDrawTests is UnitTestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            bytes32("RELAYER")
+            RELAYER
         ));
         l1Controller.draw(1e18);
     }
@@ -49,7 +49,7 @@ contract L1ControllerWipeTests is UnitTestBase {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
-            bytes32("RELAYER")
+            RELAYER
         ));
         l1Controller.wipe(1e18);
     }

@@ -3,29 +3,25 @@ pragma solidity >=0.8.0;
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
-import { UpgradeableProxied } from "upgradeable-proxy/UpgradeableProxied.sol";
-
 interface IVaultLike {
     function draw(uint256 wad) external;
     function wipe(uint256 wad) external;
 }
 
-contract L1Controller is UpgradeableProxied, AccessControl {
+contract L1Controller is AccessControl {
+
+    bytes32 public constant FREEZER = keccak256("FREEZER");
+    bytes32 public constant RELAYER = keccak256("RELAYER");
 
     IVaultLike public vault;
 
     bool public active;
 
-    bool initialized;
-
     /**********************************************************************************************/
     /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
-    // TODO: Verify this and test if necessary
-    function initialize() public {
-        require(!initialized, "L1Controller/already-initialized");
-        initialized = true;
+    constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -41,7 +37,7 @@ contract L1Controller is UpgradeableProxied, AccessControl {
     /*** Freezer Functions                                                                      ***/
     /**********************************************************************************************/
 
-    function setActive(bool active_) external onlyRole("FREEZER") {
+    function setActive(bool active_) external onlyRole(FREEZER) {
         active = active_;
     }
 
@@ -49,11 +45,11 @@ contract L1Controller is UpgradeableProxied, AccessControl {
     /*** Relayer Functions                                                                      ***/
     /**********************************************************************************************/
 
-    function draw(uint256 wad) external onlyRole("RELAYER") {
+    function draw(uint256 wad) external onlyRole(RELAYER) {
         vault.draw(wad);
     }
 
-    function wipe(uint256 wad) external onlyRole("RELAYER") {
+    function wipe(uint256 wad) external onlyRole(RELAYER) {
         vault.wipe(wad);
     }
 

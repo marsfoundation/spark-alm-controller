@@ -1,9 +1,6 @@
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "lib/upgradeable-proxy"]
-	path = lib/upgradeable-proxy
-	url = https://github.com/marsfoundation/upgradeable-proxy
 [submodule "lib/dss-allocator"]
 	path = lib/dss-allocator
 	url = https://github.com/makerdao/dss-allocator
