@@ -87,17 +87,12 @@ contract L1Controller is AccessControl {
         vault.wipe(wad);
     }
 
-    // TODO: Use referral?
     function depositNstToSNst(uint256 assets) external onlyRole(RELAYER) isActive {
         // TODO: Refactor to use ALM Proxy
         nst.transferFrom(buffer, address(this), assets);
         nst.approve(address(sNst), assets);
         sNst.deposit(assets, address(buffer));
     }
-
-    // function
-    // call sNst.withdraw using the proxy
-    // Call proxy with exec to run specified calldata (target + calldata, call and delegatecall)
 
 }
 
