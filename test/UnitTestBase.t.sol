@@ -90,7 +90,9 @@ contract UnitTestBase is Test {
             address(almProxy),
             address(vault),
             address(buffer),
-            address(sNst)
+            address(sNst),
+            address(psm),
+            address(usdc)
         );
 
         buffer.approve(address(nst), address(almProxy), type(uint256).max);

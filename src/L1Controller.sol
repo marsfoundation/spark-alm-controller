@@ -17,6 +17,11 @@ interface IVaultLike {
     function wipe(uint256 wad) external;
 }
 
+interface IPsmLike {
+    function buyGemNoFee(address usr, uint256 gemAmt) external returns (uint256 daiInWad);
+    function sellGemNoFee(address usr, uint256 gemAmt) external returns (uint256 daiOutWad);
+}
+
 contract L1Controller is AccessControl {
 
     // TODO: Inherit and override interface
@@ -33,7 +38,9 @@ contract L1Controller is AccessControl {
     IALMProxy  public immutable proxy;
     IVaultLike public immutable vault;
     ISNstLike  public immutable sNst;
+    IPsmLike   public immutable psm;
     IERC20     public immutable nst;
+    IERC20     public immutable usdc;
 
     bool public active;
 
@@ -46,7 +53,9 @@ contract L1Controller is AccessControl {
         address proxy_,
         address vault_,
         address buffer_,
-        address sNst_
+        address sNst_,
+        address psm_,
+        address usdc_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
@@ -54,6 +63,8 @@ contract L1Controller is AccessControl {
         proxy  = IALMProxy(proxy_);
         vault  = IVaultLike(vault_);
         sNst   = ISNstLike(sNst_);
+        psm    = IPsmLike(psm_);
+        usdc   = IERC20(usdc_);
         nst    = IERC20(ISNstLike(sNst_).nst());
 
         active = true;
@@ -81,7 +92,7 @@ contract L1Controller is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Relayer functions                                                                      ***/
+    /*** Relayer vault functions                                                                ***/
     /**********************************************************************************************/
 
     function draw(uint256 wad) external onlyRole(RELAYER) isActive {
@@ -112,6 +123,10 @@ contract L1Controller is AccessControl {
         );
     }
 
+    /**********************************************************************************************/
+    /*** Relayer sNST functions                                                                 ***/
+    /**********************************************************************************************/
+
     function depositNstToSNst(uint256 wad) external onlyRole(RELAYER) isActive {
         // Approve NST to sNST from the proxy (assumes the proxy has enough NST)
         proxy.doCall(
@@ -123,6 +138,38 @@ contract L1Controller is AccessControl {
         proxy.doCall(
             address(sNst),
             abi.encodeCall(sNst.deposit, (wad, address(proxy)))
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer PSM functions                                           s                       ***/
+    /**********************************************************************************************/
+
+    function sellGemNoFee(uint256 gemAmt) external onlyRole(RELAYER) isActive {
+        // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
+        proxy.doCall(
+            address(usdc),
+            abi.encodeCall(usdc.approve, (address(psm), gemAmt))
+        );
+
+        // Swap USDC to NST through the PSM
+        proxy.doCall(
+            address(psm),
+            abi.encodeCall(psm.sellGemNoFee, (address(proxy), gemAmt))
+        );
+    }
+
+    function buyGemNoFee(uint256 wad) external onlyRole(RELAYER) isActive {
+        // Approve NST to PSM from the proxy (assumes the proxy has enough NST)
+        proxy.doCall(
+            address(nst),
+            abi.encodeCall(nst.approve, (address(psm), wad))
+        );
+
+        // Swap NST to USDC through the PSM
+        proxy.doCall(
+            address(psm),
+            abi.encodeCall(psm.buyGemNoFee, (address(proxy), wad))
         );
     }
 
