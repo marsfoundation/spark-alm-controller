@@ -10,6 +10,5 @@ contract ALMProxyConstructorTests is UnitTestBase {
         ALMProxy newAlmProxy = new ALMProxy(admin);
 
         assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
-        assertEq(newAlmProxy.active(),                           true);
     }
 }

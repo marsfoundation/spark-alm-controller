@@ -2,17 +2,20 @@
 pragma solidity ^0.8.21;
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
+import { Address }       from "openzeppelin-contracts/contracts/utils/Address.sol";
 
-contract ALMProxy is AccessControl {
+import { IALMProxy } from "src/interfaces/IALMProxy.sol";
+
+contract ALMProxy is IALMProxy, AccessControl {
+
+    using Address for address;
+    using Address for address payable;
 
     /**********************************************************************************************/
     /*** State variables                                                                        ***/
     /**********************************************************************************************/
 
-    bytes32 public constant CONTROLLER = keccak256("CONTROLLER");
-    bytes32 public constant FREEZER    = keccak256("FREEZER");
-
-    bool public active;
+    bytes32 public override constant CONTROLLER = keccak256("CONTROLLER");
 
     /**********************************************************************************************/
     /*** Initialization                                                                         ***/
@@ -20,49 +23,28 @@ contract ALMProxy is AccessControl {
 
     constructor(address admin) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-
-        active = true;
     }
 
     /**********************************************************************************************/
-    /*** Modifiers                                                                              ***/
-    /**********************************************************************************************/
-
-    modifier isActive {
-        require(active, "ALMProxy/not-active");
-        _;
-    }
-
-    /**********************************************************************************************/
-    /*** Freezer functions                                                                      ***/
-    /**********************************************************************************************/
-
-    function freeze() external onlyRole(FREEZER) {
-        active = false;
-    }
-
-    function reactivate() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        active = true;
-    }
-
-    /**********************************************************************************************/
-    /*** Call functions                                                                      ***/
+    /*** Call functions                                                                         ***/
     /**********************************************************************************************/
 
     function doCall(address target, bytes memory data)
-        external payable onlyRole(CONTROLLER) isActive returns (bytes memory result)
+        external payable override onlyRole(CONTROLLER) returns (bytes memory result)
     {
-        bool success;
-        ( success, result ) = target.call(data);
-        require(success, string(result));
+        result = target.functionCallWithValue(data, msg.value);
+    }
+
+    function doCallWithValue(address target, bytes memory data, uint256 value)
+        external payable override onlyRole(CONTROLLER) returns (bytes memory result)
+    {
+        result = target.functionCallWithValue(data, value);
     }
 
     function doDelegateCall(address target, bytes memory data)
-        external payable onlyRole(CONTROLLER) isActive returns (bytes memory result)
+        external payable override onlyRole(CONTROLLER) returns (bytes memory result)
     {
-        bool success;
-        ( success, result ) = target.delegatecall(data);
-        require(success, string(result));
+        result = target.functionDelegateCall(data);
     }
 
 }

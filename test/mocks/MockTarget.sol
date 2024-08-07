@@ -7,18 +7,20 @@ contract MockTarget {
         address indexed exampleAddress,
         uint256 exampleValue,
         uint256 exampleReturn,
-        address caller
+        address caller,
+        uint256 value
     );
 
     function exampleCall(address exampleAddress, uint256 exampleValue)
-        public returns (uint256 exampleReturn)
+        public payable returns (uint256 exampleReturn)
     {
         exampleReturn = exampleValue * 2;
         emit ExampleEvent(
             exampleAddress,
             exampleValue,
             exampleReturn,
-            msg.sender
+            msg.sender,
+            msg.value
         );
     }
 
