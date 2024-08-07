@@ -14,7 +14,7 @@ contract L1ControllerConstructorTests is UnitTestBase {
             address(buffer),
             address(sNst),
             address(psm),
-            address(usdc)
+            address(gem)
         );
 
         assertEq(newL1Controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
@@ -25,7 +25,8 @@ contract L1ControllerConstructorTests is UnitTestBase {
         assertEq(address(newL1Controller.vault()),  address(vault));
         assertEq(address(newL1Controller.sNst()),   address(sNst));
         assertEq(address(newL1Controller.psm()),    address(psm));
-        assertEq(address(newL1Controller.usdc()),   address(usdc));
+        assertEq(address(newL1Controller.gem()),    address(gem));
         assertEq(address(newL1Controller.nst()),    address(nst));
     }
+
 }

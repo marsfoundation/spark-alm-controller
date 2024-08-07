@@ -51,7 +51,7 @@ contract UnitTestBase is Test {
     Vat     vat;
 
     MockERC20 nst;
-    MockERC20 usdc;
+    MockERC20 gem;
     SNst      sNst;
 
     ALMProxy     almProxy;
@@ -65,8 +65,8 @@ contract UnitTestBase is Test {
         vat = new Vat();
         jug = new MockJug(address(vat));
 
-        nst  = new MockERC20("NST",  "NST",  18);
-        usdc = new MockERC20("USDC", "USDC", 6);
+        nst = new MockERC20("NST", "NST", 18);
+        gem = new MockERC20("GEM", "GEM", 6);
 
         nstJoin = new NstJoin(address(vat), address(nst));
 
@@ -79,9 +79,7 @@ contract UnitTestBase is Test {
         vault  = new AllocatorVault(address(roles), address(buffer), ilk, address(nstJoin));
 
         pocket = new MockPocket();
-        psm    = new DssLitePsm("lite-psm", address(usdc), address(nstJoin), address(pocket));
-
-        pocket.approve(address(usdc), address(psm));
+        psm    = new DssLitePsm("lite-psm", address(gem), address(nstJoin), address(pocket));
 
         almProxy = new ALMProxy(admin);
 
@@ -92,10 +90,17 @@ contract UnitTestBase is Test {
             address(buffer),
             address(sNst),
             address(psm),
-            address(usdc)
+            address(gem)
         );
 
+        deal(address(gem), address(pocket), 100e6);  // Gem is held in pocket
+        deal(address(nst), address(psm),    100e18);
+
+        pocket.approve(address(gem), address(psm));
+
         buffer.approve(address(nst), address(almProxy), type(uint256).max);
+
+        psm.kiss(address(almProxy));  // Allow using no fee functionality
 
         // Done with spell by pause proxy
         vm.startPrank(admin);

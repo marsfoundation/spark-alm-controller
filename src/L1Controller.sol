@@ -20,6 +20,7 @@ interface IVaultLike {
 interface IPsmLike {
     function buyGemNoFee(address usr, uint256 gemAmt) external returns (uint256 daiInWad);
     function sellGemNoFee(address usr, uint256 gemAmt) external returns (uint256 daiOutWad);
+    function to18ConversionFactor() external view returns (uint256);
 }
 
 contract L1Controller is AccessControl {
@@ -40,7 +41,7 @@ contract L1Controller is AccessControl {
     ISNstLike  public immutable sNst;
     IPsmLike   public immutable psm;
     IERC20     public immutable nst;
-    IERC20     public immutable usdc;
+    IERC20     public immutable gem;
 
     bool public active;
 
@@ -55,7 +56,7 @@ contract L1Controller is AccessControl {
         address buffer_,
         address sNst_,
         address psm_,
-        address usdc_
+        address gem_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
@@ -64,7 +65,7 @@ contract L1Controller is AccessControl {
         vault  = IVaultLike(vault_);
         sNst   = ISNstLike(sNst_);
         psm    = IPsmLike(psm_);
-        usdc   = IERC20(usdc_);
+        gem    = IERC20(gem_);
         nst    = IERC20(ISNstLike(sNst_).nst());
 
         active = true;
@@ -142,34 +143,36 @@ contract L1Controller is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Relayer PSM functions                                           s                       ***/
+    /*** Relayer PSM functions                                           s                      ***/
     /**********************************************************************************************/
+
+    function buyGemNoFee(uint256 gemAmt) external onlyRole(RELAYER) isActive {
+        uint256 conversionFactor = psm.to18ConversionFactor();
+
+        // Approve NST to PSM from the proxy (assumes the proxy has enough NST)
+        proxy.doCall(
+            address(nst),
+            abi.encodeCall(nst.approve, (address(psm), gemAmt * conversionFactor))
+        );
+
+        // Swap NST to USDC through the PSM
+        proxy.doCall(
+            address(psm),
+            abi.encodeCall(psm.buyGemNoFee, (address(proxy), gemAmt))
+        );
+    }
 
     function sellGemNoFee(uint256 gemAmt) external onlyRole(RELAYER) isActive {
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
         proxy.doCall(
-            address(usdc),
-            abi.encodeCall(usdc.approve, (address(psm), gemAmt))
+            address(gem),
+            abi.encodeCall(gem.approve, (address(psm), gemAmt))
         );
 
         // Swap USDC to NST through the PSM
         proxy.doCall(
             address(psm),
             abi.encodeCall(psm.sellGemNoFee, (address(proxy), gemAmt))
-        );
-    }
-
-    function buyGemNoFee(uint256 wad) external onlyRole(RELAYER) isActive {
-        // Approve NST to PSM from the proxy (assumes the proxy has enough NST)
-        proxy.doCall(
-            address(nst),
-            abi.encodeCall(nst.approve, (address(psm), wad))
-        );
-
-        // Swap NST to USDC through the PSM
-        proxy.doCall(
-            address(psm),
-            abi.encodeCall(psm.buyGemNoFee, (address(proxy), wad))
         );
     }
 
