@@ -13,4 +13,5 @@ interface IALMProxy {
 
     function doDelegateCall(address target, bytes calldata data)
         external payable returns (bytes memory result);
+
 }
