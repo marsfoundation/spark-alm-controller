@@ -13,13 +13,13 @@ interface ISNstLike {
 }
 
 interface IVaultLike {
-    function draw(uint256 wad) external;
-    function wipe(uint256 wad) external;
+    function draw(uint256 nstAmount) external;
+    function wipe(uint256 nstAmount) external;
 }
 
 interface IPsmLike {
-    function buyGemNoFee(address usr, uint256 gemAmt) external returns (uint256 daiInWad);
-    function sellGemNoFee(address usr, uint256 gemAmt) external returns (uint256 daiOutWad);
+    function buyGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 daiInnstAmount);
+    function sellGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 daiOutnstAmount);
     function to18ConversionFactor() external view returns (uint256);
 }
 
@@ -41,7 +41,7 @@ contract L1Controller is AccessControl {
     ISNstLike  public immutable sNst;
     IPsmLike   public immutable psm;
     IERC20     public immutable nst;
-    IERC20     public immutable gem;
+    IERC20     public immutable usdc;
 
     bool public active;
 
@@ -56,7 +56,7 @@ contract L1Controller is AccessControl {
         address buffer_,
         address sNst_,
         address psm_,
-        address gem_
+        address usdc_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
@@ -65,7 +65,7 @@ contract L1Controller is AccessControl {
         vault  = IVaultLike(vault_);
         sNst   = ISNstLike(sNst_);
         psm    = IPsmLike(psm_);
-        gem    = IERC20(gem_);
+        usdc   = IERC20(usdc_);
         nst    = IERC20(ISNstLike(sNst_).nst());
 
         active = true;
@@ -96,31 +96,31 @@ contract L1Controller is AccessControl {
     /*** Relayer vault functions                                                                ***/
     /**********************************************************************************************/
 
-    function draw(uint256 wad) external onlyRole(RELAYER) isActive {
+    function mintNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
         // Mint NST into the buffer
         proxy.doCall(
             address(vault),
-            abi.encodeCall(vault.draw, (wad))
+            abi.encodeCall(vault.draw, (nstAmount))
         );
 
         // Transfer NST from the buffer to the proxy
         proxy.doCall(
             address(nst),
-            abi.encodeCall(nst.transferFrom, (buffer, address(proxy), wad))
+            abi.encodeCall(nst.transferFrom, (buffer, address(proxy), nstAmount))
         );
     }
 
-    function wipe(uint256 wad) external onlyRole(RELAYER) isActive {
+    function burnNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
         // Transfer NST from the proxy to the buffer
         proxy.doCall(
             address(nst),
-            abi.encodeCall(nst.transfer, (buffer, wad))
+            abi.encodeCall(nst.transfer, (buffer, nstAmount))
         );
 
         // Burn NST from the buffer
         proxy.doCall(
             address(vault),
-            abi.encodeCall(vault.wipe, (wad))
+            abi.encodeCall(vault.wipe, (nstAmount))
         );
     }
 
@@ -128,17 +128,17 @@ contract L1Controller is AccessControl {
     /*** Relayer sNST functions                                                                 ***/
     /**********************************************************************************************/
 
-    function depositNstToSNst(uint256 wad) external onlyRole(RELAYER) isActive {
+    function swapNSTToSNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
         // Approve NST to sNST from the proxy (assumes the proxy has enough NST)
         proxy.doCall(
             address(nst),
-            abi.encodeCall(nst.approve, (address(sNst), wad))
+            abi.encodeCall(nst.approve, (address(sNst), nstAmount))
         );
 
         // Deposit NST into sNST, proxy receives sNST shares
         proxy.doCall(
             address(sNst),
-            abi.encodeCall(sNst.deposit, (wad, address(proxy)))
+            abi.encodeCall(sNst.deposit, (nstAmount, address(proxy)))
         );
     }
 
@@ -146,33 +146,33 @@ contract L1Controller is AccessControl {
     /*** Relayer PSM functions                                           s                      ***/
     /**********************************************************************************************/
 
-    function buyGemNoFee(uint256 gemAmt) external onlyRole(RELAYER) isActive {
+    function swapNSTToUSDC(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
         uint256 conversionFactor = psm.to18ConversionFactor();
 
         // Approve NST to PSM from the proxy (assumes the proxy has enough NST)
         proxy.doCall(
             address(nst),
-            abi.encodeCall(nst.approve, (address(psm), gemAmt * conversionFactor))
+            abi.encodeCall(nst.approve, (address(psm), usdcAmount * conversionFactor))
         );
 
         // Swap NST to USDC through the PSM
         proxy.doCall(
             address(psm),
-            abi.encodeCall(psm.buyGemNoFee, (address(proxy), gemAmt))
+            abi.encodeCall(psm.buyGemNoFee, (address(proxy), usdcAmount))
         );
     }
 
-    function sellGemNoFee(uint256 gemAmt) external onlyRole(RELAYER) isActive {
+    function swapUSDCToNST(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
         proxy.doCall(
-            address(gem),
-            abi.encodeCall(gem.approve, (address(psm), gemAmt))
+            address(usdc),
+            abi.encodeCall(usdc.approve, (address(psm), usdcAmount))
         );
 
         // Swap USDC to NST through the PSM
         proxy.doCall(
             address(psm),
-            abi.encodeCall(psm.sellGemNoFee, (address(proxy), gemAmt))
+            abi.encodeCall(psm.sellGemNoFee, (address(proxy), usdcAmount))
         );
     }
 
