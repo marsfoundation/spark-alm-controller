@@ -9,6 +9,8 @@ import { AllocatorVault }  from "lib/dss-allocator/src/AllocatorVault.sol";
 
 import { Vat } from "lib/dss/src/vat.sol";
 
+import { DssLitePsm } from "lib/dss-lite-psm/src/DssLitePsm.sol";
+
 import { MockERC20 } from "lib/erc20-helpers/src/MockERC20.sol";
 
 import { NstJoin } from "lib/nst/src/NstJoin.sol";
@@ -20,32 +22,37 @@ import { SNst } from "lib/sdai/src/SNst.sol";
 import { ALMProxy }     from "src/ALMProxy.sol";
 import { L1Controller } from "src/L1Controller.sol";
 
-import { MockJug } from "test/mocks/MockJug.sol";
+import { MockJug }    from "test/mocks/MockJug.sol";
+import { MockPocket } from "test/mocks/MockPocket.sol";
 
 contract UnitTestBase is Test {
+
+    bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
+
+    bytes32 constant CONTROLLER = keccak256("CONTROLLER");
+    bytes32 constant FREEZER    = keccak256("FREEZER");
+    bytes32 constant RELAYER    = keccak256("RELAYER");
+
+    uint256 constant INK = 1e12 * 1e18;  // 1 trillion
 
     address admin   = makeAddr("admin");
     address freezer = makeAddr("freezer");
     address relayer = makeAddr("relayer");
-
-    uint256 constant INK = 1e12 * 1e18;  // 1 trillion
 
     AllocatorBuffer buffer;
     AllocatorRoles  roles;
     AllocatorVault  vault;
     NstJoin         nstJoin;
 
+    MockPocket pocket;
+    DssLitePsm psm;
+
     MockJug jug;  // Need mock because `now` has been deprecated and won't compile
     Vat     vat;
 
     MockERC20 nst;
+    MockERC20 usdc;
     SNst      sNst;
-
-    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
-
-    bytes32 public constant CONTROLLER = keccak256("CONTROLLER");
-    bytes32 public constant FREEZER    = keccak256("FREEZER");
-    bytes32 public constant RELAYER    = keccak256("RELAYER");
 
     ALMProxy     almProxy;
     L1Controller l1Controller;
@@ -58,7 +65,8 @@ contract UnitTestBase is Test {
         vat = new Vat();
         jug = new MockJug(address(vat));
 
-        nst = new MockERC20("NST", "NST", 18);
+        nst  = new MockERC20("NST",  "NST",  18);
+        usdc = new MockERC20("USDC", "USDC", 6);
 
         nstJoin = new NstJoin(address(vat), address(nst));
 
@@ -69,6 +77,11 @@ contract UnitTestBase is Test {
         buffer = new AllocatorBuffer();
         roles  = new AllocatorRoles();
         vault  = new AllocatorVault(address(roles), address(buffer), ilk, address(nstJoin));
+
+        pocket = new MockPocket();
+        psm    = new DssLitePsm("lite-psm", address(usdc), address(nstJoin), address(pocket));
+
+        pocket.approve(address(usdc), address(psm));
 
         almProxy = new ALMProxy(admin);
 
