@@ -35,8 +35,9 @@ contract L1ControllerBuyGemNoFeeTests is UnitTestBase {
         assertEq(nst.balanceOf(address(l1Controller)), 0);
         assertEq(nst.balanceOf(address(psm)),          100e18);
 
-        assertEq(gem.balanceOf(address(almProxy)), 0);
-        assertEq(gem.balanceOf(address(pocket)),   100e6);
+        assertEq(gem.balanceOf(address(almProxy)),     0);
+        assertEq(gem.balanceOf(address(l1Controller)), 0);
+        assertEq(gem.balanceOf(address(pocket)),       100e6);
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(psm)),   0);
@@ -48,8 +49,9 @@ contract L1ControllerBuyGemNoFeeTests is UnitTestBase {
         assertEq(nst.balanceOf(address(l1Controller)), 0);
         assertEq(nst.balanceOf(address(psm)),          101e18);
 
-        assertEq(gem.balanceOf(address(almProxy)), 1e6);
-        assertEq(gem.balanceOf(address(pocket)),   99e6);
+        assertEq(gem.balanceOf(address(almProxy)),     1e6);
+        assertEq(gem.balanceOf(address(l1Controller)), 0);
+        assertEq(gem.balanceOf(address(pocket)),       99e6);
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(psm)),   0);
@@ -88,8 +90,9 @@ contract L1ControllerSellGemNoFeeTests is UnitTestBase {
         assertEq(nst.balanceOf(address(l1Controller)), 0);
         assertEq(nst.balanceOf(address(psm)),          100e18);
 
-        assertEq(gem.balanceOf(address(almProxy)), 1e6);
-        assertEq(gem.balanceOf(address(pocket)),   100e6);
+        assertEq(gem.balanceOf(address(almProxy)),     1e6);
+        assertEq(gem.balanceOf(address(l1Controller)), 0);
+        assertEq(gem.balanceOf(address(pocket)),       100e6);
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(psm)),   0);
@@ -101,8 +104,9 @@ contract L1ControllerSellGemNoFeeTests is UnitTestBase {
         assertEq(nst.balanceOf(address(l1Controller)), 0);
         assertEq(nst.balanceOf(address(psm)),          99e18);
 
-        assertEq(gem.balanceOf(address(almProxy)), 0);
-        assertEq(gem.balanceOf(address(pocket)),   101e6);
+        assertEq(gem.balanceOf(address(almProxy)),     0);
+        assertEq(gem.balanceOf(address(l1Controller)), 0);
+        assertEq(gem.balanceOf(address(pocket)),       101e6);
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(psm)),   0);
