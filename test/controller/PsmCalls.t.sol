@@ -11,7 +11,7 @@ contract L1ControllerBuyGemNoFeeFailureTests is UnitTestBase {
             address(this),
             RELAYER
         ));
-        l1Controller.sellGemNoFee(1e18);
+        l1Controller.sellGemNoFee(1e6);
     }
 
     function test_sellGemNoFee_frozen() external {
@@ -20,7 +20,7 @@ contract L1ControllerBuyGemNoFeeFailureTests is UnitTestBase {
 
         vm.prank(relayer);
         vm.expectRevert("L1Controller/not-active");
-        l1Controller.buyGemNoFee(1e18);
+        l1Controller.buyGemNoFee(1e6);
     }
 
 }
@@ -67,7 +67,7 @@ contract L1ControllerSellGemNoFeeFailureTests is UnitTestBase {
             address(this),
             RELAYER
         ));
-        l1Controller.sellGemNoFee(1e18);
+        l1Controller.sellGemNoFee(1e6);
     }
 
     function test_sellGemNoFee_frozen() external {
@@ -76,7 +76,7 @@ contract L1ControllerSellGemNoFeeFailureTests is UnitTestBase {
 
         vm.prank(relayer);
         vm.expectRevert("L1Controller/not-active");
-        l1Controller.sellGemNoFee(1e18);
+        l1Controller.sellGemNoFee(1e6);
     }
 
 }
