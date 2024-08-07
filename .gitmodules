@@ -22,3 +22,6 @@
 [submodule "lib/dss-lite-psm"]
 	path = lib/dss-lite-psm
 	url = https://github.com/makerdao/dss-lite-psm
+[submodule "lib/evm-cctp-contracts"]
+	path = lib/evm-cctp-contracts
+	url = https://github.com/circlefin/evm-cctp-contracts
