@@ -17,6 +17,7 @@ import { ERC1967Proxy } from "lib/openzeppelin-contracts/contracts/proxy/ERC1967
 
 import { SNst } from "lib/sdai/src/SNst.sol";
 
+import { ALMProxy }     from "src/ALMProxy.sol";
 import { L1Controller } from "src/L1Controller.sol";
 
 import { MockJug } from "test/mocks/MockJug.sol";
@@ -42,9 +43,11 @@ contract UnitTestBase is Test {
 
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
-    bytes32 public constant FREEZER = keccak256("FREEZER");
-    bytes32 public constant RELAYER = keccak256("RELAYER");
+    bytes32 public constant CONTROLLER = keccak256("CONTROLLER");
+    bytes32 public constant FREEZER    = keccak256("FREEZER");
+    bytes32 public constant RELAYER    = keccak256("RELAYER");
 
+    ALMProxy     almProxy;
     L1Controller l1Controller;
 
     address vow = makeAddr("vow");
@@ -67,14 +70,27 @@ contract UnitTestBase is Test {
         roles  = new AllocatorRoles();
         vault  = new AllocatorVault(address(roles), address(buffer), ilk, address(nstJoin));
 
-        l1Controller = new L1Controller(admin, address(vault), address(buffer), address(sNst));
+        almProxy = new ALMProxy(admin);
 
-        buffer.approve(address(nst), address(l1Controller), type(uint256).max);
+        l1Controller = new L1Controller(
+            admin,
+            address(almProxy),
+            address(vault),
+            address(buffer),
+            address(sNst)
+        );
+
+        buffer.approve(address(nst), address(almProxy), type(uint256).max);
 
         // Done with spell by pause proxy
         vm.startPrank(admin);
+
         l1Controller.grantRole(FREEZER, freezer);
         l1Controller.grantRole(RELAYER, relayer);
+
+        almProxy.grantRole(FREEZER,    freezer);
+        almProxy.grantRole(CONTROLLER, address(l1Controller));
+
         vm.stopPrank();
 
         buffer.approve(address(nst), address(vault), type(uint256).max);
@@ -93,7 +109,7 @@ contract UnitTestBase is Test {
         jug.file("vow",  vow);
         jug.file("base", 1e27);
 
-        vault.rely(address(l1Controller));
+        vault.rely(address(almProxy));
         vault.file("jug", address(jug));
     }
 
