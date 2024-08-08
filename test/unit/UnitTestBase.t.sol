@@ -22,8 +22,8 @@ import { SNst } from "lib/sdai/src/SNst.sol";
 import { ALMProxy }           from "src/ALMProxy.sol";
 import { EthereumController } from "src/EthereumController.sol";
 
-import { MockJug }    from "test/mocks/MockJug.sol";
-import { MockPocket } from "test/mocks/MockPocket.sol";
+import { MockJug }    from "test/unit/mocks/MockJug.sol";
+import { MockPocket } from "test/unit/mocks/MockPocket.sol";
 
 contract UnitTestBase is Test {
 
