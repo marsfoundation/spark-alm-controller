@@ -12,6 +12,10 @@ import {
 
 import { AllocatorDeploy } from "dss-allocator/deploy/AllocatorDeploy.sol";
 
+import { NstDeploy }   from "nst/deploy/NstDeploy.sol";
+import { NstInit }     from "nst/deploy/NstInit.sol";
+import { NstInstance } from "nst/deploy/NstInstance.sol";
+
 import { ALMProxy }           from "src/ALMProxy.sol";
 import { EthereumController } from "src/EthereumController.sol";
 
@@ -20,6 +24,8 @@ interface ChainlogLike {
 }
 
 contract ForkTestBase is DssTest {
+
+    bytes32 constant ILK = "ILK-A";
 
     /**********************************************************************************************/
     /*** Mainnet addresses                                                                      ***/
@@ -38,6 +44,8 @@ contract ForkTestBase is DssTest {
     /**********************************************************************************************/
 
     AllocatorSharedInstance sharedInst;
+    AllocatorIlkInstance    ilkInst;
+    NstInstance             nstInst;
 
     /**********************************************************************************************/
     /*** Allocation system deployments                                                          ***/
@@ -58,11 +66,29 @@ contract ForkTestBase is DssTest {
         ILK_REGISTRY = ChainlogLike(LOG).getAddress("ILK_REGISTRY");
         USDC         = ChainlogLike(LOG).getAddress("USDC");
 
+        nstInst = NstDeploy.deploy(
+            address(this),
+            PAUSE_PROXY,
+            ChainlogLike(LOG).getAddress("MCD_JOIN_DAI")
+        );
+
+        vm.startPrank(PAUSE_PROXY);
+        NstInit.init(dss, nstInst);
+        vm.stopPrank();
+
         sharedInst = AllocatorDeploy.deployShared(address(this), PAUSE_PROXY);
+
+        ilkInst = AllocatorDeploy.deployIlk({
+            deployer     : address(this),
+            owner        : PAUSE_PROXY,
+            roles        : sharedInst.roles,
+            ilk          : ILK,
+            nstJoin      : nstInst.nstJoin
+        });
     }
 
     function test_base() public {
-        vm.createSelectFork(vm.envString("ETH_RPC_URL"));
+
     }
 
 }
