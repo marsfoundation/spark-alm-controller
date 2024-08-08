@@ -12,6 +12,8 @@ import {
 
 import { AllocatorDeploy } from "dss-allocator/deploy/AllocatorDeploy.sol";
 
+import { IERC20 } from "erc20-helpers/interfaces/IERC20.sol";
+
 import { NstDeploy }   from "nst/deploy/NstDeploy.sol";
 import { NstInit }     from "nst/deploy/NstInit.sol";
 import { NstInstance } from "nst/deploy/NstInstance.sol";
@@ -23,8 +25,12 @@ import { SNstInstance }         from "sdai/deploy/SNstInstance.sol";
 import { ALMProxy }           from "src/ALMProxy.sol";
 import { EthereumController } from "src/EthereumController.sol";
 
-interface ChainlogLike {
+interface IChainlogLike {
     function getAddress(bytes32) external view returns (address);
+}
+
+interface IBufferLike {
+    function approve(address, address, uint256) external;
 }
 
 interface IVaultLike {
@@ -34,6 +40,17 @@ interface IVaultLike {
 contract ForkTestBase is DssTest {
 
     bytes32 constant ILK = "ILK-A";
+
+    uint256 constant INK = 1e12 * 1e18;  // Ink initialization amount
+
+    bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
+
+    bytes32 constant CONTROLLER = keccak256("CONTROLLER");
+    bytes32 constant FREEZER    = keccak256("FREEZER");
+    bytes32 constant RELAYER    = keccak256("RELAYER");
+
+    address freezer = makeAddr("freezer");
+    address relayer = makeAddr("relayer");
 
     /**********************************************************************************************/
     /*** Mainnet addresses                                                                      ***/
@@ -58,9 +75,15 @@ contract ForkTestBase is DssTest {
     NstInstance             nstInst;
     SNstInstance            snstInst;
 
+    IERC20 nst;
+
     /**********************************************************************************************/
     /*** Allocation system deployments                                                          ***/
     /**********************************************************************************************/
+
+    address buffer;
+    address vault;
+    address nstJoin;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
@@ -73,16 +96,16 @@ contract ForkTestBase is DssTest {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"), 20484600);  // August 8, 2024
 
         dss          = MCD.loadFromChainlog(LOG);
-        PAUSE_PROXY  = ChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
-        ILK_REGISTRY = ChainlogLike(LOG).getAddress("ILK_REGISTRY");
-        USDC         = ChainlogLike(LOG).getAddress("USDC");
+        PAUSE_PROXY  = IChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
+        ILK_REGISTRY = IChainlogLike(LOG).getAddress("ILK_REGISTRY");
+        USDC         = IChainlogLike(LOG).getAddress("USDC");
 
         /*** Step 1: Deploy NST, sNST and allocation system ***/
 
         nstInst = NstDeploy.deploy(
             address(this),
             PAUSE_PROXY,
-            ChainlogLike(LOG).getAddress("MCD_JOIN_DAI")
+            IChainlogLike(LOG).getAddress("MCD_JOIN_DAI")
         );
 
         snstInst = SNstDeploy.deploy({
@@ -143,8 +166,26 @@ contract ForkTestBase is DssTest {
 
         /*** Step 4: Configure ALM system in allocation system ***/
 
-        vm.prank(SPARK_PROXY);
+        vm.startPrank(SPARK_PROXY);
+
         IVaultLike(ilkInst.vault).rely(address(almProxy));
+
+        ethereumController.grantRole(FREEZER, freezer);
+        ethereumController.grantRole(RELAYER, relayer);
+
+        almProxy.grantRole(FREEZER,    freezer);
+        almProxy.grantRole(CONTROLLER, address(ethereumController));
+
+        IBufferLike(ilkInst.buffer).approve(nstInst.nst, address(almProxy), type(uint256).max);
+
+        vm.stopPrank();
+
+        /*** Step 5: Perform casting for easier testing ***/
+
+        nst     = IERC20(address(nstInst.nst));
+        nstJoin = nstInst.nstJoin;
+        vault   = ilkInst.vault;
+        buffer  = ilkInst.buffer;
     }
 
     function test_base() public {
