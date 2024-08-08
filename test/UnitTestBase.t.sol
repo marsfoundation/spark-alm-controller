@@ -19,8 +19,8 @@ import { ERC1967Proxy } from "lib/openzeppelin-contracts/contracts/proxy/ERC1967
 
 import { SNst } from "lib/sdai/src/SNst.sol";
 
-import { ALMProxy }     from "src/ALMProxy.sol";
-import { L1Controller } from "src/L1Controller.sol";
+import { ALMProxy }           from "src/ALMProxy.sol";
+import { EthereumController } from "src/EthereumController.sol";
 
 import { MockJug }    from "test/mocks/MockJug.sol";
 import { MockPocket } from "test/mocks/MockPocket.sol";
@@ -52,10 +52,10 @@ contract UnitTestBase is Test {
 
     MockERC20 nst;
     MockERC20 usdc;
-    SNst      sNst;
+    SNst      snst;
 
-    ALMProxy     almProxy;
-    L1Controller l1Controller;
+    ALMProxy           almProxy;
+    EthereumController ethereumController;
 
     address vow = makeAddr("vow");
 
@@ -70,9 +70,9 @@ contract UnitTestBase is Test {
 
         nstJoin = new NstJoin(address(vat), address(nst));
 
-        address sNstImpl = address(new SNst(address(nstJoin), vow));  // No calls made to vow
+        address snstImpl = address(new SNst(address(nstJoin), vow));  // No calls made to vow
 
-        sNst = SNst(address(new ERC1967Proxy(sNstImpl, abi.encodeCall(SNst.initialize, ()))));
+        snst = SNst(address(new ERC1967Proxy(snstImpl, abi.encodeCall(SNst.initialize, ()))));
 
         buffer = new AllocatorBuffer();
         roles  = new AllocatorRoles();
@@ -83,14 +83,13 @@ contract UnitTestBase is Test {
 
         almProxy = new ALMProxy(admin);
 
-        l1Controller = new L1Controller(
+        ethereumController = new EthereumController(
             admin,
             address(almProxy),
             address(vault),
             address(buffer),
-            address(sNst),
-            address(psm),
-            address(usdc)
+            address(snst),
+            address(psm)
         );
 
         deal(address(usdc), address(pocket), 100e6);  // Gem is held in pocket
@@ -100,23 +99,24 @@ contract UnitTestBase is Test {
 
         buffer.approve(address(nst), address(almProxy), type(uint256).max);
 
+        // TODO: Use initialization library for this
         psm.kiss(address(almProxy));  // Allow using no fee functionality
 
         // Done with spell by pause proxy
         vm.startPrank(admin);
 
-        l1Controller.grantRole(FREEZER, freezer);
-        l1Controller.grantRole(RELAYER, relayer);
+        ethereumController.grantRole(FREEZER, freezer);
+        ethereumController.grantRole(RELAYER, relayer);
 
         almProxy.grantRole(FREEZER,    freezer);
-        almProxy.grantRole(CONTROLLER, address(l1Controller));
+        almProxy.grantRole(CONTROLLER, address(ethereumController));
 
         vm.stopPrank();
 
         buffer.approve(address(nst), address(vault), type(uint256).max);
 
         vat.rely(address(jug));
-        vat.rely(address(sNst));
+        vat.rely(address(snst));
         vat.init(ilk);
         vat.file("Line", 1e9 * 1e45);
         vat.file(ilk, "line", 1e9 * 1e45);  // Use 1 billion lines for testing

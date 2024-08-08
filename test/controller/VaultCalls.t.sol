@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import "test/UnitTestBase.t.sol";
 
-contract L1ControllerMintNSTTests is UnitTestBase {
+contract EthereumControllerMintNSTTests is UnitTestBase {
 
     function test_mintNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -11,16 +11,16 @@ contract L1ControllerMintNSTTests is UnitTestBase {
             address(this),
             RELAYER
         ));
-        l1Controller.mintNST(1e18);
+        ethereumController.mintNST(1e18);
     }
 
     function test_mintNST_frozen() external {
         vm.prank(freezer);
-        l1Controller.freeze();
+        ethereumController.freeze();
 
         vm.prank(relayer);
-        vm.expectRevert("L1Controller/not-active");
-        l1Controller.mintNST(1e18);
+        vm.expectRevert("EthereumController/not-active");
+        ethereumController.mintNST(1e18);
     }
 
     function test_mintNST() external {
@@ -37,7 +37,7 @@ contract L1ControllerMintNSTTests is UnitTestBase {
         assertEq(nst.totalSupply(),                0);
 
         vm.prank(relayer);
-        l1Controller.mintNST(1e18);
+        ethereumController.mintNST(1e18);
 
         ( ink, art ) = vat.urns(ilk, address(vault));
         ( Art,,,, )  = vat.ilks(ilk);
@@ -54,7 +54,7 @@ contract L1ControllerMintNSTTests is UnitTestBase {
 
 }
 
-contract L1ControllerBurnNSTTests is UnitTestBase {
+contract EthereumControllerBurnNSTTests is UnitTestBase {
 
     function test_burnNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -62,22 +62,22 @@ contract L1ControllerBurnNSTTests is UnitTestBase {
             address(this),
             RELAYER
         ));
-        l1Controller.burnNST(1e18);
+        ethereumController.burnNST(1e18);
     }
 
     function test_burnNST_frozen() external {
         vm.prank(freezer);
-        l1Controller.freeze();
+        ethereumController.freeze();
 
         vm.prank(relayer);
-        vm.expectRevert("L1Controller/not-active");
-        l1Controller.burnNST(1e18);
+        vm.expectRevert("EthereumController/not-active");
+        ethereumController.burnNST(1e18);
     }
 
     function test_burnNST() external {
         // Setup
         vm.prank(relayer);
-        l1Controller.mintNST(1e18);
+        ethereumController.mintNST(1e18);
 
         ( uint256 ink, uint256 art ) = vat.urns(ilk, address(vault));
         ( uint256 Art,,,, )          = vat.ilks(ilk);
@@ -92,7 +92,7 @@ contract L1ControllerBurnNSTTests is UnitTestBase {
         assertEq(nst.totalSupply(),                1e18);
 
         vm.prank(relayer);
-        l1Controller.burnNST(1e18);
+        ethereumController.burnNST(1e18);
 
         ( ink, art ) = vat.urns(ilk, address(vault));
         ( Art,,,, )  = vat.ilks(ilk);

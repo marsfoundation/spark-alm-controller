@@ -7,7 +7,7 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 
 import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 
-interface ISNstLike {
+interface ISNSTLike {
     function deposit(uint256 assets, address receiver) external;
     function nst() external view returns(address);
 }
@@ -17,13 +17,14 @@ interface IVaultLike {
     function wipe(uint256 nstAmount) external;
 }
 
-interface IPsmLike {
+interface IPSMLike {
     function buyGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 daiInnstAmount);
+    function gem() external view returns(address);
     function sellGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 daiOutnstAmount);
     function to18ConversionFactor() external view returns (uint256);
 }
 
-contract L1Controller is AccessControl {
+contract EthereumController is AccessControl {
 
     // TODO: Inherit and override interface
 
@@ -38,8 +39,8 @@ contract L1Controller is AccessControl {
 
     IALMProxy  public immutable proxy;
     IVaultLike public immutable vault;
-    ISNstLike  public immutable sNst;
-    IPsmLike   public immutable psm;
+    ISNSTLike  public immutable snst;
+    IPSMLike   public immutable psm;
     IERC20     public immutable nst;
     IERC20     public immutable usdc;
 
@@ -54,19 +55,18 @@ contract L1Controller is AccessControl {
         address proxy_,
         address vault_,
         address buffer_,
-        address sNst_,
-        address psm_,
-        address usdc_
+        address snst_,
+        address psm_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
         buffer = buffer_;
         proxy  = IALMProxy(proxy_);
         vault  = IVaultLike(vault_);
-        sNst   = ISNstLike(sNst_);
-        psm    = IPsmLike(psm_);
-        usdc   = IERC20(usdc_);
-        nst    = IERC20(ISNstLike(sNst_).nst());
+        snst   = ISNSTLike(snst_);
+        psm    = IPSMLike(psm_);
+        usdc   = IERC20(psm.gem());
+        nst    = IERC20(snst.nst());
 
         active = true;
     }
@@ -76,7 +76,7 @@ contract L1Controller is AccessControl {
     /**********************************************************************************************/
 
     modifier isActive {
-        require(active, "L1Controller/not-active");
+        require(active, "EthereumController/not-active");
         _;
     }
 
@@ -132,13 +132,13 @@ contract L1Controller is AccessControl {
         // Approve NST to sNST from the proxy (assumes the proxy has enough NST)
         proxy.doCall(
             address(nst),
-            abi.encodeCall(nst.approve, (address(sNst), nstAmount))
+            abi.encodeCall(nst.approve, (address(snst), nstAmount))
         );
 
         // Deposit NST into sNST, proxy receives sNST shares
         proxy.doCall(
-            address(sNst),
-            abi.encodeCall(sNst.deposit, (nstAmount, address(proxy)))
+            address(snst),
+            abi.encodeCall(snst.deposit, (nstAmount, address(proxy)))
         );
     }
 
