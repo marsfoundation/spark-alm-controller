@@ -45,6 +45,10 @@ interface IVaultLike {
 
 contract ForkTestBase is DssTest {
 
+    /**********************************************************************************************/
+    /*** Mainnet addresses                                                                      ***/
+    /**********************************************************************************************/
+
     bytes32 constant ilk = "ILK-A";
 
     uint256 constant INK = 1e12 * 1e18;  // Ink initialization amount
@@ -73,7 +77,7 @@ contract ForkTestBase is DssTest {
     address USDC;
 
     /**********************************************************************************************/
-    /*** NST addresses to be deployed                                                           ***/
+    /*** Deployment instances                                                                   ***/
     /**********************************************************************************************/
 
     AllocatorSharedInstance sharedInst;
@@ -81,13 +85,20 @@ contract ForkTestBase is DssTest {
     NstInstance             nstInst;
     SNstInstance            snstInst;
 
+    /**********************************************************************************************/
+    /*** ALM system deployments                                                                 ***/
+    /**********************************************************************************************/
+
+    ALMProxy           almProxy;
+    EthereumController ethereumController;
+
+    /**********************************************************************************************/
+    /*** Casted addresses for testing                                                           ***/
+    /**********************************************************************************************/
+
     IERC20 nst;
     IERC20 usdc;
     ISNst  snst;
-
-    /**********************************************************************************************/
-    /*** Allocation system deployments                                                          ***/
-    /**********************************************************************************************/
 
     address buffer;
     address vault;
@@ -95,11 +106,8 @@ contract ForkTestBase is DssTest {
     address pocket;
 
     /**********************************************************************************************/
-    /*** ALM system deployments                                                                 ***/
+    /*** Test setup                                                                             ***/
     /**********************************************************************************************/
-
-    ALMProxy           almProxy;
-    EthereumController ethereumController;
 
     function setUp() public virtual {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"), 20484600);  // August 8, 2024
@@ -208,10 +216,6 @@ contract ForkTestBase is DssTest {
         IPSMLike(PSM).kiss(address(almProxy));  // Allow using no fee functionality
 
         vm.label(address(almProxy), "ALMProxy");
-    }
-
-    function test_base() public {
-
     }
 
 }
