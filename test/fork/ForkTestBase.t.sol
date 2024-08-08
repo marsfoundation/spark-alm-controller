@@ -34,6 +34,11 @@ interface IBufferLike {
     function approve(address, address, uint256) external;
 }
 
+interface IPSMLike {
+    function pocket() external view returns (address);
+    function kiss(address) external;
+}
+
 interface IVaultLike {
     function rely(address) external;
 }
@@ -77,6 +82,7 @@ contract ForkTestBase is DssTest {
     SNstInstance            snstInst;
 
     IERC20 nst;
+    IERC20 usdc;
     ISNst  snst;
 
     /**********************************************************************************************/
@@ -86,6 +92,7 @@ contract ForkTestBase is DssTest {
     address buffer;
     address vault;
     address nstJoin;
+    address pocket;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
@@ -185,10 +192,22 @@ contract ForkTestBase is DssTest {
         /*** Step 5: Perform casting for easier testing ***/
 
         nst     = IERC20(address(nstInst.nst));
+        usdc    = IERC20(USDC);
         snst    = ISNst(address(snstInst.sNst));
         nstJoin = nstInst.nstJoin;
         vault   = ilkInst.vault;
         buffer  = ilkInst.buffer;
+        pocket  = IPSMLike(PSM).pocket();
+
+        /*** Step 6: Seed PSM liquidity and configure ***/
+
+        deal(address(usdc), address(pocket), 100e6);  // Gem is held in pocket
+        deal(address(nst),  address(PSM),    100e18);
+
+        vm.prank(PAUSE_PROXY);
+        IPSMLike(PSM).kiss(address(almProxy));  // Allow using no fee functionality
+
+        vm.label(address(almProxy), "ALMProxy");
     }
 
     function test_base() public {
