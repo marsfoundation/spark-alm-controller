@@ -16,11 +16,19 @@ import { NstDeploy }   from "nst/deploy/NstDeploy.sol";
 import { NstInit }     from "nst/deploy/NstInit.sol";
 import { NstInstance } from "nst/deploy/NstInstance.sol";
 
+import { SNstDeploy }           from "sdai/deploy/SNstDeploy.sol";
+import { SNstInit, SNstConfig } from "sdai/deploy/SNstInit.sol";
+import { SNstInstance }         from "sdai/deploy/SNstInstance.sol";
+
 import { ALMProxy }           from "src/ALMProxy.sol";
 import { EthereumController } from "src/EthereumController.sol";
 
 interface ChainlogLike {
     function getAddress(bytes32) external view returns (address);
+}
+
+interface IVaultLike {
+    function rely(address) external;
 }
 
 contract ForkTestBase is DssTest {
@@ -48,6 +56,7 @@ contract ForkTestBase is DssTest {
     AllocatorSharedInstance sharedInst;
     AllocatorIlkInstance    ilkInst;
     NstInstance             nstInst;
+    SNstInstance            snstInst;
 
     /**********************************************************************************************/
     /*** Allocation system deployments                                                          ***/
@@ -68,13 +77,19 @@ contract ForkTestBase is DssTest {
         ILK_REGISTRY = ChainlogLike(LOG).getAddress("ILK_REGISTRY");
         USDC         = ChainlogLike(LOG).getAddress("USDC");
 
-        // Step 1: Deploy NST and allocation system
+        /*** Step 1: Deploy NST, sNST and allocation system ***/
 
         nstInst = NstDeploy.deploy(
             address(this),
             PAUSE_PROXY,
             ChainlogLike(LOG).getAddress("MCD_JOIN_DAI")
         );
+
+        snstInst = SNstDeploy.deploy({
+            deployer : address(this),
+            owner    : PAUSE_PROXY,
+            nstJoin  : nstInst.nstJoin
+        });
 
         sharedInst = AllocatorDeploy.deployShared(address(this), PAUSE_PROXY);
 
@@ -86,36 +101,50 @@ contract ForkTestBase is DssTest {
             nstJoin  : nstInst.nstJoin
         });
 
-        // Step 2: Deploy ALM system
+        /*** Step 2: Configure NST, sNST and allocation system ***/
 
-        almProxy = new ALMProxy(admin);
-
-        ethereumController = new EthereumController(
-            admin,
-            address(almProxy),
-            address(ilkInst.vault),
-            address(ilkInst.buffer),
-            address(snst),
-            address(psm)
-        );
+        SNstConfig memory snstConfig = SNstConfig({
+            nstJoin: address(nstInst.nstJoin),
+            nst: address(nstInst.nst),
+            nsr: 1000000001547125957863212448
+        });
 
         AllocatorIlkConfig memory ilkConfig = AllocatorIlkConfig({
-            ilk :            ILK,
-            duty :           1000000001243680656318820312,
-            maxLine :        100_000_000 * RAD,
-            gap :            10_000_000 * RAD,
-            ttl :            1 days,
+            ilk            : ILK,
+            duty           : 1000000001243680656318820312,
+            maxLine        : 100_000_000 * RAD,
+            gap            : 10_000_000 * RAD,
+            ttl            : 1 days,
             allocatorProxy : SPARK_PROXY,
-            ilkRegistry :    ILK_REGISTRY
+            ilkRegistry    : ILK_REGISTRY
         });
 
         vm.startPrank(PAUSE_PROXY);
 
         NstInit.init(dss, nstInst);
+        SNstInit.init(dss, snstInst, snstConfig);
         AllocatorInit.initShared(dss, sharedInst);
         AllocatorInit.initIlk(dss, sharedInst, ilkInst, ilkConfig);
 
         vm.stopPrank();
+
+        /*** Step 3: Deploy ALM system ***/
+
+        almProxy = new ALMProxy(SPARK_PROXY);
+
+        ethereumController = new EthereumController({
+            admin_  : SPARK_PROXY,
+            proxy_  : address(almProxy),
+            vault_  : ilkInst.vault,
+            buffer_ : ilkInst.buffer,
+            snst_   : snstInst.sNst,
+            psm_    : PSM
+        });
+
+        /*** Step 4: Configure ALM system in allocation system ***/
+
+        vm.prank(SPARK_PROXY);
+        IVaultLike(ilkInst.vault).rely(address(almProxy));
     }
 
     function test_base() public {

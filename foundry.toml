@@ -7,7 +7,8 @@ optimizer = true
 optimizer_runs = 200
 remappings = [
     "dss-test/=lib/dss-allocator/lib/dss-test/src/",
-    "nst/=lib/nst/"
+    "nst/=lib/nst/",
+    "sdai/=lib/sdai/"
 ]
 
 [fuzz]
