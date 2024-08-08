@@ -13,3 +13,6 @@
 [submodule "lib/nst"]
 	path = lib/nst
 	url = https://github.com/makerdao/nst
+[submodule "lib/sdai"]
+	path = lib/sdai
+	url = https://github.com/makerdao/sdai
