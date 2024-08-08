@@ -55,6 +55,8 @@ contract ForkTestBase is DssTest {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
+    address constant allocatorProxy = address(0x1);  // TODO: Change
+
     ALMProxy           almProxy;
     EthereumController ethereumController;
 
@@ -72,10 +74,6 @@ contract ForkTestBase is DssTest {
             ChainlogLike(LOG).getAddress("MCD_JOIN_DAI")
         );
 
-        vm.startPrank(PAUSE_PROXY);
-        NstInit.init(dss, nstInst);
-        vm.stopPrank();
-
         sharedInst = AllocatorDeploy.deployShared(address(this), PAUSE_PROXY);
 
         ilkInst = AllocatorDeploy.deployIlk({
@@ -85,6 +83,23 @@ contract ForkTestBase is DssTest {
             ilk          : ILK,
             nstJoin      : nstInst.nstJoin
         });
+
+        AllocatorIlkConfig memory ilkConfig = AllocatorIlkConfig({
+            ilk :            ILK,
+            duty :           1000000001243680656318820312,
+            maxLine :        100_000_000 * RAD,
+            gap :            10_000_000 * RAD,
+            ttl :            1 days,
+            allocatorProxy : allocatorProxy,
+            ilkRegistry :    ILK_REGISTRY
+        });
+
+        vm.startPrank(PAUSE_PROXY);
+        NstInit.init(dss, nstInst);
+        AllocatorInit.initShared(dss, sharedInst);
+        AllocatorInit.initIlk(dss, sharedInst, ilkInst, ilkConfig);
+
+        vm.stopPrank();
     }
 
     function test_base() public {
