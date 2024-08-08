@@ -18,6 +18,7 @@ import { NstDeploy }   from "nst/deploy/NstDeploy.sol";
 import { NstInit }     from "nst/deploy/NstInit.sol";
 import { NstInstance } from "nst/deploy/NstInstance.sol";
 
+import { ISNst }                from "sdai/src/ISNst.sol";
 import { SNstDeploy }           from "sdai/deploy/SNstDeploy.sol";
 import { SNstInit, SNstConfig } from "sdai/deploy/SNstInit.sol";
 import { SNstInstance }         from "sdai/deploy/SNstInstance.sol";
@@ -76,6 +77,7 @@ contract ForkTestBase is DssTest {
     SNstInstance            snstInst;
 
     IERC20 nst;
+    ISNst  snst;
 
     /**********************************************************************************************/
     /*** Allocation system deployments                                                          ***/
@@ -183,6 +185,7 @@ contract ForkTestBase is DssTest {
         /*** Step 5: Perform casting for easier testing ***/
 
         nst     = IERC20(address(nstInst.nst));
+        snst    = ISNst(address(snstInst.sNst));
         nstJoin = nstInst.nstJoin;
         vault   = ilkInst.vault;
         buffer  = ilkInst.buffer;
