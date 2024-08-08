@@ -31,7 +31,9 @@ contract ForkTestBase is DssTest {
     /*** Mainnet addresses                                                                      ***/
     /**********************************************************************************************/
 
-    address constant LOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
+    address constant LOG         = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
+    address constant SPARK_PROXY = 0x3300f198988e4C9C63F75dF86De36421f06af8c4;
+    address constant PSM         = 0xf6e72Db5454dd049d0788e411b06CfAF16853042;  // Lite PSM
 
     DssInstance dss;  // Mainnet DSS
 
@@ -55,8 +57,6 @@ contract ForkTestBase is DssTest {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    address constant allocatorProxy = address(0x1);  // TODO: Change
-
     ALMProxy           almProxy;
     EthereumController ethereumController;
 
@@ -68,6 +68,8 @@ contract ForkTestBase is DssTest {
         ILK_REGISTRY = ChainlogLike(LOG).getAddress("ILK_REGISTRY");
         USDC         = ChainlogLike(LOG).getAddress("USDC");
 
+        // Step 1: Deploy NST and allocation system
+
         nstInst = NstDeploy.deploy(
             address(this),
             PAUSE_PROXY,
@@ -77,12 +79,25 @@ contract ForkTestBase is DssTest {
         sharedInst = AllocatorDeploy.deployShared(address(this), PAUSE_PROXY);
 
         ilkInst = AllocatorDeploy.deployIlk({
-            deployer     : address(this),
-            owner        : PAUSE_PROXY,
-            roles        : sharedInst.roles,
-            ilk          : ILK,
-            nstJoin      : nstInst.nstJoin
+            deployer : address(this),
+            owner    : PAUSE_PROXY,
+            roles    : sharedInst.roles,
+            ilk      : ILK,
+            nstJoin  : nstInst.nstJoin
         });
+
+        // Step 2: Deploy ALM system
+
+        almProxy = new ALMProxy(admin);
+
+        ethereumController = new EthereumController(
+            admin,
+            address(almProxy),
+            address(ilkInst.vault),
+            address(ilkInst.buffer),
+            address(snst),
+            address(psm)
+        );
 
         AllocatorIlkConfig memory ilkConfig = AllocatorIlkConfig({
             ilk :            ILK,
@@ -90,7 +105,7 @@ contract ForkTestBase is DssTest {
             maxLine :        100_000_000 * RAD,
             gap :            10_000_000 * RAD,
             ttl :            1 days,
-            allocatorProxy : allocatorProxy,
+            allocatorProxy : SPARK_PROXY,
             ilkRegistry :    ILK_REGISTRY
         });
 
