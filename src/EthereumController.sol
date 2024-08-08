@@ -10,6 +10,7 @@ import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 interface ISNSTLike {
     function deposit(uint256 assets, address receiver) external;
     function nst() external view returns(address);
+    function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares);
 }
 
 interface IVaultLike {
@@ -139,6 +140,14 @@ contract EthereumController is AccessControl {
         proxy.doCall(
             address(snst),
             abi.encodeCall(snst.deposit, (nstAmount, address(proxy)))
+        );
+    }
+
+    function swapSNSTToNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
+        // Withdraw NST from sNST, assumes proxy has adequate sNST shares
+        proxy.doCall(
+            address(snst),
+            abi.encodeCall(snst.withdraw, (nstAmount, address(proxy), address(proxy)))
         );
     }
 
