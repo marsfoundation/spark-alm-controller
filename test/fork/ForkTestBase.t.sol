@@ -39,7 +39,7 @@ interface IVaultLike {
 
 contract ForkTestBase is DssTest {
 
-    bytes32 constant ILK = "ILK-A";
+    bytes32 constant ilk = "ILK-A";
 
     uint256 constant INK = 1e12 * 1e18;  // Ink initialization amount
 
@@ -120,7 +120,7 @@ contract ForkTestBase is DssTest {
             deployer : address(this),
             owner    : PAUSE_PROXY,
             roles    : sharedInst.roles,
-            ilk      : ILK,
+            ilk      : ilk,
             nstJoin  : nstInst.nstJoin
         });
 
@@ -133,7 +133,7 @@ contract ForkTestBase is DssTest {
         });
 
         AllocatorIlkConfig memory ilkConfig = AllocatorIlkConfig({
-            ilk            : ILK,
+            ilk            : ilk,
             duty           : 1000000001243680656318820312,
             maxLine        : 100_000_000 * RAD,
             gap            : 10_000_000 * RAD,
