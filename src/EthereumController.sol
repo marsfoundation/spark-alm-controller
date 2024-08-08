@@ -7,6 +7,16 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 
 import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 
+interface ICCTPLike {
+    function depositForBurnWithCaller(
+        uint256 amount,
+        uint32 destinationDomain,
+        bytes32 mintRecipient,
+        address burnToken,
+        bytes32 destinationCaller
+    ) external returns (uint64 nonce);
+}
+
 interface ISNSTLike {
     function deposit(uint256 assets, address receiver) external;
     function nst() external view returns(address);
