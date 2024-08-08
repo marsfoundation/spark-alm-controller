@@ -95,6 +95,7 @@ contract ForkTestBase is DssTest {
         });
 
         vm.startPrank(PAUSE_PROXY);
+
         NstInit.init(dss, nstInst);
         AllocatorInit.initShared(dss, sharedInst);
         AllocatorInit.initIlk(dss, sharedInst, ilkInst, ilkConfig);
