@@ -120,7 +120,7 @@ contract ForkTestBase is DssTest {
     /**********************************************************************************************/
 
     function setUp() public virtual {
-        vm.createSelectFork(vm.envString("ETH_RPC_URL"), 20484600);  // August 8, 2024
+        vm.createSelectFork(getChain('mainnet').rpcUrl, 20484600);  // August 8, 2024
 
         dss          = MCD.loadFromChainlog(LOG);
         DAI          = IChainlogLike(LOG).getAddress("MCD_DAI");
