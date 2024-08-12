@@ -55,9 +55,9 @@ contract ForkTestBase is DssTest {
 
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
-    bytes32 constant CONTROLLER = keccak256("CONTROLLER");
-    bytes32 constant FREEZER    = keccak256("FREEZER");
-    bytes32 constant RELAYER    = keccak256("RELAYER");
+    bytes32 CONTROLLER;
+    bytes32 FREEZER;
+    bytes32 RELAYER;
 
     address freezer = makeAddr("freezer");
     address relayer = makeAddr("relayer");
@@ -206,6 +206,10 @@ contract ForkTestBase is DssTest {
         vault   = ilkInst.vault;
         buffer  = ilkInst.buffer;
         pocket  = IPSMLike(PSM).pocket();
+
+        CONTROLLER = almProxy.CONTROLLER();
+        FREEZER    = ethereumController.FREEZER();
+        RELAYER    = ethereumController.RELAYER();
 
         /*** Step 6: Seed PSM liquidity and configure ***/
 
