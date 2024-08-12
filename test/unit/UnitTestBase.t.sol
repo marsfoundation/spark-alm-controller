@@ -41,9 +41,9 @@ contract UnitTestBase is Test {
             address(almProxy),
             makeAddr("vault"),
             makeAddr("buffer"),
-            address(snst),
             address(psm),
-            address(daiNst)
+            address(daiNst),
+            address(snst)
         );
 
         // Done with spell by pause proxy

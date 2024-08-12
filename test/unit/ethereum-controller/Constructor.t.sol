@@ -12,23 +12,24 @@ contract EthereumControllerConstructorTests is UnitTestBase {
             address(almProxy),
             makeAddr("vault"),
             makeAddr("buffer"),
-            address(snst),
             address(psm),
-            address(daiNst)
+            address(daiNst),
+            address(snst)
         );
 
         assertEq(newEthereumController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
-        assertEq(newEthereumController.active(),                           true);
 
-        assertEq(address(newEthereumController.buffer()), makeAddr("buffer"));
         assertEq(address(newEthereumController.proxy()),  address(almProxy));
         assertEq(address(newEthereumController.vault()),  makeAddr("vault"));
-        assertEq(address(newEthereumController.snst()),   address(snst));
+        assertEq(address(newEthereumController.buffer()), makeAddr("buffer"));
         assertEq(address(newEthereumController.psm()),    address(psm));
         assertEq(address(newEthereumController.daiNst()), address(daiNst));
+        assertEq(address(newEthereumController.snst()),   address(snst));
         assertEq(address(newEthereumController.dai()),    makeAddr("dai"));   // Dai param in MockDaiNst
         assertEq(address(newEthereumController.usdc()),   makeAddr("usdc"));  // Gem param in MockPsm
         assertEq(address(newEthereumController.nst()),    makeAddr("nst"));   // Nst param in MockSNst
+
+        assertEq(newEthereumController.active(), true);
     }
 
 }

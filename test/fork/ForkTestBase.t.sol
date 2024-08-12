@@ -71,8 +71,8 @@ contract ForkTestBase is DssTest {
     /**********************************************************************************************/
 
     address constant LOG         = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
-    address constant SPARK_PROXY = 0x3300f198988e4C9C63F75dF86De36421f06af8c4;
     address constant PSM         = 0xf6e72Db5454dd049d0788e411b06CfAF16853042;  // Lite PSM
+    address constant SPARK_PROXY = 0x3300f198988e4C9C63F75dF86De36421f06af8c4;
 
     DssInstance dss;  // Mainnet DSS
 
@@ -85,8 +85,8 @@ contract ForkTestBase is DssTest {
     /*** Deployment instances                                                                   ***/
     /**********************************************************************************************/
 
-    AllocatorSharedInstance sharedInst;
     AllocatorIlkInstance    ilkInst;
+    AllocatorSharedInstance sharedInst;
     NstInstance             nstInst;
     SNstInstance            snstInst;
 
@@ -107,10 +107,10 @@ contract ForkTestBase is DssTest {
     ISNst  snst;
 
     address buffer;
-    address vault;
+    address daiNst;
     address nstJoin;
     address pocket;
-    address daiNst;
+    address vault;
 
     /**********************************************************************************************/
     /*** Test setup                                                                             ***/
@@ -120,10 +120,10 @@ contract ForkTestBase is DssTest {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"), 20484600);  // August 8, 2024
 
         dss          = MCD.loadFromChainlog(LOG);
-        PAUSE_PROXY  = IChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
-        ILK_REGISTRY = IChainlogLike(LOG).getAddress("ILK_REGISTRY");
-        USDC         = IChainlogLike(LOG).getAddress("USDC");
         DAI          = IChainlogLike(LOG).getAddress("MCD_DAI");
+        ILK_REGISTRY = IChainlogLike(LOG).getAddress("ILK_REGISTRY");
+        PAUSE_PROXY  = IChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
+        USDC         = IChainlogLike(LOG).getAddress("USDC");
 
         /*** Step 1: Deploy NST, sNST and allocation system ***/
 
@@ -185,9 +185,9 @@ contract ForkTestBase is DssTest {
             proxy_  : address(almProxy),
             vault_  : ilkInst.vault,
             buffer_ : ilkInst.buffer,
-            snst_   : snstInst.sNst,
             psm_    : PSM,
-            daiNst_ : nstInst.daiNst
+            daiNst_ : nstInst.daiNst,
+            snst_   : snstInst.sNst
         });
 
         CONTROLLER = almProxy.CONTROLLER();
@@ -215,15 +215,15 @@ contract ForkTestBase is DssTest {
 
         /*** Step 5: Perform casting for easier testing, cache values from mainnet ***/
 
-        dai     = IERC20(DAI);
-        nst     = IERC20(address(nstInst.nst));
-        usdc    = IERC20(USDC);
-        snst    = ISNst(address(snstInst.sNst));
-        nstJoin = nstInst.nstJoin;
-        vault   = ilkInst.vault;
         buffer  = ilkInst.buffer;
-        pocket  = IPSMLike(PSM).pocket();
+        dai     = IERC20(DAI);
         daiNst  = nstInst.daiNst;
+        nst     = IERC20(address(nstInst.nst));
+        nstJoin = nstInst.nstJoin;
+        pocket  = IPSMLike(PSM).pocket();
+        snst    = ISNst(address(snstInst.sNst));
+        usdc    = IERC20(USDC);
+        vault   = ilkInst.vault;
 
         DAI_BAL_PSM  = dai.balanceOf(PSM);
         DAI_SUPPLY   = dai.totalSupply();

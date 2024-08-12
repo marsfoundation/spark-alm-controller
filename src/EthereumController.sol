@@ -45,13 +45,14 @@ contract EthereumController is AccessControl {
     address public immutable buffer;
 
     IALMProxy   public immutable proxy;
-    IVaultLike  public immutable vault;
-    ISNSTLike   public immutable snst;
-    IPSMLike    public immutable psm;
     IDaiNstLike public immutable daiNst;
-    IERC20      public immutable dai;
-    IERC20      public immutable nst;
-    IERC20      public immutable usdc;
+    IPSMLike    public immutable psm;
+    IVaultLike  public immutable vault;
+
+    IERC20    public immutable dai;
+    IERC20    public immutable nst;
+    IERC20    public immutable usdc;
+    ISNSTLike public immutable snst;
 
     bool public active;
 
@@ -64,21 +65,22 @@ contract EthereumController is AccessControl {
         address proxy_,
         address vault_,
         address buffer_,
-        address snst_,
         address psm_,
-        address daiNst_
+        address daiNst_,
+        address snst_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
-        buffer = buffer_;
         proxy  = IALMProxy(proxy_);
         vault  = IVaultLike(vault_);
-        snst   = ISNSTLike(snst_);
+        buffer = buffer_;
         psm    = IPSMLike(psm_);
         daiNst = IDaiNstLike(daiNst_);
-        dai    = IERC20(daiNst.dai());
-        usdc   = IERC20(psm.gem());
-        nst    = IERC20(snst.nst());
+
+        snst = ISNSTLike(snst_);
+        dai  = IERC20(daiNst.dai());
+        usdc = IERC20(psm.gem());
+        nst  = IERC20(snst.nst());
 
         active = true;
     }
