@@ -53,6 +53,9 @@ contract ForkTestBase is DssTest {
 
     uint256 constant INK = 1e12 * 1e18;  // Ink initialization amount
 
+    uint256 constant SEVEN_PCT_APY = 1.000000002145441671308778766e27;  // 7% APY (current DSR)
+    uint256 constant EIGHT_PCT_APY = 1.000000002440418608258400030e27;  // 8% APY (current DSR + 1%)
+
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     bytes32 CONTROLLER;
@@ -154,15 +157,15 @@ contract ForkTestBase is DssTest {
         SNstConfig memory snstConfig = SNstConfig({
             nstJoin: address(nstInst.nstJoin),
             nst: address(nstInst.nst),
-            nsr: 1000000001547125957863212448
+            nsr: SEVEN_PCT_APY
         });
 
         AllocatorIlkConfig memory ilkConfig = AllocatorIlkConfig({
             ilk            : ilk,
-            duty           : 1000000001243680656318820312,
+            duty           : EIGHT_PCT_APY,
             maxLine        : 100_000_000 * RAD,
-            gap            : 10_000_000 * RAD,
-            ttl            : 1 days,
+            gap            : 5_000_000 * RAD,
+            ttl            : 6 hours,
             allocatorProxy : SPARK_PROXY,
             ilkRegistry    : ILK_REGISTRY
         });
@@ -203,7 +206,6 @@ contract ForkTestBase is DssTest {
         ethereumController.grantRole(FREEZER, freezer);
         ethereumController.grantRole(RELAYER, relayer);
 
-        almProxy.grantRole(FREEZER,    freezer);
         almProxy.grantRole(CONTROLLER, address(ethereumController));
 
         IBufferLike(ilkInst.buffer).approve(nstInst.nst, address(almProxy), type(uint256).max);

@@ -52,7 +52,6 @@ contract UnitTestBase is Test {
         ethereumController.grantRole(FREEZER, freezer);
         ethereumController.grantRole(RELAYER, relayer);
 
-        almProxy.grantRole(FREEZER,    freezer);
         almProxy.grantRole(CONTROLLER, address(ethereumController));
 
         vm.stopPrank();

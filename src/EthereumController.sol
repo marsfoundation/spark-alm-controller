@@ -169,24 +169,24 @@ contract EthereumController is AccessControl {
     /**********************************************************************************************/
 
     function swapNSTToUSDC(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
-        uint256 wadAmount = usdcAmount * psm.to18ConversionFactor();
+        uint256 nstAmount = usdcAmount * psm.to18ConversionFactor();
 
         // Approve NST to DaiNst migrator from the proxy (assumes the proxy has enough NST)
         proxy.doCall(
             address(nst),
-            abi.encodeCall(nst.approve, (address(daiNst), wadAmount))
+            abi.encodeCall(nst.approve, (address(daiNst), nstAmount))
         );
 
         // Swap NST to DAI 1:1
         proxy.doCall(
             address(daiNst),
-            abi.encodeCall(daiNst.nstToDai, (address(proxy), wadAmount))
+            abi.encodeCall(daiNst.nstToDai, (address(proxy), nstAmount))
         );
 
         // Approve DAI to PSM from the proxy (assumes the proxy has enough DAI)
         proxy.doCall(
             address(dai),
-            abi.encodeCall(dai.approve, (address(psm), wadAmount))
+            abi.encodeCall(dai.approve, (address(psm), nstAmount))
         );
 
         // Swap NST to USDC through the PSM
@@ -197,7 +197,7 @@ contract EthereumController is AccessControl {
     }
 
     function swapUSDCToNST(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
-        uint256 wadAmount = usdcAmount * psm.to18ConversionFactor();
+        uint256 nstAmount = usdcAmount * psm.to18ConversionFactor();
 
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
         proxy.doCall(
@@ -214,13 +214,13 @@ contract EthereumController is AccessControl {
         // Approve DAI to  DaiNst migrator from the proxy (assumes the proxy has enough DAI)
         proxy.doCall(
             address(dai),
-            abi.encodeCall(dai.approve, (address(daiNst), wadAmount))
+            abi.encodeCall(dai.approve, (address(daiNst), nstAmount))
         );
 
         // Swap DAI to NST 1:1
         proxy.doCall(
             address(daiNst),
-            abi.encodeCall(daiNst.daiToNst, (address(proxy), wadAmount))
+            abi.encodeCall(daiNst.daiToNst, (address(proxy), nstAmount))
         );
     }
 
