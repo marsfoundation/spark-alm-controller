@@ -46,7 +46,7 @@ interface IVaultLike {
 contract ForkTestBase is DssTest {
 
     /**********************************************************************************************/
-    /*** Mainnet addresses                                                                      ***/
+    /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
     bytes32 constant ilk = "ILK-A";
@@ -62,6 +62,10 @@ contract ForkTestBase is DssTest {
     address freezer = makeAddr("freezer");
     address relayer = makeAddr("relayer");
 
+    uint256 DAI_BAL_PSM;
+    uint256 DAI_SUPPLY;
+    uint256 USDC_BAL_PSM;
+
     /**********************************************************************************************/
     /*** Mainnet addresses                                                                      ***/
     /**********************************************************************************************/
@@ -75,6 +79,7 @@ contract ForkTestBase is DssTest {
     address ILK_REGISTRY;
     address PAUSE_PROXY;
     address USDC;
+    address DAI;
 
     /**********************************************************************************************/
     /*** Deployment instances                                                                   ***/
@@ -96,6 +101,7 @@ contract ForkTestBase is DssTest {
     /*** Casted addresses for testing                                                           ***/
     /**********************************************************************************************/
 
+    IERC20 dai;
     IERC20 nst;
     IERC20 usdc;
     ISNst  snst;
@@ -104,6 +110,7 @@ contract ForkTestBase is DssTest {
     address vault;
     address nstJoin;
     address pocket;
+    address daiNst;
 
     /**********************************************************************************************/
     /*** Test setup                                                                             ***/
@@ -116,6 +123,7 @@ contract ForkTestBase is DssTest {
         PAUSE_PROXY  = IChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
         ILK_REGISTRY = IChainlogLike(LOG).getAddress("ILK_REGISTRY");
         USDC         = IChainlogLike(LOG).getAddress("USDC");
+        DAI          = IChainlogLike(LOG).getAddress("MCD_DAI");
 
         /*** Step 1: Deploy NST, sNST and allocation system ***/
 
@@ -178,8 +186,13 @@ contract ForkTestBase is DssTest {
             vault_  : ilkInst.vault,
             buffer_ : ilkInst.buffer,
             snst_   : snstInst.sNst,
-            psm_    : PSM
+            psm_    : PSM,
+            daiNst_ : nstInst.daiNst
         });
+
+        CONTROLLER = almProxy.CONTROLLER();
+        FREEZER    = ethereumController.FREEZER();
+        RELAYER    = ethereumController.RELAYER();
 
         /*** Step 4: Configure ALM system in allocation system ***/
 
@@ -197,8 +210,12 @@ contract ForkTestBase is DssTest {
 
         vm.stopPrank();
 
-        /*** Step 5: Perform casting for easier testing ***/
+        vm.prank(PAUSE_PROXY);
+        IPSMLike(PSM).kiss(address(almProxy));  // Allow using no fee functionality
 
+        /*** Step 5: Perform casting for easier testing, cache values from mainnet ***/
+
+        dai     = IERC20(DAI);
         nst     = IERC20(address(nstInst.nst));
         usdc    = IERC20(USDC);
         snst    = ISNst(address(snstInst.sNst));
@@ -206,20 +223,11 @@ contract ForkTestBase is DssTest {
         vault   = ilkInst.vault;
         buffer  = ilkInst.buffer;
         pocket  = IPSMLike(PSM).pocket();
+        daiNst  = nstInst.daiNst;
 
-        CONTROLLER = almProxy.CONTROLLER();
-        FREEZER    = ethereumController.FREEZER();
-        RELAYER    = ethereumController.RELAYER();
-
-        /*** Step 6: Seed PSM liquidity and configure ***/
-
-        deal(address(usdc), address(pocket), 100e6);  // Gem is held in pocket
-        deal(address(nst),  address(PSM),    100e18);
-
-        vm.prank(PAUSE_PROXY);
-        IPSMLike(PSM).kiss(address(almProxy));  // Allow using no fee functionality
-
-        vm.label(address(almProxy), "ALMProxy");
+        DAI_BAL_PSM  = dai.balanceOf(PSM);
+        DAI_SUPPLY   = dai.totalSupply();
+        USDC_BAL_PSM = usdc.balanceOf(pocket);
     }
 
 }

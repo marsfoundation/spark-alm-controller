@@ -7,6 +7,12 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 
 import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 
+interface IDaiNstLike {
+    function dai() external view returns(address);
+    function daiToNst(address usr, uint256 wad) external;
+    function nstToDai(address usr, uint256 wad) external;
+}
+
 interface ISNSTLike {
     function deposit(uint256 assets, address receiver) external;
     function nst() external view returns(address);
@@ -38,12 +44,14 @@ contract EthereumController is AccessControl {
 
     address public immutable buffer;
 
-    IALMProxy  public immutable proxy;
-    IVaultLike public immutable vault;
-    ISNSTLike  public immutable snst;
-    IPSMLike   public immutable psm;
-    IERC20     public immutable nst;
-    IERC20     public immutable usdc;
+    IALMProxy   public immutable proxy;
+    IVaultLike  public immutable vault;
+    ISNSTLike   public immutable snst;
+    IPSMLike    public immutable psm;
+    IDaiNstLike public immutable daiNst;
+    IERC20      public immutable dai;
+    IERC20      public immutable nst;
+    IERC20      public immutable usdc;
 
     bool public active;
 
@@ -57,7 +65,8 @@ contract EthereumController is AccessControl {
         address vault_,
         address buffer_,
         address snst_,
-        address psm_
+        address psm_,
+        address daiNst_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
@@ -66,6 +75,8 @@ contract EthereumController is AccessControl {
         vault  = IVaultLike(vault_);
         snst   = ISNSTLike(snst_);
         psm    = IPSMLike(psm_);
+        daiNst = IDaiNstLike(daiNst_);
+        dai    = IERC20(daiNst.dai());
         usdc   = IERC20(psm.gem());
         nst    = IERC20(snst.nst());
 
@@ -156,12 +167,24 @@ contract EthereumController is AccessControl {
     /**********************************************************************************************/
 
     function swapNSTToUSDC(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
-        uint256 conversionFactor = psm.to18ConversionFactor();
+        uint256 wadAmount = usdcAmount * psm.to18ConversionFactor();
 
-        // Approve NST to PSM from the proxy (assumes the proxy has enough NST)
+        // Approve NST to DaiNst migrator from the proxy (assumes the proxy has enough NST)
         proxy.doCall(
             address(nst),
-            abi.encodeCall(nst.approve, (address(psm), usdcAmount * conversionFactor))
+            abi.encodeCall(nst.approve, (address(daiNst), wadAmount))
+        );
+
+        // Swap NST to DAI 1:1
+        proxy.doCall(
+            address(daiNst),
+            abi.encodeCall(daiNst.nstToDai, (address(proxy), wadAmount))
+        );
+
+        // Approve DAI to PSM from the proxy (assumes the proxy has enough DAI)
+        proxy.doCall(
+            address(dai),
+            abi.encodeCall(dai.approve, (address(psm), wadAmount))
         );
 
         // Swap NST to USDC through the PSM
@@ -172,16 +195,30 @@ contract EthereumController is AccessControl {
     }
 
     function swapUSDCToNST(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
+        uint256 wadAmount = usdcAmount * psm.to18ConversionFactor();
+
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
         proxy.doCall(
             address(usdc),
             abi.encodeCall(usdc.approve, (address(psm), usdcAmount))
         );
 
-        // Swap USDC to NST through the PSM
+        // Swap USDC to DAI through the PSM
         proxy.doCall(
             address(psm),
             abi.encodeCall(psm.sellGemNoFee, (address(proxy), usdcAmount))
+        );
+
+        // Approve DAI to  DaiNst migrator from the proxy (assumes the proxy has enough DAI)
+        proxy.doCall(
+            address(dai),
+            abi.encodeCall(dai.approve, (address(daiNst), wadAmount))
+        );
+
+        // Swap DAI to NST 1:1
+        proxy.doCall(
+            address(daiNst),
+            abi.encodeCall(daiNst.daiToNst, (address(proxy), wadAmount))
         );
     }
 

@@ -6,8 +6,9 @@ import "forge-std/Test.sol";
 import { ALMProxy }           from "src/ALMProxy.sol";
 import { EthereumController } from "src/EthereumController.sol";
 
-import { MockPsm }  from "test/unit/mocks/MockPsm.sol";
-import { MockSNst } from "test/unit/mocks/MockSNst.sol";
+import { MockDaiNst } from "test/unit/mocks/MockDaiNst.sol";
+import { MockPsm }    from "test/unit/mocks/MockPsm.sol";
+import { MockSNst }   from "test/unit/mocks/MockSNst.sol";
 
 contract UnitTestBase is Test {
 
@@ -21,8 +22,9 @@ contract UnitTestBase is Test {
     address freezer = makeAddr("freezer");
     address relayer = makeAddr("relayer");
 
-    MockPsm  psm;
-    MockSNst snst;
+    MockDaiNst daiNst;
+    MockPsm    psm;
+    MockSNst   snst;
 
     ALMProxy           almProxy;
     EthereumController ethereumController;
@@ -30,6 +32,7 @@ contract UnitTestBase is Test {
     function setUp() public virtual {
         psm  = new MockPsm(makeAddr("usdc"));
         snst = new MockSNst(makeAddr("nst"));
+        daiNst = new MockDaiNst(makeAddr("dai"));
 
         almProxy = new ALMProxy(admin);
 
@@ -39,7 +42,8 @@ contract UnitTestBase is Test {
             makeAddr("vault"),
             makeAddr("buffer"),
             address(snst),
-            address(psm)
+            address(psm),
+            address(daiNst)
         );
 
         // Done with spell by pause proxy
