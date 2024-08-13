@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import "test/UnitTestBase.t.sol";
+import "test/fork/ForkTestBase.t.sol";
 
-contract EthereumControllerSwapNSTToSNSTFailureTests is UnitTestBase {
+contract EthereumControllerSwapNSTToSNSTFailureTests is ForkTestBase {
 
     function test_swapNSTToSNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -25,7 +25,7 @@ contract EthereumControllerSwapNSTToSNSTFailureTests is UnitTestBase {
 
 }
 
-contract EthereumControllerSwapNSTToSNSTTests is UnitTestBase {
+contract EthereumControllerSwapNSTToSNSTTests is ForkTestBase {
 
     function test_swapNSTToSNST() external {
         vm.prank(relayer);
@@ -60,7 +60,7 @@ contract EthereumControllerSwapNSTToSNSTTests is UnitTestBase {
 
 }
 
-contract EthereumControllerSwapSNSTToNSTFailureTests is UnitTestBase {
+contract EthereumControllerSwapSNSTToNSTFailureTests is ForkTestBase {
 
     function test_swapSNSTToNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -82,7 +82,7 @@ contract EthereumControllerSwapSNSTToNSTFailureTests is UnitTestBase {
 
 }
 
-contract EthereumControllerSwapSNSTToNSTTests is UnitTestBase {
+contract EthereumControllerSwapSNSTToNSTTests is ForkTestBase {
 
     function test_swapSNSTToNST() external {
         vm.startPrank(relayer);

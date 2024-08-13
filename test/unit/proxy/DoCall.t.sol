@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import "test/UnitTestBase.t.sol";
+import "test/unit/UnitTestBase.t.sol";
 
-import { MockTarget } from "test/mocks/MockTarget.sol";
+import { MockTarget } from "test/unit/mocks/MockTarget.sol";
 
 contract ALMProxyCallTestBase is UnitTestBase {
 

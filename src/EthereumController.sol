@@ -7,6 +7,12 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 
 import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 
+interface IDaiNstLike {
+    function dai() external view returns(address);
+    function daiToNst(address usr, uint256 wad) external;
+    function nstToDai(address usr, uint256 wad) external;
+}
+
 interface ISNSTLike {
     function deposit(uint256 assets, address receiver) external;
     function nst() external view returns(address);
@@ -38,12 +44,15 @@ contract EthereumController is AccessControl {
 
     address public immutable buffer;
 
-    IALMProxy  public immutable proxy;
-    IVaultLike public immutable vault;
-    ISNSTLike  public immutable snst;
-    IPSMLike   public immutable psm;
-    IERC20     public immutable nst;
-    IERC20     public immutable usdc;
+    IALMProxy   public immutable proxy;
+    IDaiNstLike public immutable daiNst;
+    IPSMLike    public immutable psm;
+    IVaultLike  public immutable vault;
+
+    IERC20    public immutable dai;
+    IERC20    public immutable nst;
+    IERC20    public immutable usdc;
+    ISNSTLike public immutable snst;
 
     bool public active;
 
@@ -56,18 +65,22 @@ contract EthereumController is AccessControl {
         address proxy_,
         address vault_,
         address buffer_,
-        address snst_,
-        address psm_
+        address psm_,
+        address daiNst_,
+        address snst_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
-        buffer = buffer_;
         proxy  = IALMProxy(proxy_);
         vault  = IVaultLike(vault_);
-        snst   = ISNSTLike(snst_);
+        buffer = buffer_;
         psm    = IPSMLike(psm_);
-        usdc   = IERC20(psm.gem());
-        nst    = IERC20(snst.nst());
+        daiNst = IDaiNstLike(daiNst_);
+
+        snst = ISNSTLike(snst_);
+        dai  = IERC20(daiNst.dai());
+        usdc = IERC20(psm.gem());
+        nst  = IERC20(snst.nst());
 
         active = true;
     }
@@ -156,12 +169,24 @@ contract EthereumController is AccessControl {
     /**********************************************************************************************/
 
     function swapNSTToUSDC(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
-        uint256 conversionFactor = psm.to18ConversionFactor();
+        uint256 nstAmount = usdcAmount * psm.to18ConversionFactor();
 
-        // Approve NST to PSM from the proxy (assumes the proxy has enough NST)
+        // Approve NST to DaiNst migrator from the proxy (assumes the proxy has enough NST)
         proxy.doCall(
             address(nst),
-            abi.encodeCall(nst.approve, (address(psm), usdcAmount * conversionFactor))
+            abi.encodeCall(nst.approve, (address(daiNst), nstAmount))
+        );
+
+        // Swap NST to DAI 1:1
+        proxy.doCall(
+            address(daiNst),
+            abi.encodeCall(daiNst.nstToDai, (address(proxy), nstAmount))
+        );
+
+        // Approve DAI to PSM from the proxy (assumes the proxy has enough DAI)
+        proxy.doCall(
+            address(dai),
+            abi.encodeCall(dai.approve, (address(psm), nstAmount))
         );
 
         // Swap NST to USDC through the PSM
@@ -172,16 +197,30 @@ contract EthereumController is AccessControl {
     }
 
     function swapUSDCToNST(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
+        uint256 nstAmount = usdcAmount * psm.to18ConversionFactor();
+
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
         proxy.doCall(
             address(usdc),
             abi.encodeCall(usdc.approve, (address(psm), usdcAmount))
         );
 
-        // Swap USDC to NST through the PSM
+        // Swap USDC to DAI through the PSM
         proxy.doCall(
             address(psm),
             abi.encodeCall(psm.sellGemNoFee, (address(proxy), usdcAmount))
+        );
+
+        // Approve DAI to  DaiNst migrator from the proxy (assumes the proxy has enough DAI)
+        proxy.doCall(
+            address(dai),
+            abi.encodeCall(dai.approve, (address(daiNst), nstAmount))
+        );
+
+        // Swap DAI to NST 1:1
+        proxy.doCall(
+            address(daiNst),
+            abi.encodeCall(daiNst.daiToNst, (address(proxy), nstAmount))
         );
     }
 

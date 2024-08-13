@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import "test/UnitTestBase.t.sol";
+import "test/fork/ForkTestBase.t.sol";
 
-contract EthereumControllerMintNSTTests is UnitTestBase {
+contract EthereumControllerMintNSTTests is ForkTestBase {
 
     function test_mintNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -24,10 +24,10 @@ contract EthereumControllerMintNSTTests is UnitTestBase {
     }
 
     function test_mintNST() external {
-        ( uint256 ink, uint256 art ) = vat.urns(ilk, address(vault));
-        ( uint256 Art,,,, )          = vat.ilks(ilk);
+        ( uint256 ink, uint256 art ) = dss.vat.urns(ilk, vault);
+        ( uint256 Art,,,, )          = dss.vat.ilks(ilk);
 
-        assertEq(vat.dai(address(nstJoin)), 0);
+        assertEq(dss.vat.dai(nstJoin), 0);
 
         assertEq(Art, 0);
         assertEq(ink, INK);
@@ -39,10 +39,10 @@ contract EthereumControllerMintNSTTests is UnitTestBase {
         vm.prank(relayer);
         ethereumController.mintNST(1e18);
 
-        ( ink, art ) = vat.urns(ilk, address(vault));
-        ( Art,,,, )  = vat.ilks(ilk);
+        ( ink, art ) = dss.vat.urns(ilk, vault);
+        ( Art,,,, )  = dss.vat.ilks(ilk);
 
-        assertEq(vat.dai(address(nstJoin)), 1e45);
+        assertEq(dss.vat.dai(nstJoin), 1e45);
 
         assertEq(Art, 1e18);
         assertEq(ink, INK);
@@ -54,7 +54,7 @@ contract EthereumControllerMintNSTTests is UnitTestBase {
 
 }
 
-contract EthereumControllerBurnNSTTests is UnitTestBase {
+contract EthereumControllerBurnNSTTests is ForkTestBase {
 
     function test_burnNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -79,10 +79,10 @@ contract EthereumControllerBurnNSTTests is UnitTestBase {
         vm.prank(relayer);
         ethereumController.mintNST(1e18);
 
-        ( uint256 ink, uint256 art ) = vat.urns(ilk, address(vault));
-        ( uint256 Art,,,, )          = vat.ilks(ilk);
+        ( uint256 ink, uint256 art ) = dss.vat.urns(ilk, vault);
+        ( uint256 Art,,,, )          = dss.vat.ilks(ilk);
 
-        assertEq(vat.dai(address(nstJoin)), 1e45);
+        assertEq(dss.vat.dai(address(nstJoin)), 1e45);
 
         assertEq(Art, 1e18);
         assertEq(ink, INK);
@@ -94,10 +94,10 @@ contract EthereumControllerBurnNSTTests is UnitTestBase {
         vm.prank(relayer);
         ethereumController.burnNST(1e18);
 
-        ( ink, art ) = vat.urns(ilk, address(vault));
-        ( Art,,,, )  = vat.ilks(ilk);
+        ( ink, art ) = dss.vat.urns(ilk, vault);
+        ( Art,,,, )  = dss.vat.ilks(ilk);
 
-        assertEq(vat.dai(address(nstJoin)), 0);
+        assertEq(dss.vat.dai(address(nstJoin)), 0);
 
         assertEq(Art, 0);
         assertEq(ink, INK);

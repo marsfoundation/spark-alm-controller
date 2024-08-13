@@ -6,32 +6,9 @@ solc_version = '0.8.21'
 optimizer = true
 optimizer_runs = 200
 remappings = [
-    "openzeppelin-contracts/=lib/openzeppelin-contracts/",
-    "upgradeable-proxy/=lib/upgradeable-proxy/src/",
-    "forge-std/=lib/forge-std/src/",
-    "@openzeppelin/contracts-upgradeable/=lib/sdai/lib/openzeppelin-contracts-upgradeable/contracts/",
-    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
-    "ds-auth/=lib/dss/lib/ds-token/lib/ds-auth/src/",
-    "ds-math/=lib/dss/lib/ds-token/lib/ds-math/src/",
-    "ds-note/=lib/dss/lib/ds-value/lib/ds-thing/lib/ds-note/src/",
-    "ds-test/=lib/dss/lib/ds-test/src/",
-    "ds-thing/=lib/dss/lib/ds-value/lib/ds-thing/src/",
-    "ds-token/=lib/dss/lib/ds-token/src/",
-    "ds-value/=lib/dss/lib/ds-value/src/",
-    "dss-allocator/=lib/dss-allocator/",
-    "dss-interfaces/=lib/sdai/lib/dss-test/lib/dss-interfaces/src/",
-    "dss-test/=lib/sdai/lib/dss-test/src/",
-    "dss/=lib/dss/src/",
-    "erc20-helpers/=lib/erc20-helpers/src/",
-    "erc4626-tests/=lib/sdai/lib/erc4626-tests/",
-    "forge-std/=lib/forge-std/src/",
+    "dss-test/=lib/dss-allocator/lib/dss-test/src/",
     "nst/=lib/nst/",
-    "openzeppelin-contracts-upgradeable/=lib/sdai/lib/openzeppelin-contracts-upgradeable/",
-    "openzeppelin-contracts/=lib/openzeppelin-contracts/",
-    "openzeppelin-foundry-upgrades/=lib/sdai/lib/openzeppelin-foundry-upgrades/src/",
-    "sdai/=lib/sdai/",
-    "solidity-stringutils/=lib/sdai/lib/openzeppelin-foundry-upgrades/lib/solidity-stringutils/",
-    "token-tests/=lib/sdai/lib/token-tests/src/"
+    "sdai/=lib/sdai/"
 ]
 
 [fuzz]
