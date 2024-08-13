@@ -31,7 +31,7 @@ interface IPSMLike {
     function to18ConversionFactor() external view returns (uint256);
 }
 
-contract EthereumController is AccessControl {
+contract MainnetController is AccessControl {
 
     // TODO: Inherit and override interface
 
@@ -90,7 +90,7 @@ contract EthereumController is AccessControl {
     /**********************************************************************************************/
 
     modifier isActive {
-        require(active, "EthereumController/not-active");
+        require(active, "MainnetController/not-active");
         _;
     }
 

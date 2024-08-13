@@ -3,8 +3,8 @@ pragma solidity ^0.8.21;
 
 import "forge-std/Test.sol";
 
-import { ALMProxy }           from "src/ALMProxy.sol";
-import { EthereumController } from "src/EthereumController.sol";
+import { ALMProxy }          from "src/ALMProxy.sol";
+import { MainnetController } from "src/MainnetController.sol";
 
 import { MockDaiNst } from "test/unit/mocks/MockDaiNst.sol";
 import { MockPsm }    from "test/unit/mocks/MockPsm.sol";
@@ -26,8 +26,8 @@ contract UnitTestBase is Test {
     MockPsm    psm;
     MockSNst   snst;
 
-    ALMProxy           almProxy;
-    EthereumController ethereumController;
+    ALMProxy          almProxy;
+    MainnetController mainnetController;
 
     function setUp() public virtual {
         psm  = new MockPsm(makeAddr("usdc"));
@@ -36,7 +36,7 @@ contract UnitTestBase is Test {
 
         almProxy = new ALMProxy(admin);
 
-        ethereumController = new EthereumController(
+        mainnetController = new MainnetController(
             admin,
             address(almProxy),
             makeAddr("vault"),
@@ -49,10 +49,10 @@ contract UnitTestBase is Test {
         // Done with spell by pause proxy
         vm.startPrank(admin);
 
-        ethereumController.grantRole(FREEZER, freezer);
-        ethereumController.grantRole(RELAYER, relayer);
+        mainnetController.grantRole(FREEZER, freezer);
+        mainnetController.grantRole(RELAYER, relayer);
 
-        almProxy.grantRole(CONTROLLER, address(ethereumController));
+        almProxy.grantRole(CONTROLLER, address(mainnetController));
 
         vm.stopPrank();
     }
