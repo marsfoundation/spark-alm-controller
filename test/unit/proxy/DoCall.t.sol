@@ -60,7 +60,7 @@ contract ALMProxyDoCallTests is ALMProxyCallTestBase {
         // ALM Proxy is msg.sender, target emits the event
         vm.expectEmit(target);
         emit ExampleEvent(exampleAddress, 42, 84, address(almProxy), 0);
-        vm.prank(address(ethereumController));
+        vm.prank(address(mainnetController));
         bytes memory returnData = almProxy.doCall(target, data);
 
         assertEq(abi.decode(returnData, (uint256)), 84);
@@ -90,7 +90,7 @@ contract ALMProxyDoCallWithValueFailureTests is ALMProxyCallTestBase {
     function test_doCallWithValue_notEnoughBalanceBoundary() public {
         vm.deal(address(almProxy), 1e18 - 1);
 
-        vm.startPrank(address(ethereumController));
+        vm.startPrank(address(mainnetController));
 
         vm.expectRevert(abi.encodeWithSignature(
             "AddressInsufficientBalance(address)",
@@ -113,7 +113,7 @@ contract ALMProxyDoCallWithValueTests is ALMProxyCallTestBase {
         // ALM Proxy is msg.sender, target emits the event
         vm.expectEmit(target);
         emit ExampleEvent(exampleAddress, 42, 84, address(almProxy), 1e18);
-        vm.prank(address(ethereumController));
+        vm.prank(address(mainnetController));
         bytes memory returnData = almProxy.doCallWithValue(target, data, 1e18);
 
         assertEq(abi.decode(returnData, (uint256)), 84);
@@ -147,8 +147,8 @@ contract ALMProxyDoDelegateCallTests is ALMProxyCallTestBase {
     function test_doDelegateCall() public {
         // L1 Controller is msg.sender, almProxy emits the event
         vm.expectEmit(address(almProxy));
-        emit ExampleEvent(exampleAddress, 42, 84, address(ethereumController), 0);
-        vm.prank(address(ethereumController));
+        emit ExampleEvent(exampleAddress, 42, 84, address(mainnetController), 0);
+        vm.prank(address(mainnetController));
         bytes memory returnData = almProxy.doDelegateCall(target, data);
 
         assertEq(abi.decode(returnData, (uint256)), 84);
