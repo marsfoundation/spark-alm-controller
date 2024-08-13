@@ -16,6 +16,7 @@ interface IDaiNstLike {
 interface ISNSTLike {
     function deposit(uint256 assets, address receiver) external;
     function nst() external view returns(address);
+    function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets);
     function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares);
 }
 
@@ -142,7 +143,7 @@ contract EthereumController is AccessControl {
     /*** Relayer sNST functions                                                                 ***/
     /**********************************************************************************************/
 
-    function swapNSTToSNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
+    function depositToSNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
         // Approve NST to sNST from the proxy (assumes the proxy has enough NST)
         proxy.doCall(
             address(nst),
@@ -156,11 +157,19 @@ contract EthereumController is AccessControl {
         );
     }
 
-    function swapSNSTToNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
+    function withdrawFromSNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
         // Withdraw NST from sNST, assumes proxy has adequate sNST shares
         proxy.doCall(
             address(snst),
             abi.encodeCall(snst.withdraw, (nstAmount, address(proxy), address(proxy)))
+        );
+    }
+
+    function redeemFromSNST(uint256 snstSharesAmount) external onlyRole(RELAYER) isActive {
+        // Redeem shares for NST from sNST, assumes proxy has adequate sNST shares
+        proxy.doCall(
+            address(snst),
+            abi.encodeCall(snst.redeem, (snstSharesAmount, address(proxy), address(proxy)))
         );
     }
 
