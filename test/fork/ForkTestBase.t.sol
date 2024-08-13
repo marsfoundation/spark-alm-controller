@@ -67,6 +67,7 @@ contract ForkTestBase is DssTest {
 
     uint256 DAI_BAL_PSM;
     uint256 DAI_SUPPLY;
+    uint256 SNST_CONVERSION;
     uint256 USDC_BAL_PSM;
 
     /**********************************************************************************************/
@@ -215,7 +216,9 @@ contract ForkTestBase is DssTest {
         vm.prank(PAUSE_PROXY);
         IPSMLike(PSM).kiss(address(almProxy));  // Allow using no fee functionality
 
-        /*** Step 5: Perform casting for easier testing, cache values from mainnet ***/
+        /*** Step 5: Warp, Perform casting for easier testing, cache values from mainnet ***/
+
+        skip(10 days);  // Accrue value against sNST to remove 1:1 exchange rate
 
         buffer  = ilkInst.buffer;
         dai     = IERC20(DAI);
@@ -227,9 +230,10 @@ contract ForkTestBase is DssTest {
         usdc    = IERC20(USDC);
         vault   = ilkInst.vault;
 
-        DAI_BAL_PSM  = dai.balanceOf(PSM);
-        DAI_SUPPLY   = dai.totalSupply();
-        USDC_BAL_PSM = usdc.balanceOf(pocket);
+        DAI_BAL_PSM     = dai.balanceOf(PSM);
+        DAI_SUPPLY      = dai.totalSupply();
+        SNST_CONVERSION = snst.convertToAssets(1e18);
+        USDC_BAL_PSM    = usdc.balanceOf(pocket);
     }
 
 }
