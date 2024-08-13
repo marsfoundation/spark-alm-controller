@@ -3,7 +3,27 @@ pragma solidity >=0.8.0;
 
 import "test/fork/ForkTestBase.t.sol";
 
-contract MainnetControllerDepositToSNSTFailureTests is ForkTestBase {
+contract SNSTTestBase is ForkTestBase {
+
+    uint256 SNST_CONVERTED_ASSETS;
+    uint256 SNST_CONVERTED_SHARES;
+
+    function setUp() override public {
+        super.setUp();
+
+        // Warp to accrue value over 1:1 exchange rate
+        skip(10 days);
+
+        SNST_CONVERTED_ASSETS = snst.convertToAssets(1e18);
+        SNST_CONVERTED_SHARES = snst.convertToShares(1e18);
+
+        assertEq(SNST_CONVERTED_ASSETS, 1.001855380694731009e18);
+        assertEq(SNST_CONVERTED_SHARES, 0.998148055367587678e18);
+    }
+
+}
+
+contract MainnetControllerDepositToSNSTFailureTests is SNSTTestBase {
 
     function test_depositToSNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -25,7 +45,7 @@ contract MainnetControllerDepositToSNSTFailureTests is ForkTestBase {
 
 }
 
-contract MainnetControllerDepositToSNSTTests is ForkTestBase {
+contract MainnetControllerDepositToSNSTTests is SNSTTestBase {
 
     function test_depositToSNST() external {
         vm.prank(relayer);
@@ -45,7 +65,7 @@ contract MainnetControllerDepositToSNSTTests is ForkTestBase {
         vm.prank(relayer);
         uint256 shares = mainnetController.depositToSNST(1e18);
 
-        assertEq(shares, 1e18);
+        assertEq(shares, SNST_CONVERTED_SHARES);
 
         assertEq(nst.balanceOf(address(almProxy)),          0);
         assertEq(nst.balanceOf(address(mainnetController)), 0);
@@ -54,15 +74,14 @@ contract MainnetControllerDepositToSNSTTests is ForkTestBase {
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(snst)),  0);
 
-        // NOTE: 1:1 exchange rate
-        assertEq(snst.totalSupply(),                1e18);
-        assertEq(snst.totalAssets(),                1e18);
-        assertEq(snst.balanceOf(address(almProxy)), 1e18);
+        assertEq(snst.totalSupply(),                SNST_CONVERTED_SHARES);
+        assertEq(snst.totalAssets(),                1e18 - 1);  // Rounding
+        assertEq(snst.balanceOf(address(almProxy)), SNST_CONVERTED_SHARES);
     }
 
 }
 
-contract MainnetControllerWithdrawFromSNSTFailureTests is ForkTestBase {
+contract MainnetControllerWithdrawFromSNSTFailureTests is SNSTTestBase {
 
     function test_withdrawFromSNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -84,7 +103,7 @@ contract MainnetControllerWithdrawFromSNSTFailureTests is ForkTestBase {
 
 }
 
-contract MainnetControllerWithdrawFromSNSTTests is ForkTestBase {
+contract MainnetControllerWithdrawFromSNSTTests is SNSTTestBase {
 
     function test_withdrawFromSNST() external {
         vm.startPrank(relayer);
@@ -99,19 +118,19 @@ contract MainnetControllerWithdrawFromSNSTTests is ForkTestBase {
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(snst)),  0);
 
-        // NOTE: 1:1 exchange rate
-        assertEq(snst.totalSupply(),                1e18);
-        assertEq(snst.totalAssets(),                1e18);
-        assertEq(snst.balanceOf(address(almProxy)), 1e18);
+        assertEq(snst.totalSupply(),                SNST_CONVERTED_SHARES);
+        assertEq(snst.totalAssets(),                1e18 - 1);  // Rounding
+        assertEq(snst.balanceOf(address(almProxy)), SNST_CONVERTED_SHARES);
 
+        // Max available with rounding
         vm.prank(relayer);
-        uint256 shares = mainnetController.withdrawFromSNST(1e18);
+        uint256 shares = mainnetController.withdrawFromSNST(1e18 - 1);  // Rounding
 
-        assertEq(shares, 1e18);
+        assertEq(shares, SNST_CONVERTED_SHARES);
 
-        assertEq(nst.balanceOf(address(almProxy)),          1e18);
+        assertEq(nst.balanceOf(address(almProxy)),          1e18 - 1);
         assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.balanceOf(address(snst)),              0);
+        assertEq(nst.balanceOf(address(snst)),              1);
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(snst)),  0);
@@ -123,7 +142,7 @@ contract MainnetControllerWithdrawFromSNSTTests is ForkTestBase {
 
 }
 
-contract MainnetControllerRedeemFromSNSTFailureTests is ForkTestBase {
+contract MainnetControllerRedeemFromSNSTFailureTests is SNSTTestBase {
 
     function test_redeemFromSNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -146,7 +165,7 @@ contract MainnetControllerRedeemFromSNSTFailureTests is ForkTestBase {
 }
 
 
-contract MainnetControllerRedeemFromSNSTTests is ForkTestBase {
+contract MainnetControllerRedeemFromSNSTTests is SNSTTestBase {
 
     function test_redeemFromSNST() external {
         vm.startPrank(relayer);
@@ -161,19 +180,18 @@ contract MainnetControllerRedeemFromSNSTTests is ForkTestBase {
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(snst)),  0);
 
-        // NOTE: 1:1 exchange rate
-        assertEq(snst.totalSupply(),                1e18);
-        assertEq(snst.totalAssets(),                1e18);
-        assertEq(snst.balanceOf(address(almProxy)), 1e18);
+        assertEq(snst.totalSupply(),                SNST_CONVERTED_SHARES);
+        assertEq(snst.totalAssets(),                1e18 - 1);  // Rounding
+        assertEq(snst.balanceOf(address(almProxy)), SNST_CONVERTED_SHARES);
 
         vm.prank(relayer);
-        uint256 assets = mainnetController.redeemFromSNST(1e18);
+        uint256 assets = mainnetController.redeemFromSNST(SNST_CONVERTED_SHARES);
 
-        assertEq(assets, 1e18);
+        assertEq(assets, 1e18 - 1);  // Rounding
 
-        assertEq(nst.balanceOf(address(almProxy)),          1e18);
+        assertEq(nst.balanceOf(address(almProxy)),          1e18 - 1);  // Rounding
         assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.balanceOf(address(snst)),              0);
+        assertEq(nst.balanceOf(address(snst)),              1);  // Rounding
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(snst)),  0);
