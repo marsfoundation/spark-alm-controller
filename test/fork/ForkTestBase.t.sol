@@ -12,7 +12,7 @@ import {
 
 import { AllocatorDeploy } from "dss-allocator/deploy/AllocatorDeploy.sol";
 
-import { IERC20 } from "erc20-helpers/interfaces/IERC20.sol";
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { NstDeploy }   from "nst/deploy/NstDeploy.sol";
 import { NstInit }     from "nst/deploy/NstInit.sol";

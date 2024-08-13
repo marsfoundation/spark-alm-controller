@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import { IERC20 } from "erc20-helpers/interfaces/IERC20.sol";
+import { IERC20 }   from "forge-std/interfaces/IERC20.sol";
+import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
@@ -13,11 +14,8 @@ interface IDaiNstLike {
     function nstToDai(address usr, uint256 wad) external;
 }
 
-interface ISNSTLike {
-    function deposit(uint256 assets, address receiver) external;
+interface ISNSTLike is IERC4626 {
     function nst() external view returns(address);
-    function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets);
-    function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares);
 }
 
 interface IVaultLike {
