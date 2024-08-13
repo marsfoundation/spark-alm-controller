@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "test/fork/ForkTestBase.t.sol";
 
-contract EthereumControllerSwapNSTToSNSTFailureTests is ForkTestBase {
+contract EthereumControllerDepositToSNSTFailureTests is ForkTestBase {
 
     function test_depositToSNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -25,7 +25,7 @@ contract EthereumControllerSwapNSTToSNSTFailureTests is ForkTestBase {
 
 }
 
-contract EthereumControllerSwapNSTToSNSTTests is ForkTestBase {
+contract EthereumControllerDepositToSNSTTests is ForkTestBase {
 
     function test_depositToSNST() external {
         vm.prank(relayer);
@@ -43,7 +43,9 @@ contract EthereumControllerSwapNSTToSNSTTests is ForkTestBase {
         assertEq(snst.balanceOf(address(almProxy)), 0);
 
         vm.prank(relayer);
-        ethereumController.depositToSNST(1e18);
+        uint256 shares = ethereumController.depositToSNST(1e18);
+
+        assertEq(shares, 1e18);
 
         assertEq(nst.balanceOf(address(almProxy)),           0);
         assertEq(nst.balanceOf(address(ethereumController)), 0);
@@ -60,7 +62,7 @@ contract EthereumControllerSwapNSTToSNSTTests is ForkTestBase {
 
 }
 
-contract EthereumControllerSwapSNSTToNSTFailureTests is ForkTestBase {
+contract EthereumControllerWithdrawFromSNSTFailureTests is ForkTestBase {
 
     function test_withdrawFromSNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -82,7 +84,7 @@ contract EthereumControllerSwapSNSTToNSTFailureTests is ForkTestBase {
 
 }
 
-contract EthereumControllerSwapSNSTToNSTTests is ForkTestBase {
+contract EthereumControllerWithdrawFromSNSTTests is ForkTestBase {
 
     function test_withdrawFromSNST() external {
         vm.startPrank(relayer);
@@ -103,7 +105,9 @@ contract EthereumControllerSwapSNSTToNSTTests is ForkTestBase {
         assertEq(snst.balanceOf(address(almProxy)), 1e18);
 
         vm.prank(relayer);
-        ethereumController.withdrawFromSNST(1e18);
+        uint256 shares = ethereumController.withdrawFromSNST(1e18);
+
+        assertEq(shares, 1e18);
 
         assertEq(nst.balanceOf(address(almProxy)),           1e18);
         assertEq(nst.balanceOf(address(ethereumController)), 0);
@@ -118,6 +122,29 @@ contract EthereumControllerSwapSNSTToNSTTests is ForkTestBase {
     }
 
 }
+
+contract EthereumControllerRedeemFromSNSTFailureTests is ForkTestBase {
+
+    function test_redeemFromSNST_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        ethereumController.redeemFromSNST(1e18);
+    }
+
+    function test_redeemFromSNST_frozen() external {
+        vm.prank(freezer);
+        ethereumController.freeze();
+
+        vm.prank(relayer);
+        vm.expectRevert("EthereumController/not-active");
+        ethereumController.redeemFromSNST(1e18);
+    }
+
+}
+
 
 contract EthereumControllerRedeemFromSNSTTests is ForkTestBase {
 
@@ -140,7 +167,9 @@ contract EthereumControllerRedeemFromSNSTTests is ForkTestBase {
         assertEq(snst.balanceOf(address(almProxy)), 1e18);
 
         vm.prank(relayer);
-        ethereumController.redeemFromSNST(1e18);
+        uint256 assets = ethereumController.redeemFromSNST(1e18);
+
+        assertEq(assets, 1e18);
 
         assertEq(nst.balanceOf(address(almProxy)),           1e18);
         assertEq(nst.balanceOf(address(ethereumController)), 0);

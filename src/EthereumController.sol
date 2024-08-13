@@ -141,33 +141,50 @@ contract EthereumController is AccessControl {
     /*** Relayer sNST functions                                                                 ***/
     /**********************************************************************************************/
 
-    function depositToSNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
-        // Approve NST to sNST from the proxy (assumes the proxy has enough NST)
+    function depositToSNST(uint256 nstAmount)
+        external onlyRole(RELAYER) isActive returns (uint256 shares)
+    {
+        // Approve NST to sNST from the proxy (assumes the proxy has enough NST).
         proxy.doCall(
             address(nst),
             abi.encodeCall(nst.approve, (address(snst), nstAmount))
         );
 
-        // Deposit NST into sNST, proxy receives sNST shares
-        proxy.doCall(
-            address(snst),
-            abi.encodeCall(snst.deposit, (nstAmount, address(proxy)))
+        // Deposit NST into sNST, proxy receives sNST shares, decode the resulting shares
+        shares = abi.decode(
+            proxy.doCall(
+                address(snst),
+                abi.encodeCall(snst.deposit, (nstAmount, address(proxy)))
+            ),
+            (uint256)
         );
     }
 
-    function withdrawFromSNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
-        // Withdraw NST from sNST, assumes proxy has adequate sNST shares
-        proxy.doCall(
-            address(snst),
-            abi.encodeCall(snst.withdraw, (nstAmount, address(proxy), address(proxy)))
+    function withdrawFromSNST(uint256 nstAmount)
+        external onlyRole(RELAYER) isActive returns (uint256 shares)
+    {
+        // Withdraw NST from sNST, decode resulting shares.
+        // Assumes proxy has adequate sNST shares.
+        shares = abi.decode(
+            proxy.doCall(
+                address(snst),
+                abi.encodeCall(snst.withdraw, (nstAmount, address(proxy), address(proxy)))
+            ),
+            (uint256)
         );
     }
 
-    function redeemFromSNST(uint256 snstSharesAmount) external onlyRole(RELAYER) isActive {
-        // Redeem shares for NST from sNST, assumes proxy has adequate sNST shares
-        proxy.doCall(
-            address(snst),
-            abi.encodeCall(snst.redeem, (snstSharesAmount, address(proxy), address(proxy)))
+    function redeemFromSNST(uint256 snstSharesAmount)
+        external onlyRole(RELAYER) isActive returns (uint256 assets)
+    {
+        // Redeem shares for NST from sNST, decode the resulting assets.
+        // Assumes proxy has adequate sNST shares.
+        assets = abi.decode(
+            proxy.doCall(
+                address(snst),
+                abi.encodeCall(snst.redeem, (snstSharesAmount, address(proxy), address(proxy)))
+            ),
+            (uint256)
         );
     }
 
