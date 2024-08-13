@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import "test/unit/UnitTestBase.t.sol";
 
-contract EthereumControllerFreezeTests is UnitTestBase {
+contract MainnetControllerFreezeTests is UnitTestBase {
 
     function test_freeze_unauthorizedAccount() public {
         vm.expectRevert(abi.encodeWithSignature(
@@ -11,7 +11,7 @@ contract EthereumControllerFreezeTests is UnitTestBase {
             address(this),
             FREEZER
         ));
-        ethereumController.freeze();
+        mainnetController.freeze();
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSignature(
@@ -19,26 +19,26 @@ contract EthereumControllerFreezeTests is UnitTestBase {
             admin,
             FREEZER
         ));
-        ethereumController.freeze();
+        mainnetController.freeze();
     }
 
     function test_freeze() public {
-        assertEq(ethereumController.active(), true);
+        assertEq(mainnetController.active(), true);
 
         vm.prank(freezer);
-        ethereumController.freeze();
+        mainnetController.freeze();
 
-        assertEq(ethereumController.active(), false);
+        assertEq(mainnetController.active(), false);
 
         vm.prank(freezer);
-        ethereumController.freeze();
+        mainnetController.freeze();
 
-        assertEq(ethereumController.active(), false);
+        assertEq(mainnetController.active(), false);
     }
 
 }
 
-contract EthereumControllerReactivateTests is UnitTestBase {
+contract MainnetControllerReactivateTests is UnitTestBase {
 
     function test_reactivate_unauthorizedAccount() public {
         vm.expectRevert(abi.encodeWithSignature(
@@ -46,7 +46,7 @@ contract EthereumControllerReactivateTests is UnitTestBase {
             address(this),
             DEFAULT_ADMIN_ROLE
         ));
-        ethereumController.reactivate();
+        mainnetController.reactivate();
 
         vm.prank(freezer);
         vm.expectRevert(abi.encodeWithSignature(
@@ -54,24 +54,24 @@ contract EthereumControllerReactivateTests is UnitTestBase {
             freezer,
             DEFAULT_ADMIN_ROLE
         ));
-        ethereumController.reactivate();
+        mainnetController.reactivate();
     }
 
     function test_reactivate() public {
         vm.prank(freezer);
-        ethereumController.freeze();
+        mainnetController.freeze();
 
-        assertEq(ethereumController.active(), false);
-
-        vm.prank(admin);
-        ethereumController.reactivate();
-
-        assertEq(ethereumController.active(), true);
+        assertEq(mainnetController.active(), false);
 
         vm.prank(admin);
-        ethereumController.reactivate();
+        mainnetController.reactivate();
 
-        assertEq(ethereumController.active(), true);
+        assertEq(mainnetController.active(), true);
+
+        vm.prank(admin);
+        mainnetController.reactivate();
+
+        assertEq(mainnetController.active(), true);
     }
 
 }

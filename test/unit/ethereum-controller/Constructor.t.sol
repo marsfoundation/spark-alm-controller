@@ -3,11 +3,11 @@ pragma solidity ^0.8.21;
 
 import "test/unit/UnitTestBase.t.sol";
 
-contract EthereumControllerConstructorTests is UnitTestBase {
+contract MainnetControllerConstructorTests is UnitTestBase {
 
     function test_constructor() public {
-        // Deploy another ethereumController to test the constructor
-        EthereumController newEthereumController = new EthereumController(
+        // Deploy another mainnetController to test the constructor
+        MainnetController newMainnetController = new MainnetController(
             admin,
             address(almProxy),
             makeAddr("vault"),
@@ -17,19 +17,19 @@ contract EthereumControllerConstructorTests is UnitTestBase {
             address(snst)
         );
 
-        assertEq(newEthereumController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(newMainnetController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
-        assertEq(address(newEthereumController.proxy()),  address(almProxy));
-        assertEq(address(newEthereumController.vault()),  makeAddr("vault"));
-        assertEq(address(newEthereumController.buffer()), makeAddr("buffer"));
-        assertEq(address(newEthereumController.psm()),    address(psm));
-        assertEq(address(newEthereumController.daiNst()), address(daiNst));
-        assertEq(address(newEthereumController.snst()),   address(snst));
-        assertEq(address(newEthereumController.dai()),    makeAddr("dai"));   // Dai param in MockDaiNst
-        assertEq(address(newEthereumController.usdc()),   makeAddr("usdc"));  // Gem param in MockPsm
-        assertEq(address(newEthereumController.nst()),    makeAddr("nst"));   // Nst param in MockSNst
+        assertEq(address(newMainnetController.proxy()),  address(almProxy));
+        assertEq(address(newMainnetController.vault()),  makeAddr("vault"));
+        assertEq(address(newMainnetController.buffer()), makeAddr("buffer"));
+        assertEq(address(newMainnetController.psm()),    address(psm));
+        assertEq(address(newMainnetController.daiNst()), address(daiNst));
+        assertEq(address(newMainnetController.snst()),   address(snst));
+        assertEq(address(newMainnetController.dai()),    makeAddr("dai"));   // Dai param in MockDaiNst
+        assertEq(address(newMainnetController.usdc()),   makeAddr("usdc"));  // Gem param in MockPsm
+        assertEq(address(newMainnetController.nst()),    makeAddr("nst"));   // Nst param in MockSNst
 
-        assertEq(newEthereumController.active(), true);
+        assertEq(newMainnetController.active(), true);
     }
 
 }

@@ -23,8 +23,8 @@ import { SNstDeploy }           from "sdai/deploy/SNstDeploy.sol";
 import { SNstInit, SNstConfig } from "sdai/deploy/SNstInit.sol";
 import { SNstInstance }         from "sdai/deploy/SNstInstance.sol";
 
-import { ALMProxy }           from "src/ALMProxy.sol";
-import { EthereumController } from "src/EthereumController.sol";
+import { ALMProxy }          from "src/ALMProxy.sol";
+import { MainnetController } from "src/MainnetController.sol";
 
 interface IChainlogLike {
     function getAddress(bytes32) external view returns (address);
@@ -97,8 +97,8 @@ contract ForkTestBase is DssTest {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    ALMProxy           almProxy;
-    EthereumController ethereumController;
+    ALMProxy          almProxy;
+    MainnetController mainnetController;
 
     /**********************************************************************************************/
     /*** Casted addresses for testing                                                           ***/
@@ -183,7 +183,7 @@ contract ForkTestBase is DssTest {
 
         almProxy = new ALMProxy(SPARK_PROXY);
 
-        ethereumController = new EthereumController({
+        mainnetController = new MainnetController({
             admin_  : SPARK_PROXY,
             proxy_  : address(almProxy),
             vault_  : ilkInst.vault,
@@ -194,8 +194,8 @@ contract ForkTestBase is DssTest {
         });
 
         CONTROLLER = almProxy.CONTROLLER();
-        FREEZER    = ethereumController.FREEZER();
-        RELAYER    = ethereumController.RELAYER();
+        FREEZER    = mainnetController.FREEZER();
+        RELAYER    = mainnetController.RELAYER();
 
         /*** Step 4: Configure ALM system in allocation system ***/
 
@@ -203,10 +203,10 @@ contract ForkTestBase is DssTest {
 
         IVaultLike(ilkInst.vault).rely(address(almProxy));
 
-        ethereumController.grantRole(FREEZER, freezer);
-        ethereumController.grantRole(RELAYER, relayer);
+        mainnetController.grantRole(FREEZER, freezer);
+        mainnetController.grantRole(RELAYER, relayer);
 
-        almProxy.grantRole(CONTROLLER, address(ethereumController));
+        almProxy.grantRole(CONTROLLER, address(mainnetController));
 
         IBufferLike(ilkInst.buffer).approve(nstInst.nst, address(almProxy), type(uint256).max);
 

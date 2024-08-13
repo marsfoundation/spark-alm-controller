@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "test/fork/ForkTestBase.t.sol";
 
-contract EthereumControllerSwapNSTToSNSTFailureTests is ForkTestBase {
+contract MainnetControllerSwapNSTToSNSTFailureTests is ForkTestBase {
 
     function test_swapNSTToSNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -11,29 +11,29 @@ contract EthereumControllerSwapNSTToSNSTFailureTests is ForkTestBase {
             address(this),
             RELAYER
         ));
-        ethereumController.swapNSTToSNST(1e18);
+        mainnetController.swapNSTToSNST(1e18);
     }
 
     function test_swapNSTToSNST_frozen() external {
         vm.prank(freezer);
-        ethereumController.freeze();
+        mainnetController.freeze();
 
         vm.prank(relayer);
-        vm.expectRevert("EthereumController/not-active");
-        ethereumController.swapNSTToSNST(1e18);
+        vm.expectRevert("MainnetController/not-active");
+        mainnetController.swapNSTToSNST(1e18);
     }
 
 }
 
-contract EthereumControllerSwapNSTToSNSTTests is ForkTestBase {
+contract MainnetControllerSwapNSTToSNSTTests is ForkTestBase {
 
     function test_swapNSTToSNST() external {
         vm.prank(relayer);
-        ethereumController.mintNST(1e18);
+        mainnetController.mintNST(1e18);
 
-        assertEq(nst.balanceOf(address(almProxy)),           1e18);
-        assertEq(nst.balanceOf(address(ethereumController)), 0);
-        assertEq(nst.balanceOf(address(snst)),               0);
+        assertEq(nst.balanceOf(address(almProxy)),          1e18);
+        assertEq(nst.balanceOf(address(mainnetController)), 0);
+        assertEq(nst.balanceOf(address(snst)),              0);
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(snst)),  0);
@@ -43,11 +43,11 @@ contract EthereumControllerSwapNSTToSNSTTests is ForkTestBase {
         assertEq(snst.balanceOf(address(almProxy)), 0);
 
         vm.prank(relayer);
-        ethereumController.swapNSTToSNST(1e18);
+        mainnetController.swapNSTToSNST(1e18);
 
-        assertEq(nst.balanceOf(address(almProxy)),           0);
-        assertEq(nst.balanceOf(address(ethereumController)), 0);
-        assertEq(nst.balanceOf(address(snst)),               1e18);
+        assertEq(nst.balanceOf(address(almProxy)),          0);
+        assertEq(nst.balanceOf(address(mainnetController)), 0);
+        assertEq(nst.balanceOf(address(snst)),              1e18);
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(snst)),  0);
@@ -60,7 +60,7 @@ contract EthereumControllerSwapNSTToSNSTTests is ForkTestBase {
 
 }
 
-contract EthereumControllerSwapSNSTToNSTFailureTests is ForkTestBase {
+contract MainnetControllerSwapSNSTToNSTFailureTests is ForkTestBase {
 
     function test_swapSNSTToNST_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -68,31 +68,31 @@ contract EthereumControllerSwapSNSTToNSTFailureTests is ForkTestBase {
             address(this),
             RELAYER
         ));
-        ethereumController.swapSNSTToNST(1e18);
+        mainnetController.swapSNSTToNST(1e18);
     }
 
     function test_swapSNSTToNST_frozen() external {
         vm.prank(freezer);
-        ethereumController.freeze();
+        mainnetController.freeze();
 
         vm.prank(relayer);
-        vm.expectRevert("EthereumController/not-active");
-        ethereumController.swapSNSTToNST(1e18);
+        vm.expectRevert("MainnetController/not-active");
+        mainnetController.swapSNSTToNST(1e18);
     }
 
 }
 
-contract EthereumControllerSwapSNSTToNSTTests is ForkTestBase {
+contract MainnetControllerSwapSNSTToNSTTests is ForkTestBase {
 
     function test_swapSNSTToNST() external {
         vm.startPrank(relayer);
-        ethereumController.mintNST(1e18);
-        ethereumController.swapNSTToSNST(1e18);
+        mainnetController.mintNST(1e18);
+        mainnetController.swapNSTToSNST(1e18);
         vm.stopPrank();
 
-        assertEq(nst.balanceOf(address(almProxy)),           0);
-        assertEq(nst.balanceOf(address(ethereumController)), 0);
-        assertEq(nst.balanceOf(address(snst)),               1e18);
+        assertEq(nst.balanceOf(address(almProxy)),          0);
+        assertEq(nst.balanceOf(address(mainnetController)), 0);
+        assertEq(nst.balanceOf(address(snst)),              1e18);
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(snst)),  0);
@@ -103,11 +103,11 @@ contract EthereumControllerSwapSNSTToNSTTests is ForkTestBase {
         assertEq(snst.balanceOf(address(almProxy)), 1e18);
 
         vm.prank(relayer);
-        ethereumController.swapSNSTToNST(1e18);
+        mainnetController.swapSNSTToNST(1e18);
 
-        assertEq(nst.balanceOf(address(almProxy)),           1e18);
-        assertEq(nst.balanceOf(address(ethereumController)), 0);
-        assertEq(nst.balanceOf(address(snst)),               0);
+        assertEq(nst.balanceOf(address(almProxy)),          1e18);
+        assertEq(nst.balanceOf(address(mainnetController)), 0);
+        assertEq(nst.balanceOf(address(snst)),              0);
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(snst)),  0);
