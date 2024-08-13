@@ -66,6 +66,18 @@ contract ALMProxyDoCallTests is ALMProxyCallTestBase {
         assertEq(abi.decode(returnData, (uint256)), 84);
     }
 
+    function test_doCall_msgValue() public {
+        vm.deal(address(mainnetController), 1e18);
+
+        // ALM Proxy is msg.sender, target emits the event, msg.value is sent to target
+        vm.expectEmit(target);
+        emit ExampleEvent(exampleAddress, 42, 84, address(almProxy), 1e18);
+        vm.prank(address(mainnetController));
+        bytes memory returnData = almProxy.doCall{value: 1e18}(target, data);
+
+        assertEq(abi.decode(returnData, (uint256)), 84);
+    }
+
 }
 
 contract ALMProxyDoCallWithValueFailureTests is ALMProxyCallTestBase {
