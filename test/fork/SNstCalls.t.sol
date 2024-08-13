@@ -109,9 +109,9 @@ contract MainnetControllerWithdrawFromSNSTTests is ForkTestBase {
 
         assertEq(shares, 1e18);
 
-        assertEq(nst.balanceOf(address(almProxy)),           1e18);
+        assertEq(nst.balanceOf(address(almProxy)),          1e18);
         assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.balanceOf(address(snst)),               0);
+        assertEq(nst.balanceOf(address(snst)),              0);
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(snst)),  0);
@@ -154,9 +154,9 @@ contract MainnetControllerRedeemFromSNSTTests is ForkTestBase {
         mainnetController.depositToSNST(1e18);
         vm.stopPrank();
 
-        assertEq(nst.balanceOf(address(almProxy)),           0);
+        assertEq(nst.balanceOf(address(almProxy)),          0);
         assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.balanceOf(address(snst)),               1e18);
+        assertEq(nst.balanceOf(address(snst)),              1e18);
 
         assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(nst.allowance(address(almProxy), address(snst)),  0);
