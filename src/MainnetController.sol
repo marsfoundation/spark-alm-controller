@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import { IERC20 } from "erc20-helpers/interfaces/IERC20.sol";
+import { IERC20 }   from "forge-std/interfaces/IERC20.sol";
+import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
@@ -13,10 +14,8 @@ interface IDaiNstLike {
     function nstToDai(address usr, uint256 wad) external;
 }
 
-interface ISNSTLike {
-    function deposit(uint256 assets, address receiver) external;
+interface ISNSTLike is IERC4626 {
     function nst() external view returns(address);
-    function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares);
 }
 
 interface IVaultLike {
@@ -142,25 +141,50 @@ contract MainnetController is AccessControl {
     /*** Relayer sNST functions                                                                 ***/
     /**********************************************************************************************/
 
-    function swapNSTToSNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
-        // Approve NST to sNST from the proxy (assumes the proxy has enough NST)
+    function depositToSNST(uint256 nstAmount)
+        external onlyRole(RELAYER) isActive returns (uint256 shares)
+    {
+        // Approve NST to sNST from the proxy (assumes the proxy has enough NST).
         proxy.doCall(
             address(nst),
             abi.encodeCall(nst.approve, (address(snst), nstAmount))
         );
 
-        // Deposit NST into sNST, proxy receives sNST shares
-        proxy.doCall(
-            address(snst),
-            abi.encodeCall(snst.deposit, (nstAmount, address(proxy)))
+        // Deposit NST into sNST, proxy receives sNST shares, decode the resulting shares
+        shares = abi.decode(
+            proxy.doCall(
+                address(snst),
+                abi.encodeCall(snst.deposit, (nstAmount, address(proxy)))
+            ),
+            (uint256)
         );
     }
 
-    function swapSNSTToNST(uint256 nstAmount) external onlyRole(RELAYER) isActive {
-        // Withdraw NST from sNST, assumes proxy has adequate sNST shares
-        proxy.doCall(
-            address(snst),
-            abi.encodeCall(snst.withdraw, (nstAmount, address(proxy), address(proxy)))
+    function withdrawFromSNST(uint256 nstAmount)
+        external onlyRole(RELAYER) isActive returns (uint256 shares)
+    {
+        // Withdraw NST from sNST, decode resulting shares.
+        // Assumes proxy has adequate sNST shares.
+        shares = abi.decode(
+            proxy.doCall(
+                address(snst),
+                abi.encodeCall(snst.withdraw, (nstAmount, address(proxy), address(proxy)))
+            ),
+            (uint256)
+        );
+    }
+
+    function redeemFromSNST(uint256 snstSharesAmount)
+        external onlyRole(RELAYER) isActive returns (uint256 assets)
+    {
+        // Redeem shares for NST from sNST, decode the resulting assets.
+        // Assumes proxy has adequate sNST shares.
+        assets = abi.decode(
+            proxy.doCall(
+                address(snst),
+                abi.encodeCall(snst.redeem, (snstSharesAmount, address(proxy), address(proxy)))
+            ),
+            (uint256)
         );
     }
 
