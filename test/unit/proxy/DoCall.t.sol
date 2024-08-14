@@ -131,6 +131,18 @@ contract ALMProxyDoCallWithValueTests is ALMProxyCallTestBase {
         assertEq(abi.decode(returnData, (uint256)), 84);
     }
 
+    function test_doCallWithValue_msgValue() public {
+        vm.deal(address(mainnetController), 1e18);
+
+        // ALM Proxy is msg.sender, target emits the event, msg.value sent to proxy then target
+        vm.expectEmit(target);
+        emit ExampleEvent(exampleAddress, 42, 84, address(almProxy), 1e18);
+        vm.prank(address(mainnetController));
+        bytes memory returnData = almProxy.doCallWithValue{value: 1e18}(target, data, 1e18);
+
+        assertEq(abi.decode(returnData, (uint256)), 84);
+    }
+
 }
 
 contract ALMProxyDoDelegateCallFailureTests is ALMProxyCallTestBase {
@@ -162,6 +174,18 @@ contract ALMProxyDoDelegateCallTests is ALMProxyCallTestBase {
         emit ExampleEvent(exampleAddress, 42, 84, address(mainnetController), 0);
         vm.prank(address(mainnetController));
         bytes memory returnData = almProxy.doDelegateCall(target, data);
+
+        assertEq(abi.decode(returnData, (uint256)), 84);
+    }
+
+    function test_doDelegateCall_msgValue() public {
+        vm.deal(address(mainnetController), 1e18);
+
+        // L1 Controller is msg.sender, almProxy emits the event, msg.value sent to proxy
+        vm.expectEmit(address(almProxy));
+        emit ExampleEvent(exampleAddress, 42, 84, address(mainnetController), 1e18);
+        vm.prank(address(mainnetController));
+        bytes memory returnData = almProxy.doDelegateCall{value: 1e18}(target, data);
 
         assertEq(abi.decode(returnData, (uint256)), 84);
     }
