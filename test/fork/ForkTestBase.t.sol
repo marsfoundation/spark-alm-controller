@@ -73,7 +73,7 @@ contract ForkTestBase is DssTest {
     /*** Mainnet addresses                                                                      ***/
     /**********************************************************************************************/
 
-    address constant CCTP_MESSENGER = 0xbd3fa81b58ba92a82136038b25adec7066af3155;
+    address constant CCTP_MESSENGER = 0xBd3fa81B58Ba92a82136038B25aDec7066af3155;
     address constant LOG            = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
     address constant PSM            = 0xf6e72Db5454dd049d0788e411b06CfAF16853042;  // Lite PSM
     address constant SPARK_PROXY    = 0x3300f198988e4C9C63F75dF86De36421f06af8c4;
@@ -191,6 +191,7 @@ contract ForkTestBase is DssTest {
             buffer_ : ilkInst.buffer,
             psm_    : PSM,
             daiNst_ : nstInst.daiNst,
+            cctp_   : CCTP_MESSENGER,
             snst_   : snstInst.sNst
         });
 

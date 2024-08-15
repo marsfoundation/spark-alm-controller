@@ -265,29 +265,34 @@ contract MainnetController is AccessControl {
     /*** Relayer bridging functions                                                             ***/
     /**********************************************************************************************/
 
-    function transferToCCTP(uint256 usdcAmount)
+    function transferUSDCToCCTP(
+        uint256 usdcAmount,
+        uint32  destinationDomain,
+        bytes32 mintRecipient,
+        bytes32 destinationCaller
+    )
         external onlyRole(RELAYER) isActive returns (uint256 shares)
     {
-        // Approve NST to sNST from the proxy (assumes the proxy has enough NST).
+        // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC).
         proxy.doCall(
             address(usdc),
             abi.encodeCall(usdc.approve, (address(cctp), usdcAmount))
         );
 
-        // Deposit NST into sNST, proxy receives sNST shares, decode the resulting shares
-        // proxy.doCall(
-        //     address(cctp),
-        //     abi.encodeCall(
-        //         // cctp.depositForBurnWithCaller,
-        //         (
-        //             // uint256 amount,
-        //             // uint32 destinationDomain,
-        //             // bytes32 mintRecipient,
-        //             // address burnToken,
-        //             // bytes32 destinationCaller
-        //         )
-        //     )
-        // );
+        // Send USDC to CCTP for bridging to destinationDomain
+        proxy.doCall(
+            address(cctp),
+            abi.encodeCall(
+                cctp.depositForBurnWithCaller,
+                (
+                    usdcAmount,
+                    destinationDomain,
+                    mintRecipient,
+                    address(usdc),
+                    destinationCaller
+                )
+            )
+        );
     }
 
 }

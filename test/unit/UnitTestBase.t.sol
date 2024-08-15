@@ -43,6 +43,7 @@ contract UnitTestBase is Test {
             makeAddr("buffer"),
             address(psm),
             address(daiNst),
+            makeAddr("cctp"),
             address(snst)
         );
 
