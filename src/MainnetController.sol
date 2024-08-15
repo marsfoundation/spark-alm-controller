@@ -8,6 +8,16 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 
 import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 
+interface ICCTPLike {
+    function depositForBurnWithCaller(
+        uint256 amount,
+        uint32 destinationDomain,
+        bytes32 mintRecipient,
+        address burnToken,
+        bytes32 destinationCaller
+    ) external returns (uint64 nonce);
+}
+
 interface IDaiNstLike {
     function dai() external view returns(address);
     function daiToNst(address usr, uint256 wad) external;
@@ -44,6 +54,7 @@ contract MainnetController is AccessControl {
     address public immutable buffer;
 
     IALMProxy   public immutable proxy;
+    ICCTPLike   public immutable cctp;
     IDaiNstLike public immutable daiNst;
     IPSMLike    public immutable psm;
     IVaultLike  public immutable vault;
@@ -66,6 +77,7 @@ contract MainnetController is AccessControl {
         address buffer_,
         address psm_,
         address daiNst_,
+        address cctp_,
         address snst_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
@@ -75,6 +87,7 @@ contract MainnetController is AccessControl {
         buffer = buffer_;
         psm    = IPSMLike(psm_);
         daiNst = IDaiNstLike(daiNst_);
+        cctp   = ICCTPLike(cctp_);
 
         snst = ISNSTLike(snst_);
         dai  = IERC20(daiNst.dai());
@@ -189,7 +202,7 @@ contract MainnetController is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Relayer PSM functions                                           s                      ***/
+    /*** Relayer PSM functions                                                                  ***/
     /**********************************************************************************************/
 
     function swapNSTToUSDC(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
@@ -246,6 +259,35 @@ contract MainnetController is AccessControl {
             address(daiNst),
             abi.encodeCall(daiNst.daiToNst, (address(proxy), nstAmount))
         );
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer bridging functions                                                             ***/
+    /**********************************************************************************************/
+
+    function transferToCCTP(uint256 usdcAmount)
+        external onlyRole(RELAYER) isActive returns (uint256 shares)
+    {
+        // Approve NST to sNST from the proxy (assumes the proxy has enough NST).
+        proxy.doCall(
+            address(usdc),
+            abi.encodeCall(usdc.approve, (address(cctp), usdcAmount))
+        );
+
+        // Deposit NST into sNST, proxy receives sNST shares, decode the resulting shares
+        // proxy.doCall(
+        //     address(cctp),
+        //     abi.encodeCall(
+        //         // cctp.depositForBurnWithCaller,
+        //         (
+        //             // uint256 amount,
+        //             // uint32 destinationDomain,
+        //             // bytes32 mintRecipient,
+        //             // address burnToken,
+        //             // bytes32 destinationCaller
+        //         )
+        //     )
+        // );
     }
 
 }
