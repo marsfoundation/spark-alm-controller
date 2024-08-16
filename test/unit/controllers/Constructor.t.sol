@@ -60,9 +60,9 @@ contract L2ControllerConstructorTests is UnitTestBase {
 
         assertEq(address(l2Controller.proxy()), makeAddr("almProxy"));
         assertEq(address(l2Controller.psm()),   address(psm3));
-        assertEq(address(l2Controller.nst()),   makeAddr("nst"));   // asset0 param in MockPSM3
-        assertEq(address(l2Controller.usdc()),  makeAddr("usdc"));  // asset1 param in MockPSM3
-        assertEq(address(l2Controller.snst()),  makeAddr("snst"));  // asset2 param in MockPSM3
+        assertEq(address(l2Controller.nst()),   nst);   // asset0 param in MockPSM3
+        assertEq(address(l2Controller.usdc()),  usdc);  // asset1 param in MockPSM3
+        assertEq(address(l2Controller.snst()),  snst);  // asset2 param in MockPSM3
 
         assertEq(l2Controller.active(), true);
     }

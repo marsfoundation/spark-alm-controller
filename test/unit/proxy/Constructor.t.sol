@@ -8,9 +8,9 @@ import { ALMProxy } from "src/ALMProxy.sol";
 contract ALMProxyConstructorTests is UnitTestBase {
 
     function test_constructor() public {
-        // Deploy another almProxy to test the constructor
         ALMProxy newAlmProxy = new ALMProxy(admin);
 
         assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
     }
+
 }
