@@ -68,6 +68,7 @@ contract ForkTestBase is DssTest {
     uint256 DAI_BAL_PSM;
     uint256 DAI_SUPPLY;
     uint256 USDC_BAL_PSM;
+    uint256 USDC_SUPPLY;
 
     /**********************************************************************************************/
     /*** Mainnet addresses                                                                      ***/
@@ -232,6 +233,7 @@ contract ForkTestBase is DssTest {
         DAI_BAL_PSM  = dai.balanceOf(PSM);
         DAI_SUPPLY   = dai.totalSupply();
         USDC_BAL_PSM = usdc.balanceOf(pocket);
+        USDC_SUPPLY  = usdc.totalSupply();
     }
 
 }

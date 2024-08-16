@@ -271,7 +271,7 @@ contract MainnetController is AccessControl {
         bytes32 mintRecipient,
         bytes32 destinationCaller
     )
-        external onlyRole(RELAYER) isActive returns (uint256 shares)
+        external onlyRole(RELAYER) isActive
     {
         // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC).
         proxy.doCall(
