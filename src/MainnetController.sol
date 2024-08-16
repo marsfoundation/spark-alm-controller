@@ -273,7 +273,7 @@ contract MainnetController is AccessControl {
     )
         external onlyRole(RELAYER) isActive
     {
-        // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC).
+        // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC)
         proxy.doCall(
             address(usdc),
             abi.encodeCall(usdc.approve, (address(cctp), usdcAmount))
