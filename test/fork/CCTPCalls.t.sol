@@ -17,7 +17,7 @@ contract MainnetControllerTransferUSDCToCTTPTests is ForkTestBase {
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
         assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
 
-        assertEq(nst.allowance(address(almProxy), address(CCTP_MESSENGER)),  0);
+        assertEq(nst.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
         vm.prank(relayer);
         mainnetController.transferUSDCToCCTP({
@@ -31,7 +31,7 @@ contract MainnetControllerTransferUSDCToCTTPTests is ForkTestBase {
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
         assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 1e6);
 
-        assertEq(nst.allowance(address(almProxy), address(CCTP_MESSENGER)),  0);
+        assertEq(nst.allowance(address(almProxy), CCTP_MESSENGER),  0);
     }
 
 }
