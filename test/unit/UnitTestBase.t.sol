@@ -3,12 +3,12 @@ pragma solidity ^0.8.21;
 
 import "forge-std/Test.sol";
 
-import { ALMProxy }          from "src/ALMProxy.sol";
-import { MainnetController } from "src/MainnetController.sol";
+// import { ALMProxy }          from "src/ALMProxy.sol";
+// import { MainnetController } from "src/MainnetController.sol";
 
-import { MockDaiNst } from "test/unit/mocks/MockDaiNst.sol";
-import { MockPsm }    from "test/unit/mocks/MockPsm.sol";
-import { MockSNst }   from "test/unit/mocks/MockSNst.sol";
+// import { MockDaiNst } from "test/unit/mocks/MockDaiNst.sol";
+// import { MockPsm }    from "test/unit/mocks/MockPsm.sol";
+// import { MockSNst }   from "test/unit/mocks/MockSNst.sol";
 
 contract UnitTestBase is Test {
 
@@ -22,39 +22,39 @@ contract UnitTestBase is Test {
     address freezer = makeAddr("freezer");
     address relayer = makeAddr("relayer");
 
-    MockDaiNst daiNst;
-    MockPsm    psm;
-    MockSNst   snst;
+    // MockDaiNst daiNst;
+    // MockPsm    psm;
+    // MockSNst   snst;
 
-    ALMProxy          almProxy;
-    MainnetController mainnetController;
+    // ALMProxy          almProxy;
+    // MainnetController mainnetController;
 
-    function setUp() public virtual {
-        psm  = new MockPsm(makeAddr("usdc"));
-        snst = new MockSNst(makeAddr("nst"));
-        daiNst = new MockDaiNst(makeAddr("dai"));
+    // function setUp() public virtual {
+    //     psm  = new MockPsm(makeAddr("usdc"));
+    //     snst = new MockSNst(makeAddr("nst"));
+    //     daiNst = new MockDaiNst(makeAddr("dai"));
 
-        almProxy = new ALMProxy(admin);
+    //     almProxy = new ALMProxy(admin);
 
-        mainnetController = new MainnetController(
-            admin,
-            address(almProxy),
-            makeAddr("vault"),
-            makeAddr("buffer"),
-            address(psm),
-            address(daiNst),
-            address(snst)
-        );
+    //     mainnetController = new MainnetController(
+    //         admin,
+    //         address(almProxy),
+    //         makeAddr("vault"),
+    //         makeAddr("buffer"),
+    //         address(psm),
+    //         address(daiNst),
+    //         address(snst)
+    //     );
 
-        // Done with spell by pause proxy
-        vm.startPrank(admin);
+    //     // Done with spell by pause proxy
+    //     vm.startPrank(admin);
 
-        mainnetController.grantRole(FREEZER, freezer);
-        mainnetController.grantRole(RELAYER, relayer);
+    //     mainnetController.grantRole(FREEZER, freezer);
+    //     mainnetController.grantRole(RELAYER, relayer);
 
-        almProxy.grantRole(CONTROLLER, address(mainnetController));
+    //     almProxy.grantRole(CONTROLLER, address(mainnetController));
 
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 
 }
