@@ -18,6 +18,8 @@ import { NstDeploy }   from "nst/deploy/NstDeploy.sol";
 import { NstInit }     from "nst/deploy/NstInit.sol";
 import { NstInstance } from "nst/deploy/NstInstance.sol";
 
+import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
+
 import { ISNst }                from "sdai/src/ISNst.sol";
 import { SNstDeploy }           from "sdai/deploy/SNstDeploy.sol";
 import { SNstInit, SNstConfig } from "sdai/deploy/SNstInit.sol";
@@ -79,10 +81,17 @@ contract ForkTestBase is DssTest {
 
     DssInstance dss;  // Mainnet DSS
 
+    // TODO: Fill these addresses in and remove from setup
     address ILK_REGISTRY;
     address PAUSE_PROXY;
     address USDC;
     address DAI;
+
+    /**********************************************************************************************/
+    /*** Base addresses                                                                         ***/
+    /**********************************************************************************************/
+
+    address USDC_BASE = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 
     /**********************************************************************************************/
     /*** Deployment instances                                                                   ***/
@@ -120,6 +129,17 @@ contract ForkTestBase is DssTest {
     /**********************************************************************************************/
 
     function setUp() public virtual {
+        _setupMainnet();
+        _setupBaseChain();
+    }
+
+    function _setupBaseChain() internal {
+        vm.createSelectFork(getChain('base').rpcUrl, 18181500);  // August 8, 2024
+
+
+    }
+
+    function _setupMainnet() internal {
         vm.createSelectFork(getChain('mainnet').rpcUrl, 20484600);  // August 8, 2024
 
         dss          = MCD.loadFromChainlog(LOG);
