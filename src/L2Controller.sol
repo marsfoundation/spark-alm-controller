@@ -66,7 +66,7 @@ contract L2Controller is AccessControl {
     /**********************************************************************************************/
 
     modifier isActive {
-        require(active, "MainnetController/not-active");
+        require(active, "L2Controller/not-active");
         _;
     }
 
