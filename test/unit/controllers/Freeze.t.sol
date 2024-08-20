@@ -35,6 +35,7 @@ contract ControllerTestBase is UnitTestBase {
             makeAddr("buffer"),
             address(psm),
             address(daiNst),
+            makeAddr("cctp"),
             address(snst)
         )));
 
