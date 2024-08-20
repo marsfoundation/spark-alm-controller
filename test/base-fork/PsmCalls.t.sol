@@ -43,8 +43,9 @@ contract L2ControllerSwapExactInTests is ForkTestBase {
 
     function test_swapExactIn() external {
         // Give the PSM a balance of 100 USDC and 100 NST, give proxy 1 NST.
+        // TODO: Refactor to use real deposits once full integration is set up
         deal(USDC_BASE,        address(psmBase),  100e6);
-        deal(address(nstBase), address(psmBase),  99e18);
+        deal(address(nstBase), address(psmBase),  100e18);
         deal(address(nstBase), address(almProxy), 1e18);
 
         assertEq(nstBase.balanceOf(address(almProxy)),     1e18);

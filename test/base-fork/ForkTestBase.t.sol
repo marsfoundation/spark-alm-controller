@@ -71,6 +71,7 @@ contract ForkTestBase is DssTest {
 
         nstBase  = new ERC20Mock();
         snstBase = new ERC20Mock();
+        usdcBase = IERC20(USDC_BASE);
 
         rateProvider = new MockRateProvider();
 
@@ -79,7 +80,7 @@ contract ForkTestBase is DssTest {
         nstBase.mint(address(this), 1e18);  // For seeding PSM during deployment
 
         psmBase = IPSM3(PSM3Deploy.deploy(
-            address(nstBase), address(snstBase), USDC_BASE, address(rateProvider)
+            address(nstBase), USDC_BASE, address(snstBase), address(rateProvider)
         ));
 
         almProxy = new ALMProxy(admin);
