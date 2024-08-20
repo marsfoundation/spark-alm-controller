@@ -18,16 +18,10 @@ import { NstDeploy }   from "nst/deploy/NstDeploy.sol";
 import { NstInit }     from "nst/deploy/NstInit.sol";
 import { NstInstance } from "nst/deploy/NstInstance.sol";
 
-import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
-
 import { ISNst }                from "sdai/src/ISNst.sol";
 import { SNstDeploy }           from "sdai/deploy/SNstDeploy.sol";
 import { SNstInit, SNstConfig } from "sdai/deploy/SNstInit.sol";
 import { SNstInstance }         from "sdai/deploy/SNstInstance.sol";
-
-import { PSM3Deploy }       from "spark-psm/deploy/PSM3Deploy.sol";
-import { IPSM3 }            from "spark-psm/src/PSM3.sol";
-import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
 
 import { ALMProxy }          from "src/ALMProxy.sol";
 import { MainnetController } from "src/MainnetController.sol";
@@ -50,8 +44,6 @@ interface IVaultLike {
 }
 
 contract ForkTestBase is DssTest {
-
-    // TODO: Refactor to use deployment libraries/testnet addresses
 
     /**********************************************************************************************/
     /*** Constants/state variables                                                              ***/
@@ -93,12 +85,6 @@ contract ForkTestBase is DssTest {
     address DAI;
 
     /**********************************************************************************************/
-    /*** Base addresses                                                                         ***/
-    /**********************************************************************************************/
-
-    address USDC_BASE = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
-
-    /**********************************************************************************************/
     /*** Deployment instances                                                                   ***/
     /**********************************************************************************************/
 
@@ -123,13 +109,6 @@ contract ForkTestBase is DssTest {
     IERC20 usdc;
     ISNst  snst;
 
-    ERC20Mock nstBase;
-    ERC20Mock snstBase;
-
-    MockRateProvider rateProvider;
-
-    IPSM3 psmBase;
-
     address buffer;
     address daiNst;
     address nstJoin;
@@ -141,26 +120,6 @@ contract ForkTestBase is DssTest {
     /**********************************************************************************************/
 
     function setUp() public virtual {
-        _setupMainnet();
-        _setupBaseChain();
-    }
-
-    function _setupBaseChain() internal {
-        vm.createSelectFork(getChain('base').rpcUrl, 18181500);  // August 8, 2024
-
-        nstBase  = new ERC20Mock();
-        snstBase = new ERC20Mock();
-
-        rateProvider = new MockRateProvider();
-
-        rateProvider.__setConversionRate(1.25e27);
-
-        psmBase = IPSM3(PSM3Deploy.deploy(
-            address(nstBase), address(snstBase), USDC_BASE, address(rateProvider)
-        ));
-    }
-
-    function _setupMainnet() internal {
         vm.createSelectFork(getChain('mainnet').rpcUrl, 20484600);  // August 8, 2024
 
         dss          = MCD.loadFromChainlog(LOG);
