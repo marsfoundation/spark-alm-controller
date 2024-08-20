@@ -46,7 +46,7 @@ contract L2ControllerSwapExactInTests is ForkTestBase {
 
         deal(USDC_BASE,         address(psmBase), 100e6);
         deal(address(nstBase),  address(psmBase), 100e18);
-        deal(address(snstBase), address(psmBase), 80e18);
+        deal(address(snstBase), address(psmBase), 100e18);
     }
 
     function _assertBalances(
@@ -64,7 +64,7 @@ contract L2ControllerSwapExactInTests is ForkTestBase {
         assertEq(nstBase.allowance(address(almProxy), address(psmBase)), 0);
     }
 
-    function test_swapExactIn_usdcAndNst() external {
+    function test_swapExactIn_nstToUsdc() external {
         deal(address(nstBase), address(almProxy), 1e18);
 
         _assertBalances({ token: nstBase,  proxyBalance: 1e18, psmBalance: 100e18 });
@@ -82,6 +82,106 @@ contract L2ControllerSwapExactInTests is ForkTestBase {
 
         _assertBalances({ token: nstBase,  proxyBalance: 0,   psmBalance: 101e18 });
         _assertBalances({ token: usdcBase, proxyBalance: 1e6, psmBalance: 99e6 });
+    }
+
+    function test_swapExactIn_nstToSNst() external {
+        deal(address(nstBase), address(almProxy), 1e18);
+
+        _assertBalances({ token: nstBase,  proxyBalance: 1e18, psmBalance: 100e18 });
+        _assertBalances({ token: snstBase, proxyBalance: 0,    psmBalance: 100e18 });
+
+        vm.prank(relayer);
+        l2Controller.swapExactIn({
+            assetIn      : address(nstBase),
+            assetOut     : address(snstBase),
+            amountIn     : 1e18,
+            minAmountOut : 0,
+            receiver     : address(almProxy),
+            referralCode : 0
+        });
+
+        _assertBalances({ token: nstBase,  proxyBalance: 0,      psmBalance: 101e18 });
+        _assertBalances({ token: snstBase, proxyBalance: 0.8e18, psmBalance: 99.2e18 });
+    }
+
+    function test_swapExactIn_snstToNst() external {
+        deal(address(snstBase), address(almProxy), 1e18);
+
+        _assertBalances({ token: snstBase, proxyBalance: 1e18, psmBalance: 100e18 });
+        _assertBalances({ token: nstBase,  proxyBalance: 0,    psmBalance: 100e18 });
+
+        vm.prank(relayer);
+        l2Controller.swapExactIn({
+            assetIn      : address(snstBase),
+            assetOut     : address(nstBase),
+            amountIn     : 1e18,
+            minAmountOut : 0,
+            receiver     : address(almProxy),
+            referralCode : 0
+        });
+
+        _assertBalances({ token: snstBase, proxyBalance: 0,       psmBalance: 101e18 });
+        _assertBalances({ token: nstBase,  proxyBalance: 1.25e18, psmBalance: 98.75e18 });
+    }
+
+    function test_swapExactIn_snstToUsdc() external {
+        deal(address(snstBase), address(almProxy), 1e18);
+
+        _assertBalances({ token: snstBase, proxyBalance: 1e18, psmBalance: 100e18 });
+        _assertBalances({ token: usdcBase, proxyBalance: 0,    psmBalance: 100e6 });
+
+        vm.prank(relayer);
+        l2Controller.swapExactIn({
+            assetIn      : address(snstBase),
+            assetOut     : address(usdcBase),
+            amountIn     : 1e18,
+            minAmountOut : 0,
+            receiver     : address(almProxy),
+            referralCode : 0
+        });
+
+        _assertBalances({ token: snstBase, proxyBalance: 0,      psmBalance: 101e18 });
+        _assertBalances({ token: usdcBase, proxyBalance: 1.25e6, psmBalance: 98.75e6 });
+    }
+
+    function test_swapExactIn_usdcToNst() external {
+        deal(address(usdcBase), address(almProxy), 1e6);
+
+        _assertBalances({ token: usdcBase, proxyBalance: 1e6, psmBalance: 100e6 });
+        _assertBalances({ token: nstBase,  proxyBalance: 0,   psmBalance: 100e18 });
+
+        vm.prank(relayer);
+        l2Controller.swapExactIn({
+            assetIn      : address(usdcBase),
+            assetOut     : address(nstBase),
+            amountIn     : 1e6,
+            minAmountOut : 0,
+            receiver     : address(almProxy),
+            referralCode : 0
+        });
+
+        _assertBalances({ token: usdcBase, proxyBalance: 0,    psmBalance: 101e6 });
+        _assertBalances({ token: nstBase,  proxyBalance: 1e18, psmBalance: 99e18 });
+    }
+
+    function test_swapExactIn_usdcToSNst() external {
+        deal(address(usdcBase), address(almProxy), 1e6);
+
+        _assertBalances({ token: usdcBase, proxyBalance: 1e6, psmBalance: 100e6 });
+        _assertBalances({ token: snstBase, proxyBalance: 0,   psmBalance: 100e18 });
+
+        vm.prank(relayer);
+        l2Controller.swapExactIn({
+            assetIn      : address(usdcBase),
+            assetOut     : address(snstBase),
+            amountIn     : 1e6,
+            minAmountOut : 0,
+            receiver     : address(almProxy),
+            referralCode : 0
+        });
+
+        _assertBalances({ token: usdcBase, proxyBalance: 0,      psmBalance: 101e6 });
+        _assertBalances({ token: snstBase, proxyBalance: 0.8e18, psmBalance: 99.2e18 });
     }
 
 }
