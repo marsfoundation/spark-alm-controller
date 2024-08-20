@@ -115,4 +115,35 @@ contract L2Controller is AccessControl {
         );
     }
 
+    function swapExactOut(
+        address assetIn,
+        address assetOut,
+        uint256 amountOut,
+        uint256 maxAmountIn,
+        address receiver,
+        uint256 referralCode
+    )
+        external onlyRole(RELAYER) isActive returns (uint256 amountIn)
+    {
+        uint256 amountInPreview = psm.previewSwapExactOut(assetIn, assetOut, amountOut);
+
+        // Approve `assetIn` to PSM from the proxy (assumes the proxy has enough `assetIn`).
+        proxy.doCall(
+            assetIn,
+            abi.encodeCall(IERC20.approve, (address(psm), amountInPreview))
+        );
+
+        // Swap `assetIn` for `assetOut` in the PSM, decode the result to get `amountIn`.
+        amountIn = abi.decode(
+            proxy.doCall(
+                address(psm),
+                abi.encodeCall(
+                    psm.swapExactOut,
+                    (assetIn, assetOut, amountOut, maxAmountIn, receiver, referralCode)
+                )
+            ),
+            (uint256)
+        );
+    }
+
 }
