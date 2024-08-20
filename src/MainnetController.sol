@@ -9,12 +9,11 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 
 interface ICCTPLike {
-    function depositForBurnWithCaller(
+    function depositForBurn(
         uint256 amount,
         uint32 destinationDomain,
         bytes32 mintRecipient,
-        address burnToken,
-        bytes32 destinationCaller
+        address burnToken
     ) external returns (uint64 nonce);
 }
 
@@ -66,6 +65,8 @@ contract MainnetController is AccessControl {
 
     bool public active;
 
+    mapping(uint32 destinationDomain => bytes32 mintRecipient) public mintRecipients;
+
     /**********************************************************************************************/
     /*** Initialization                                                                         ***/
     /**********************************************************************************************/
@@ -104,6 +105,16 @@ contract MainnetController is AccessControl {
     modifier isActive {
         require(active, "MainnetController/not-active");
         _;
+    }
+
+    /**********************************************************************************************/
+    /*** Admin functions                                                                        ***/
+    /**********************************************************************************************/
+
+    function setMintRecipient(uint32 destinationDomain, bytes32 mintRecipient)
+        external onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        mintRecipients[destinationDomain] = mintRecipient;
     }
 
     /**********************************************************************************************/
@@ -265,14 +276,13 @@ contract MainnetController is AccessControl {
     /*** Relayer bridging functions                                                             ***/
     /**********************************************************************************************/
 
-    function transferUSDCToCCTP(
-        uint256 usdcAmount,
-        uint32  destinationDomain,
-        bytes32 mintRecipient,
-        bytes32 destinationCaller
-    )
+    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
         external onlyRole(RELAYER) isActive
     {
+        bytes32 mintRecipient = mintRecipients[destinationDomain];
+
+        require(mintRecipient != 0, "MainnetController/invalid-mint-recipient");
+
         // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC)
         proxy.doCall(
             address(usdc),
@@ -283,13 +293,12 @@ contract MainnetController is AccessControl {
         proxy.doCall(
             address(cctp),
             abi.encodeCall(
-                cctp.depositForBurnWithCaller,
+                cctp.depositForBurn,
                 (
                     usdcAmount,
                     destinationDomain,
                     mintRecipient,
-                    address(usdc),
-                    destinationCaller
+                    address(usdc)
                 )
             )
         );

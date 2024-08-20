@@ -3,12 +3,37 @@ pragma solidity >=0.8.0;
 
 import "test/fork/ForkTestBase.t.sol";
 
+contract MainnetControllerTransferUSDCToCTTPFailureTests is ForkTestBase {
+
+    uint32 constant DOMAIN_ID_CIRCLE_ARBITRUM = 3;
+
+    function test_transferUSDCToCCTP_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        mainnetController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_OPTIMISM);
+    }
+
+    function test_transferUSDCToCCTP_frozen() external {
+        vm.prank(freezer);
+        mainnetController.freeze();
+
+        vm.prank(relayer);
+        vm.expectRevert("MainnetController/not-active");
+        mainnetController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_OPTIMISM);
+    }
+
+    function test_transferUSDCToCCTP_invalidMintRecipient() external {
+        vm.prank(relayer);
+        vm.expectRevert("MainnetController/invalid-mint-recipient");
+        mainnetController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_ARBITRUM);
+    }
+
+}
+
 contract MainnetControllerTransferUSDCToCTTPTests is ForkTestBase {
-
-    bytes32 mintRecipient     = bytes32(uint256(uint160(makeAddr("mintRecipient"))));
-    bytes32 destinationCaller = bytes32(uint256(uint160(makeAddr("destinationCaller"))));
-
-    uint32 constant internal DOMAIN_ID_CIRCLE_OPTIMISM = 2;
 
     function test_transferUSDCToCCTP() external {
         deal(address(usdc), address(almProxy), 1e6);
@@ -20,12 +45,7 @@ contract MainnetControllerTransferUSDCToCTTPTests is ForkTestBase {
         assertEq(nst.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
         vm.prank(relayer);
-        mainnetController.transferUSDCToCCTP({
-            usdcAmount        : 1e6,
-            destinationDomain : DOMAIN_ID_CIRCLE_OPTIMISM,
-            mintRecipient     : mintRecipient,
-            destinationCaller : destinationCaller
-        });
+        mainnetController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_OPTIMISM);
 
         assertEq(usdc.balanceOf(address(almProxy)),          0);
         assertEq(usdc.balanceOf(address(mainnetController)), 0);

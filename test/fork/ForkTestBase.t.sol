@@ -56,14 +56,18 @@ contract ForkTestBase is DssTest {
     uint256 constant SEVEN_PCT_APY = 1.000000002145441671308778766e27;  // 7% APY (current DSR)
     uint256 constant EIGHT_PCT_APY = 1.000000002440418608258400030e27;  // 8% APY (current DSR + 1%)
 
+    uint32 constant DOMAIN_ID_CIRCLE_OPTIMISM = 2;
+
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
+
+    address freezer = makeAddr("freezer");
+    address relayer = makeAddr("relayer");
+
+    bytes32 mintRecipient = bytes32(uint256(uint160(makeAddr("mintRecipient"))));
 
     bytes32 CONTROLLER;
     bytes32 FREEZER;
     bytes32 RELAYER;
-
-    address freezer = makeAddr("freezer");
-    address relayer = makeAddr("relayer");
 
     uint256 DAI_BAL_PSM;
     uint256 DAI_SUPPLY;
@@ -208,6 +212,8 @@ contract ForkTestBase is DssTest {
 
         mainnetController.grantRole(FREEZER, freezer);
         mainnetController.grantRole(RELAYER, relayer);
+
+        mainnetController.setMintRecipient(DOMAIN_ID_CIRCLE_OPTIMISM, mintRecipient);
 
         almProxy.grantRole(CONTROLLER, address(mainnetController));
 
