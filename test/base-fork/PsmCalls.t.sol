@@ -30,13 +30,31 @@ contract L2ControllerSwapSuccessTestBase is ForkTestBase {
 
     // NOTE: Setting minAmountOut to 0, setting receiver to almProxy, and setting referralCode to 0
     //       for all of these tests for simplicity
-    function _doSwapExactIn(IERC20  assetIn, IERC20 assetOut, uint256 amountIn) internal {
+    function _doSwapExactIn(IERC20  assetIn, IERC20 assetOut, uint256 amountIn)
+        internal returns (uint256 amountOut)
+    {
         vm.prank(relayer);
-        l2Controller.swapExactIn({
+        amountOut = l2Controller.swapExactIn({
             assetIn      : address(assetIn),
             assetOut     : address(assetOut),
             amountIn     : amountIn,
             minAmountOut : 0,
+            receiver     : address(almProxy),
+            referralCode : 0
+        });
+    }
+
+    // NOTE: Setting maxAmountIn to uint256 max, setting receiver to almProxy, and setting
+    //       referralCode to 0 for all of these tests for simplicity
+    function _doSwapExactOut(IERC20  assetIn, IERC20 assetOut, uint256 amountOut)
+        internal returns (uint256 amountIn)
+    {
+        vm.prank(relayer);
+        amountIn = l2Controller.swapExactOut({
+            assetIn      : address(assetIn),
+            assetOut     : address(assetOut),
+            amountOut    : amountOut,
+            maxAmountIn  : type(uint256).max,
             receiver     : address(almProxy),
             referralCode : 0
         });
@@ -89,7 +107,9 @@ contract L2ControllerSwapExactInTests is L2ControllerSwapSuccessTestBase {
         _assertBalances({ token: nstBase,  proxyBalance: 1e18, psmBalance: 100e18 });
         _assertBalances({ token: usdcBase, proxyBalance: 0,    psmBalance: 100e6 });
 
-        _doSwapExactIn(nstBase, usdcBase, 1e18);
+        uint256 amountOut = _doSwapExactIn(nstBase, usdcBase, 1e18);
+
+        assertEq(amountOut, 1e6);
 
         _assertBalances({ token: nstBase,  proxyBalance: 0,   psmBalance: 101e18 });
         _assertBalances({ token: usdcBase, proxyBalance: 1e6, psmBalance: 99e6 });
@@ -101,7 +121,9 @@ contract L2ControllerSwapExactInTests is L2ControllerSwapSuccessTestBase {
         _assertBalances({ token: nstBase,  proxyBalance: 1e18, psmBalance: 100e18 });
         _assertBalances({ token: snstBase, proxyBalance: 0,    psmBalance: 100e18 });
 
-        _doSwapExactIn(nstBase, snstBase, 1e18);
+        uint256 amountOut = _doSwapExactIn(nstBase, snstBase, 1e18);
+
+        assertEq(amountOut, 0.8e18);
 
         _assertBalances({ token: nstBase,  proxyBalance: 0,      psmBalance: 101e18 });
         _assertBalances({ token: snstBase, proxyBalance: 0.8e18, psmBalance: 99.2e18 });
@@ -113,7 +135,9 @@ contract L2ControllerSwapExactInTests is L2ControllerSwapSuccessTestBase {
         _assertBalances({ token: snstBase, proxyBalance: 1e18, psmBalance: 100e18 });
         _assertBalances({ token: nstBase,  proxyBalance: 0,    psmBalance: 100e18 });
 
-        _doSwapExactIn(snstBase, nstBase, 1e18);
+        uint256 amountOut = _doSwapExactIn(snstBase, nstBase, 1e18);
+
+        assertEq(amountOut, 1.25e18);
 
         _assertBalances({ token: snstBase, proxyBalance: 0,       psmBalance: 101e18 });
         _assertBalances({ token: nstBase,  proxyBalance: 1.25e18, psmBalance: 98.75e18 });
@@ -125,7 +149,9 @@ contract L2ControllerSwapExactInTests is L2ControllerSwapSuccessTestBase {
         _assertBalances({ token: snstBase, proxyBalance: 1e18, psmBalance: 100e18 });
         _assertBalances({ token: usdcBase, proxyBalance: 0,    psmBalance: 100e6 });
 
-        _doSwapExactIn(snstBase, usdcBase, 1e18);
+        uint256 amountOut = _doSwapExactIn(snstBase, usdcBase, 1e18);
+
+        assertEq(amountOut, 1.25e6);
 
         _assertBalances({ token: snstBase, proxyBalance: 0,      psmBalance: 101e18 });
         _assertBalances({ token: usdcBase, proxyBalance: 1.25e6, psmBalance: 98.75e6 });
@@ -137,7 +163,9 @@ contract L2ControllerSwapExactInTests is L2ControllerSwapSuccessTestBase {
         _assertBalances({ token: usdcBase, proxyBalance: 1e6, psmBalance: 100e6 });
         _assertBalances({ token: nstBase,  proxyBalance: 0,   psmBalance: 100e18 });
 
-        _doSwapExactIn(usdcBase, nstBase, 1e6);
+        uint256 amountOut = _doSwapExactIn(usdcBase, nstBase, 1e6);
+
+        assertEq(amountOut, 1e18);
 
         _assertBalances({ token: usdcBase, proxyBalance: 0,    psmBalance: 101e6 });
         _assertBalances({ token: nstBase,  proxyBalance: 1e18, psmBalance: 99e18 });
@@ -149,7 +177,9 @@ contract L2ControllerSwapExactInTests is L2ControllerSwapSuccessTestBase {
         _assertBalances({ token: usdcBase, proxyBalance: 1e6, psmBalance: 100e6 });
         _assertBalances({ token: snstBase, proxyBalance: 0,   psmBalance: 100e18 });
 
-        _doSwapExactIn(usdcBase, snstBase, 1e6);
+        uint256 amountOut = _doSwapExactIn(usdcBase, snstBase, 1e6);
+
+        assertEq(amountOut, 0.8e18);
 
         _assertBalances({ token: usdcBase, proxyBalance: 0,      psmBalance: 101e6 });
         _assertBalances({ token: snstBase, proxyBalance: 0.8e18, psmBalance: 99.2e18 });
@@ -189,6 +219,94 @@ contract L2ControllerSwapExactOutFailureTests is ForkTestBase {
             receiver     : address(almProxy),
             referralCode : 0
         });
+    }
+
+}
+
+contract L2ControllerSwapExactOutTests is L2ControllerSwapSuccessTestBase {
+
+    function test_swapExactOut_nstToUsdc() external {
+        deal(address(nstBase), address(almProxy), 1e18);
+
+        _assertBalances({ token: nstBase,  proxyBalance: 1e18, psmBalance: 100e18 });
+        _assertBalances({ token: usdcBase, proxyBalance: 0,    psmBalance: 100e6 });
+
+        uint256 amountIn = _doSwapExactOut(nstBase, usdcBase, 1e6);
+
+        assertEq(amountIn, 1e18);
+
+        _assertBalances({ token: nstBase,  proxyBalance: 0,   psmBalance: 101e18 });
+        _assertBalances({ token: usdcBase, proxyBalance: 1e6, psmBalance: 99e6 });
+    }
+
+    function test_swapExactOut_nstToSNst() external {
+        deal(address(nstBase), address(almProxy), 1e18);
+
+        _assertBalances({ token: nstBase,  proxyBalance: 1e18, psmBalance: 100e18 });
+        _assertBalances({ token: snstBase, proxyBalance: 0,    psmBalance: 100e18 });
+
+        uint256 amountIn = _doSwapExactOut(nstBase, snstBase, 0.8e18);
+
+        assertEq(amountIn, 1e18);
+
+        _assertBalances({ token: nstBase,  proxyBalance: 0,      psmBalance: 101e18 });
+        _assertBalances({ token: snstBase, proxyBalance: 0.8e18, psmBalance: 99.2e18 });
+    }
+
+    function test_swapExactOut_snstToNst() external {
+        deal(address(snstBase), address(almProxy), 1e18);
+
+        _assertBalances({ token: snstBase, proxyBalance: 1e18, psmBalance: 100e18 });
+        _assertBalances({ token: nstBase,  proxyBalance: 0,    psmBalance: 100e18 });
+
+        uint256 amountIn = _doSwapExactOut(snstBase, nstBase, 1.25e18);
+
+        assertEq(amountIn, 1e18);
+
+        _assertBalances({ token: snstBase, proxyBalance: 0,       psmBalance: 101e18 });
+        _assertBalances({ token: nstBase,  proxyBalance: 1.25e18, psmBalance: 98.75e18 });
+    }
+
+    function test_swapExactOut_snstToUsdc() external {
+        deal(address(snstBase), address(almProxy), 1e18);
+
+        _assertBalances({ token: snstBase, proxyBalance: 1e18, psmBalance: 100e18 });
+        _assertBalances({ token: usdcBase, proxyBalance: 0,    psmBalance: 100e6 });
+
+        uint256 amountIn = _doSwapExactOut(snstBase, usdcBase, 1.25e6);
+
+        assertEq(amountIn, 1e18);
+
+        _assertBalances({ token: snstBase, proxyBalance: 0,      psmBalance: 101e18 });
+        _assertBalances({ token: usdcBase, proxyBalance: 1.25e6, psmBalance: 98.75e6 });
+    }
+
+    function test_swapExactOut_usdcToNst() external {
+        deal(address(usdcBase), address(almProxy), 1e6);
+
+        _assertBalances({ token: usdcBase, proxyBalance: 1e6, psmBalance: 100e6 });
+        _assertBalances({ token: nstBase,  proxyBalance: 0,   psmBalance: 100e18 });
+
+        uint256 amountIn = _doSwapExactOut(usdcBase, nstBase, 1e18);
+
+        assertEq(amountIn, 1e6);
+
+        _assertBalances({ token: usdcBase, proxyBalance: 0,    psmBalance: 101e6 });
+        _assertBalances({ token: nstBase,  proxyBalance: 1e18, psmBalance: 99e18 });
+    }
+
+    function test_swapExactOut_usdcToSNst() external {
+        deal(address(usdcBase), address(almProxy), 1e6);
+
+        _assertBalances({ token: usdcBase, proxyBalance: 1e6, psmBalance: 100e6 });
+        _assertBalances({ token: snstBase, proxyBalance: 0,   psmBalance: 100e18 });
+
+        uint256 amountIn = _doSwapExactOut(usdcBase, snstBase, 0.8e18);
+
+        assertEq(amountIn, 1e6);
+
+        _assertBalances({ token: usdcBase, proxyBalance: 0,      psmBalance: 101e6 });
+        _assertBalances({ token: snstBase, proxyBalance: 0.8e18, psmBalance: 99.2e18 });
     }
 
 }
