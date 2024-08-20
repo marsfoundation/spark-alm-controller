@@ -16,6 +16,3 @@
 [submodule "lib/spark-psm"]
 	path = lib/spark-psm
 	url = https://github.com/marsfoundation/spark-psm
-[submodule "lib/op-token-bridge"]
-	path = lib/op-token-bridge
-	url = https://github.com/makerdao/op-token-bridge
