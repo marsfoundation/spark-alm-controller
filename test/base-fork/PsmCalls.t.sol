@@ -41,22 +41,34 @@ contract L2ControllerSwapExactInFailureTests is ForkTestBase {
 
 contract L2ControllerSwapExactInTests is ForkTestBase {
 
-    function test_swapExactIn() external {
-        // Give the PSM a balance of 100 USDC and 100 NST, give proxy 1 NST.
-        // TODO: Refactor to use real deposits once full integration is set up
-        deal(USDC_BASE,        address(psmBase),  100e6);
-        deal(address(nstBase), address(psmBase),  100e18);
+    function setUp() override public {
+        super.setUp();
+
+        deal(USDC_BASE,         address(psmBase), 100e6);
+        deal(address(nstBase),  address(psmBase), 100e18);
+        deal(address(snstBase), address(psmBase), 80e18);
+    }
+
+    function _assertBalances(
+        IERC20  token,
+        uint256 proxyBalance,
+        uint256 psmBalance
+    )
+        internal
+    {
+        assertEq(token.balanceOf(address(almProxy)),     proxyBalance);
+        assertEq(token.balanceOf(address(l2Controller)), 0);
+        assertEq(token.balanceOf(address(psmBase)),      psmBalance);
+
+        // Should always be 0 before and after calls
+        assertEq(nstBase.allowance(address(almProxy), address(psmBase)), 0);
+    }
+
+    function test_swapExactIn_usdcAndNst() external {
         deal(address(nstBase), address(almProxy), 1e18);
 
-        assertEq(nstBase.balanceOf(address(almProxy)),     1e18);
-        assertEq(nstBase.balanceOf(address(l2Controller)), 0);
-        assertEq(nstBase.balanceOf(address(psmBase)),      100e18);
-
-        assertEq(usdcBase.balanceOf(address(almProxy)),     0);
-        assertEq(usdcBase.balanceOf(address(l2Controller)), 0);
-        assertEq(usdcBase.balanceOf(address(psmBase)),      100e6);
-
-        assertEq(nstBase.allowance(address(almProxy), address(psmBase)), 0);
+        _assertBalances({ token: nstBase,  proxyBalance: 1e18, psmBalance: 100e18 });
+        _assertBalances({ token: usdcBase, proxyBalance: 0,    psmBalance: 100e6 });
 
         vm.prank(relayer);
         l2Controller.swapExactIn({
@@ -68,15 +80,8 @@ contract L2ControllerSwapExactInTests is ForkTestBase {
             referralCode : 0
         });
 
-        assertEq(nstBase.balanceOf(address(almProxy)),     0);
-        assertEq(nstBase.balanceOf(address(l2Controller)), 0);
-        assertEq(nstBase.balanceOf(address(psmBase)),      101e18);
-
-        assertEq(usdcBase.balanceOf(address(almProxy)),     1e6);
-        assertEq(usdcBase.balanceOf(address(l2Controller)), 0);
-        assertEq(usdcBase.balanceOf(address(psmBase)),      99e6);
-
-        assertEq(nstBase.allowance(address(almProxy), address(psmBase)), 0);
+        _assertBalances({ token: nstBase,  proxyBalance: 0,   psmBalance: 101e18 });
+        _assertBalances({ token: usdcBase, proxyBalance: 1e6, psmBalance: 99e6 });
     }
 
 }

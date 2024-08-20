@@ -54,9 +54,9 @@ contract ForkTestBase is DssTest {
     /*** Casted addresses for testing                                                           ***/
     /**********************************************************************************************/
 
-    ERC20Mock nstBase;
-    ERC20Mock snstBase;
-    IERC20    usdcBase;
+    IERC20 nstBase;
+    IERC20 snstBase;
+    IERC20 usdcBase;
 
     MockRateProvider rateProvider;
 
@@ -69,15 +69,15 @@ contract ForkTestBase is DssTest {
     function setUp() public virtual {
         vm.createSelectFork(getChain('base').rpcUrl, 18181500);  // August 8, 2024
 
-        nstBase  = new ERC20Mock();
-        snstBase = new ERC20Mock();
+        nstBase  = IERC20(address(new ERC20Mock()));
+        snstBase = IERC20(address(new ERC20Mock()));
         usdcBase = IERC20(USDC_BASE);
 
         rateProvider = new MockRateProvider();
 
         rateProvider.__setConversionRate(1.25e27);
 
-        nstBase.mint(address(this), 1e18);  // For seeding PSM during deployment
+        deal(address(nstBase), address(this), 1e18);  // For seeding PSM during deployment
 
         psmBase = IPSM3(PSM3Deploy.deploy(
             address(nstBase), USDC_BASE, address(snstBase), address(rateProvider)
