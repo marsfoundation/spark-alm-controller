@@ -56,26 +56,32 @@ contract ForkTestBase is DssTest {
     uint256 constant SEVEN_PCT_APY = 1.000000002145441671308778766e27;  // 7% APY (current DSR)
     uint256 constant EIGHT_PCT_APY = 1.000000002440418608258400030e27;  // 8% APY (current DSR + 1%)
 
+    uint32 constant DOMAIN_ID_CIRCLE_OPTIMISM = 2;
+
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
+
+    address freezer = makeAddr("freezer");
+    address relayer = makeAddr("relayer");
+
+    bytes32 mintRecipient = bytes32(uint256(uint160(makeAddr("mintRecipient"))));
 
     bytes32 CONTROLLER;
     bytes32 FREEZER;
     bytes32 RELAYER;
 
-    address freezer = makeAddr("freezer");
-    address relayer = makeAddr("relayer");
-
     uint256 DAI_BAL_PSM;
     uint256 DAI_SUPPLY;
     uint256 USDC_BAL_PSM;
+    uint256 USDC_SUPPLY;
 
     /**********************************************************************************************/
     /*** Mainnet addresses                                                                      ***/
     /**********************************************************************************************/
 
-    address constant LOG         = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
-    address constant PSM         = 0xf6e72Db5454dd049d0788e411b06CfAF16853042;  // Lite PSM
-    address constant SPARK_PROXY = 0x3300f198988e4C9C63F75dF86De36421f06af8c4;
+    address constant CCTP_MESSENGER = 0xBd3fa81B58Ba92a82136038B25aDec7066af3155;
+    address constant LOG            = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
+    address constant PSM            = 0xf6e72Db5454dd049d0788e411b06CfAF16853042;  // Lite PSM
+    address constant SPARK_PROXY    = 0x3300f198988e4C9C63F75dF86De36421f06af8c4;
 
     DssInstance dss;  // Mainnet DSS
 
@@ -190,6 +196,7 @@ contract ForkTestBase is DssTest {
             buffer_ : ilkInst.buffer,
             psm_    : PSM,
             daiNst_ : nstInst.daiNst,
+            cctp_   : CCTP_MESSENGER,
             snst_   : snstInst.sNst
         });
 
@@ -205,6 +212,8 @@ contract ForkTestBase is DssTest {
 
         mainnetController.grantRole(FREEZER, freezer);
         mainnetController.grantRole(RELAYER, relayer);
+
+        mainnetController.setMintRecipient(DOMAIN_ID_CIRCLE_OPTIMISM, mintRecipient);
 
         almProxy.grantRole(CONTROLLER, address(mainnetController));
 
@@ -230,6 +239,7 @@ contract ForkTestBase is DssTest {
         DAI_BAL_PSM  = dai.balanceOf(PSM);
         DAI_SUPPLY   = dai.totalSupply();
         USDC_BAL_PSM = usdc.balanceOf(pocket);
+        USDC_SUPPLY  = usdc.totalSupply();
     }
 
 }
