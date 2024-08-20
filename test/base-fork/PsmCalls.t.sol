@@ -39,7 +39,6 @@ contract L2ControllerSwapSuccessTestBase is ForkTestBase {
             assetOut     : address(assetOut),
             amountIn     : amountIn,
             minAmountOut : 0,
-            receiver     : address(almProxy),
             referralCode : 0
         });
     }
@@ -55,7 +54,6 @@ contract L2ControllerSwapSuccessTestBase is ForkTestBase {
             assetOut     : address(assetOut),
             amountOut    : amountOut,
             maxAmountIn  : type(uint256).max,
-            receiver     : address(almProxy),
             referralCode : 0
         });
     }
@@ -76,7 +74,6 @@ contract L2ControllerSwapExactInFailureTests is ForkTestBase {
             assetOut     : address(usdcBase),
             amountIn     : 1e18,
             minAmountOut : 0,
-            receiver     : address(almProxy),
             referralCode : 0
         });
     }
@@ -92,7 +89,6 @@ contract L2ControllerSwapExactInFailureTests is ForkTestBase {
             assetOut     : address(usdcBase),
             amountIn     : 1e18,
             minAmountOut : 0,
-            receiver     : address(almProxy),
             referralCode : 0
         });
     }
@@ -200,7 +196,6 @@ contract L2ControllerSwapExactOutFailureTests is ForkTestBase {
             assetOut     : address(usdcBase),
             amountOut    : 1e18,
             maxAmountIn  : type(uint256).max,
-            receiver     : address(almProxy),
             referralCode : 0
         });
     }
@@ -216,7 +211,6 @@ contract L2ControllerSwapExactOutFailureTests is ForkTestBase {
             assetOut     : address(usdcBase),
             amountOut    : 1e18,
             maxAmountIn  : type(uint256).max,
-            receiver     : address(almProxy),
             referralCode : 0
         });
     }

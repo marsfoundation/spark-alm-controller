@@ -91,7 +91,6 @@ contract L2Controller is AccessControl {
         address assetOut,
         uint256 amountIn,
         uint256 minAmountOut,
-        address receiver,
         uint256 referralCode
     )
         external onlyRole(RELAYER) isActive returns (uint256 amountOut)
@@ -108,7 +107,7 @@ contract L2Controller is AccessControl {
                 address(psm),
                 abi.encodeCall(
                     psm.swapExactIn,
-                    (assetIn, assetOut, amountIn, minAmountOut, receiver, referralCode)
+                    (assetIn, assetOut, amountIn, minAmountOut, address(proxy), referralCode)
                 )
             ),
             (uint256)
@@ -120,7 +119,6 @@ contract L2Controller is AccessControl {
         address assetOut,
         uint256 amountOut,
         uint256 maxAmountIn,
-        address receiver,
         uint256 referralCode
     )
         external onlyRole(RELAYER) isActive returns (uint256 amountIn)
@@ -139,7 +137,7 @@ contract L2Controller is AccessControl {
                 address(psm),
                 abi.encodeCall(
                     psm.swapExactOut,
-                    (assetIn, assetOut, amountOut, maxAmountIn, receiver, referralCode)
+                    (assetIn, assetOut, amountOut, maxAmountIn, address(proxy), referralCode)
                 )
             ),
             (uint256)

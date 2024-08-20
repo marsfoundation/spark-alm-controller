@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import "dss-test/DssTest.sol";
-
-import {
-    AllocatorIlkInstance,
-    AllocatorSharedInstance
-} from "dss-allocator/deploy/AllocatorInstances.sol";
+import "forge-std/Test.sol";
 
 import { IERC20 } from "lib/forge-std/src/interfaces/IERC20.sol";
 
@@ -19,7 +14,7 @@ import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
 import { ALMProxy }     from "src/ALMProxy.sol";
 import { L2Controller } from "src/L2Controller.sol";
 
-contract ForkTestBase is DssTest {
+contract ForkTestBase is Test {
 
     // TODO: Refactor to use deployment libraries/testnet addresses
 
