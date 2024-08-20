@@ -8,6 +8,15 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 
 import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 
+interface ICCTPLike {
+    function depositForBurn(
+        uint256 amount,
+        uint32 destinationDomain,
+        bytes32 mintRecipient,
+        address burnToken
+    ) external returns (uint64 nonce);
+}
+
 interface IDaiNstLike {
     function dai() external view returns(address);
     function daiToNst(address usr, uint256 wad) external;
@@ -44,6 +53,7 @@ contract MainnetController is AccessControl {
     address public immutable buffer;
 
     IALMProxy   public immutable proxy;
+    ICCTPLike   public immutable cctp;
     IDaiNstLike public immutable daiNst;
     IPSMLike    public immutable psm;
     IVaultLike  public immutable vault;
@@ -54,6 +64,8 @@ contract MainnetController is AccessControl {
     ISNSTLike public immutable snst;
 
     bool public active;
+
+    mapping(uint32 destinationDomain => bytes32 mintRecipient) public mintRecipients;
 
     /**********************************************************************************************/
     /*** Initialization                                                                         ***/
@@ -66,6 +78,7 @@ contract MainnetController is AccessControl {
         address buffer_,
         address psm_,
         address daiNst_,
+        address cctp_,
         address snst_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
@@ -75,6 +88,7 @@ contract MainnetController is AccessControl {
         buffer = buffer_;
         psm    = IPSMLike(psm_);
         daiNst = IDaiNstLike(daiNst_);
+        cctp   = ICCTPLike(cctp_);
 
         snst = ISNSTLike(snst_);
         dai  = IERC20(daiNst.dai());
@@ -91,6 +105,16 @@ contract MainnetController is AccessControl {
     modifier isActive {
         require(active, "MainnetController/not-active");
         _;
+    }
+
+    /**********************************************************************************************/
+    /*** Admin functions                                                                        ***/
+    /**********************************************************************************************/
+
+    function setMintRecipient(uint32 destinationDomain, bytes32 mintRecipient)
+        external onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        mintRecipients[destinationDomain] = mintRecipient;
     }
 
     /**********************************************************************************************/
@@ -189,7 +213,7 @@ contract MainnetController is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Relayer PSM functions                                           s                      ***/
+    /*** Relayer PSM functions                                                                  ***/
     /**********************************************************************************************/
 
     function swapNSTToUSDC(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
@@ -245,6 +269,38 @@ contract MainnetController is AccessControl {
         proxy.doCall(
             address(daiNst),
             abi.encodeCall(daiNst.daiToNst, (address(proxy), nstAmount))
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer bridging functions                                                             ***/
+    /**********************************************************************************************/
+
+    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
+        external onlyRole(RELAYER) isActive
+    {
+        bytes32 mintRecipient = mintRecipients[destinationDomain];
+
+        require(mintRecipient != 0, "MainnetController/domain-not-configured");
+
+        // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC)
+        proxy.doCall(
+            address(usdc),
+            abi.encodeCall(usdc.approve, (address(cctp), usdcAmount))
+        );
+
+        // Send USDC to CCTP for bridging to destinationDomain
+        proxy.doCall(
+            address(cctp),
+            abi.encodeCall(
+                cctp.depositForBurn,
+                (
+                    usdcAmount,
+                    destinationDomain,
+                    mintRecipient,
+                    address(usdc)
+                )
+            )
         );
     }
 

@@ -25,6 +25,7 @@ contract MainnetControllerConstructorTests is UnitTestBase {
             makeAddr("buffer"),
             address(psm),
             address(daiNst),
+            makeAddr("cctp"),
             address(snst)
         );
 
@@ -35,6 +36,7 @@ contract MainnetControllerConstructorTests is UnitTestBase {
         assertEq(address(mainnetController.buffer()), makeAddr("buffer"));
         assertEq(address(mainnetController.psm()),    address(psm));
         assertEq(address(mainnetController.daiNst()), address(daiNst));
+        assertEq(address(mainnetController.cctp()),   makeAddr("cctp"));
         assertEq(address(mainnetController.snst()),   address(snst));
         assertEq(address(mainnetController.dai()),    makeAddr("dai"));   // Dai param in MockDaiNst
         assertEq(address(mainnetController.usdc()),   makeAddr("usdc"));  // Gem param in MockPSM
