@@ -35,6 +35,17 @@ contract MainnetControllerTransferUSDCToCTTPFailureTests is ForkTestBase {
 
 contract MainnetControllerTransferUSDCToCTTPTests is ForkTestBase {
 
+    event DepositForBurn(
+        uint64  indexed nonce,
+        address indexed burnToken,
+        uint256 amount,
+        address indexed depositor,
+        bytes32 mintRecipient,
+        uint32  destinationDomain,
+        bytes32 destinationTokenMessenger,
+        bytes32 destinationCaller
+    );
+
     function test_transferUSDCToCCTP() external {
         deal(address(usdc), address(almProxy), 1e6);
 
@@ -43,6 +54,20 @@ contract MainnetControllerTransferUSDCToCTTPTests is ForkTestBase {
         assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
 
         assertEq(nst.allowance(address(almProxy), CCTP_MESSENGER),  0);
+
+        // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
+        //       for assertions
+        vm.expectEmit(CCTP_MESSENGER);
+        emit DepositForBurn(
+            94773,
+            address(usdc),
+            1e6,
+            address(almProxy),
+            mainnetController.mintRecipients(DOMAIN_ID_CIRCLE_OPTIMISM),
+            DOMAIN_ID_CIRCLE_OPTIMISM,
+            bytes32(0x0000000000000000000000002b4069517957735be00cee0fadae88a26365528f),
+            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
+        );
 
         vm.prank(relayer);
         mainnetController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_OPTIMISM);
