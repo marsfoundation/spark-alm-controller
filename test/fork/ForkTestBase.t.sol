@@ -25,6 +25,10 @@ import { SNstDeploy }           from "sdai/deploy/SNstDeploy.sol";
 import { SNstInit, SNstConfig } from "sdai/deploy/SNstInit.sol";
 import { SNstInstance }         from "sdai/deploy/SNstInstance.sol";
 
+import { PSM3Deploy }       from "spark-psm/deploy/PSM3Deploy.sol";
+import { IPSM3 }            from "spark-psm/src/PSM3.sol";
+import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
+
 import { ALMProxy }          from "src/ALMProxy.sol";
 import { MainnetController } from "src/MainnetController.sol";
 
@@ -46,6 +50,8 @@ interface IVaultLike {
 }
 
 contract ForkTestBase is DssTest {
+
+    // TODO: Refactor to use deployment libraries/testnet addresses
 
     /**********************************************************************************************/
     /*** Constants/state variables                                                              ***/
@@ -81,7 +87,6 @@ contract ForkTestBase is DssTest {
 
     DssInstance dss;  // Mainnet DSS
 
-    // TODO: Fill these addresses in and remove from setup
     address ILK_REGISTRY;
     address PAUSE_PROXY;
     address USDC;
@@ -118,6 +123,13 @@ contract ForkTestBase is DssTest {
     IERC20 usdc;
     ISNst  snst;
 
+    ERC20Mock nstBase;
+    ERC20Mock snstBase;
+
+    MockRateProvider rateProvider;
+
+    IPSM3 psmBase;
+
     address buffer;
     address daiNst;
     address nstJoin;
@@ -136,7 +148,16 @@ contract ForkTestBase is DssTest {
     function _setupBaseChain() internal {
         vm.createSelectFork(getChain('base').rpcUrl, 18181500);  // August 8, 2024
 
+        nstBase  = new ERC20Mock();
+        snstBase = new ERC20Mock();
 
+        rateProvider = new MockRateProvider();
+
+        rateProvider.__setConversionRate(1.25e27);
+
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            address(nstBase), address(snstBase), USDC_BASE, address(rateProvider)
+        ));
     }
 
     function _setupMainnet() internal {
