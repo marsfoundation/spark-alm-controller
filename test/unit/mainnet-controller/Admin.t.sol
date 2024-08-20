@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import "test/unit/UnitTestBase.t.sol";
 
-contract MainnetControllerFreezeTests is UnitTestBase {
+contract MainnetAdminTests is UnitTestBase {
 
     bytes32 mintRecipient1 = bytes32(uint256(uint160(makeAddr("mintRecipient1"))));
     bytes32 mintRecipient2 = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));

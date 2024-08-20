@@ -27,7 +27,7 @@ contract MainnetControllerTransferUSDCToCTTPFailureTests is ForkTestBase {
 
     function test_transferUSDCToCCTP_invalidMintRecipient() external {
         vm.prank(relayer);
-        vm.expectRevert("MainnetController/invalid-mint-recipient");
+        vm.expectRevert("MainnetController/domain-not-configured");
         mainnetController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_ARBITRUM);
     }
 

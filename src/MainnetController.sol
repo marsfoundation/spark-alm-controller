@@ -281,7 +281,7 @@ contract MainnetController is AccessControl {
     {
         bytes32 mintRecipient = mintRecipients[destinationDomain];
 
-        require(mintRecipient != 0, "MainnetController/invalid-mint-recipient");
+        require(mintRecipient != 0, "MainnetController/domain-not-configured");
 
         // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC)
         proxy.doCall(
