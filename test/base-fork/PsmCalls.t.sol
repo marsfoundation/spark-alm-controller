@@ -26,7 +26,7 @@ contract L2ControllerSwapExactInFailureTests is ForkTestBase {
         l2Controller.freeze();
 
         vm.prank(relayer);
-        vm.expectRevert("MainnetController/not-active");
+        vm.expectRevert("L2Controller/not-active");
         l2Controller.swapExactIn({
             assetIn      : address(nstBase),
             assetOut     : address(usdcBase),
@@ -39,46 +39,43 @@ contract L2ControllerSwapExactInFailureTests is ForkTestBase {
 
 }
 
-// contract MainnetControllerSwapNSTToUSDCTests is ForkTestBase {
+contract L2ControllerSwapExactInTests is ForkTestBase {
 
-//     function test_swapNSTToUSDC() external {
-//         vm.prank(relayer);
-//         l2Controller.mintNST(1e18);
+    function test_swapExactIn() external {
+        // Give the PSM a balance of 100 USDC and 100 NST, give proxy 1 NST.
+        deal(USDC_BASE,        address(psmBase),  100e6);
+        deal(address(nstBase), address(psmBase),  99e18);
+        deal(address(nstBase), address(almProxy), 1e18);
 
-//         assertEq(nstBase.balanceOf(address(almProxy)),          1e18);
-//         assertEq(nstBase.balanceOf(address(l2Controller)), 0);
-//         assertEq(nstBase.totalSupply(),                         1e18);
+        assertEq(nstBase.balanceOf(address(almProxy)),     1e18);
+        assertEq(nstBase.balanceOf(address(l2Controller)), 0);
+        assertEq(nstBase.balanceOf(address(psmBase)),      100e18);
 
-//         assertEq(dai.balanceOf(address(almProxy)), 0);
-//         assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM);
-//         assertEq(dai.totalSupply(),                DAI_SUPPLY);
+        assertEq(usdcBase.balanceOf(address(almProxy)),     0);
+        assertEq(usdcBase.balanceOf(address(l2Controller)), 0);
+        assertEq(usdcBase.balanceOf(address(psmBase)),      100e6);
 
-//         assertEq(usdcBase.balanceOf(address(almProxy)),          0);
-//         assertEq(usdcBase.balanceOf(address(l2Controller)), 0);
-//         assertEq(usdcBase.balanceOf(address(pocket)),            USDC_BAL_PSM);
+        assertEq(nstBase.allowance(address(almProxy), address(psmBase)), 0);
 
-//         assertEq(nstBase.allowance(address(buffer),   address(vault)),  type(uint256).max);
-//         assertEq(nstBase.allowance(address(almProxy), address(daiNst)), 0);
-//         assertEq(dai.allowance(address(almProxy), address(PSM)),    0);
+        vm.prank(relayer);
+        l2Controller.swapExactIn({
+            assetIn      : address(nstBase),
+            assetOut     : address(usdcBase),
+            amountIn     : 1e18,
+            minAmountOut : 0,
+            receiver     : address(almProxy),
+            referralCode : 0
+        });
 
-//         vm.prank(relayer);
-//         l2Controller.swapNSTToUSDC(1e6);
+        assertEq(nstBase.balanceOf(address(almProxy)),     0);
+        assertEq(nstBase.balanceOf(address(l2Controller)), 0);
+        assertEq(nstBase.balanceOf(address(psmBase)),      101e18);
 
-//         assertEq(nstBase.balanceOf(address(almProxy)),          0);
-//         assertEq(nstBase.balanceOf(address(l2Controller)), 0);
-//         assertEq(nstBase.totalSupply(),                         0);
+        assertEq(usdcBase.balanceOf(address(almProxy)),     1e6);
+        assertEq(usdcBase.balanceOf(address(l2Controller)), 0);
+        assertEq(usdcBase.balanceOf(address(psmBase)),      99e6);
 
-//         assertEq(dai.balanceOf(address(almProxy)), 0);
-//         assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM + 1e18);
-//         assertEq(dai.totalSupply(),                DAI_SUPPLY + 1e18);
+        assertEq(nstBase.allowance(address(almProxy), address(psmBase)), 0);
+    }
 
-//         assertEq(usdcBase.balanceOf(address(almProxy)),          1e6);
-//         assertEq(usdcBase.balanceOf(address(l2Controller)), 0);
-//         assertEq(usdcBase.balanceOf(address(pocket)),            USDC_BAL_PSM - 1e6);
-
-//         assertEq(nstBase.allowance(address(buffer),   address(vault)),  type(uint256).max);
-//         assertEq(nstBase.allowance(address(almProxy), address(daiNst)), 0);
-//         assertEq(dai.allowance(address(almProxy), address(PSM)),    0);
-//     }
-
-// }
+}

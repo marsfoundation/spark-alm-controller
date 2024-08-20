@@ -76,6 +76,8 @@ contract ForkTestBase is DssTest {
 
         rateProvider.__setConversionRate(1.25e27);
 
+        nstBase.mint(address(this), 1e18);  // For seeding PSM during deployment
+
         psmBase = IPSM3(PSM3Deploy.deploy(
             address(nstBase), address(snstBase), USDC_BASE, address(rateProvider)
         ));
