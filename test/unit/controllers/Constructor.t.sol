@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import "test/unit/UnitTestBase.t.sol";
 
-import { L2Controller }      from "src/L2Controller.sol";
+import { ForeignController }      from "src/ForeignController.sol";
 import { MainnetController } from "src/MainnetController.sol";
 
 import { MockDaiNst } from "test/unit/mocks/MockDaiNst.sol";
@@ -47,7 +47,7 @@ contract MainnetControllerConstructorTests is UnitTestBase {
 
 }
 
-contract L2ControllerConstructorTests is UnitTestBase {
+contract ForeignControllerConstructorTests is UnitTestBase {
 
     address nst  = makeAddr("nst");
     address usdc = makeAddr("usdc");
@@ -56,17 +56,17 @@ contract L2ControllerConstructorTests is UnitTestBase {
     function test_constructor() public {
         MockPSM3 psm3 = new MockPSM3(nst, usdc, snst);
 
-        L2Controller l2Controller = new L2Controller(admin, makeAddr("almProxy"), address(psm3));
+        ForeignController foreignController = new ForeignController(admin, makeAddr("almProxy"), address(psm3));
 
-        assertEq(l2Controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
-        assertEq(address(l2Controller.proxy()), makeAddr("almProxy"));
-        assertEq(address(l2Controller.psm()),   address(psm3));
-        assertEq(address(l2Controller.nst()),   nst);   // asset0 param in MockPSM3
-        assertEq(address(l2Controller.usdc()),  usdc);  // asset1 param in MockPSM3
-        assertEq(address(l2Controller.snst()),  snst);  // asset2 param in MockPSM3
+        assertEq(address(foreignController.proxy()), makeAddr("almProxy"));
+        assertEq(address(foreignController.psm()),   address(psm3));
+        assertEq(address(foreignController.nst()),   nst);   // asset0 param in MockPSM3
+        assertEq(address(foreignController.usdc()),  usdc);  // asset1 param in MockPSM3
+        assertEq(address(foreignController.snst()),  snst);  // asset2 param in MockPSM3
 
-        assertEq(l2Controller.active(), true);
+        assertEq(foreignController.active(), true);
     }
 
 }

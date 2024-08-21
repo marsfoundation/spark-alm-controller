@@ -18,7 +18,7 @@ interface ISNSTLike is IERC4626 {
     function nst() external view returns(address);
 }
 
-contract L2Controller is AccessControl {
+contract ForeignController is AccessControl {
 
     // TODO: Inherit and override interface
 
@@ -49,8 +49,8 @@ contract L2Controller is AccessControl {
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
-        proxy  = IALMProxy(proxy_);
-        psm    = IPSM3Like(psm_);
+        proxy = IALMProxy(proxy_);
+        psm   = IPSM3Like(psm_);
 
         nst  = IERC20(psm.asset0());
         usdc = IERC20(psm.asset1());
@@ -64,7 +64,7 @@ contract L2Controller is AccessControl {
     /**********************************************************************************************/
 
     modifier isActive {
-        require(active, "L2Controller/not-active");
+        require(active, "ForeignController/not-active");
         _;
     }
 
