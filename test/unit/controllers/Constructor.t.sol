@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import "test/unit/UnitTestBase.t.sol";
 
-import { ForeignController }      from "src/ForeignController.sol";
+import { ForeignController } from "src/ForeignController.sol";
 import { MainnetController } from "src/MainnetController.sol";
 
 import { MockDaiNst } from "test/unit/mocks/MockDaiNst.sol";
