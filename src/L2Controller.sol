@@ -86,58 +86,38 @@ contract L2Controller is AccessControl {
     /*** Relayer PSM functions                                                                  ***/
     /**********************************************************************************************/
 
-    function swapExactIn(
-        address assetIn,
-        address assetOut,
-        uint256 amountIn,
-        uint256 minAmountOut,
-        uint256 referralCode
-    )
-        external onlyRole(RELAYER) isActive returns (uint256 amountOut)
+    function depositPSM(address asset, uint256 amount)
+        external onlyRole(RELAYER) isActive returns (uint256 shares)
     {
-        // Approve `assetIn` to PSM from the proxy (assumes the proxy has enough `assetIn`).
+        // Approve `asset` to PSM from the proxy (assumes the proxy has enough `asset`).
         proxy.doCall(
-            assetIn,
-            abi.encodeCall(IERC20.approve, (address(psm), amountIn))
+            asset,
+            abi.encodeCall(IERC20.approve, (address(psm), amount))
         );
 
-        // Swap `assetIn` for `assetOut` in the PSM, decode the result to get `amountOut`.
-        amountOut = abi.decode(
+        // Deposit `amount` of `asset` in the PSM, decode the result to get `shares`.
+        shares = abi.decode(
             proxy.doCall(
                 address(psm),
                 abi.encodeCall(
-                    psm.swapExactIn,
-                    (assetIn, assetOut, amountIn, minAmountOut, address(proxy), referralCode)
+                    psm.deposit,
+                    (asset, address(proxy), amount)
                 )
             ),
             (uint256)
         );
     }
 
-    function swapExactOut(
-        address assetIn,
-        address assetOut,
-        uint256 amountOut,
-        uint256 maxAmountIn,
-        uint256 referralCode
-    )
-        external onlyRole(RELAYER) isActive returns (uint256 amountIn)
+    function withdrawPSM(address asset, uint256 maxAmount)
+        external onlyRole(RELAYER) isActive returns (uint256 assetsWithdrawn)
     {
-        uint256 amountInPreview = psm.previewSwapExactOut(assetIn, assetOut, amountOut);
-
-        // Approve `assetIn` to PSM from the proxy (assumes the proxy has enough `assetIn`).
-        proxy.doCall(
-            assetIn,
-            abi.encodeCall(IERC20.approve, (address(psm), amountInPreview))
-        );
-
-        // Swap `assetIn` for `assetOut` in the PSM, decode the result to get `amountIn`.
-        amountIn = abi.decode(
+        // Deposit `amount` of `asset` in the PSM, decode the result to get `shares`.
+        assetsWithdrawn = abi.decode(
             proxy.doCall(
                 address(psm),
                 abi.encodeCall(
-                    psm.swapExactOut,
-                    (assetIn, assetOut, amountOut, maxAmountIn, address(proxy), referralCode)
+                    psm.withdraw,
+                    (asset, address(proxy), maxAmount)
                 )
             ),
             (uint256)
