@@ -14,10 +14,6 @@ interface IPSM3Like {
     function asset2() external view returns(address);
 }
 
-interface ISNSTLike is IERC4626 {
-    function nst() external view returns(address);
-}
-
 contract ForeignController is AccessControl {
 
     // TODO: Inherit and override interface
@@ -32,9 +28,9 @@ contract ForeignController is AccessControl {
     IALMProxy public immutable proxy;
     IPSM3Like public immutable psm;
 
-    IERC20    public immutable nst;
-    IERC20    public immutable usdc;
-    ISNSTLike public immutable snst;
+    IERC20 public immutable nst;
+    IERC20 public immutable usdc;
+    IERC20 public immutable snst;
 
     bool public active;
 
@@ -45,16 +41,19 @@ contract ForeignController is AccessControl {
     constructor(
         address admin_,
         address proxy_,
-        address psm_
+        address psm_,
+        address nst_,
+        address usdc_,
+        address snst_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
         proxy = IALMProxy(proxy_);
         psm   = IPSM3Like(psm_);
 
-        nst  = IERC20(psm.asset0());
-        usdc = IERC20(psm.asset1());
-        snst = ISNSTLike(psm.asset2());
+        nst  = IERC20(nst_);
+        usdc = IERC20(usdc_);
+        snst = IERC20(snst_);
 
         active = true;
     }

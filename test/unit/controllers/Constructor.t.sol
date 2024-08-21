@@ -56,7 +56,14 @@ contract ForeignControllerConstructorTests is UnitTestBase {
     function test_constructor() public {
         MockPSM3 psm3 = new MockPSM3(nst, usdc, snst);
 
-        ForeignController foreignController = new ForeignController(admin, makeAddr("almProxy"), address(psm3));
+        ForeignController foreignController = new ForeignController(
+            admin,
+            makeAddr("almProxy"),
+            address(psm3),
+            nst,
+            usdc,
+            snst
+        );
 
         assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 

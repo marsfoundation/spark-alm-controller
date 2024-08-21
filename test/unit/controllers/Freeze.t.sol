@@ -130,13 +130,22 @@ contract ControllerReactivateTests is ControllerTestBase {
 
 contract ForeignControllerFreezeTest is ControllerFreezeTests {
 
+    address nst  = makeAddr("nst");
+    address usdc = makeAddr("usdc");
+    address snst = makeAddr("snst");
+
     // Override setUp to run the same tests against the L2 controller
     function setUp() public override {
-        MockPSM3 psm3 = new MockPSM3(makeAddr("nst"), makeAddr("usdc"), makeAddr("snst"));
+        MockPSM3 psm3 = new MockPSM3(nst, usdc, snst);
 
-        controller = IBaseControllerLike(address(
-            new ForeignController(admin, makeAddr("almProxy"), address(psm3))
-        ));
+        controller = IBaseControllerLike(address(new ForeignController(
+            admin,
+            makeAddr("almProxy"),
+            address(psm3),
+            nst,
+            usdc,
+            snst
+        )));
 
         _setRoles();
     }
@@ -145,13 +154,22 @@ contract ForeignControllerFreezeTest is ControllerFreezeTests {
 
 contract ForeignControllerReactivateTest is ControllerReactivateTests {
 
+    address nst  = makeAddr("nst");
+    address usdc = makeAddr("usdc");
+    address snst = makeAddr("snst");
+
     // Override setUp to run the same tests against the L2 controller
     function setUp() public override {
-        MockPSM3 psm3 = new MockPSM3(makeAddr("nst"), makeAddr("usdc"), makeAddr("snst"));
+        MockPSM3 psm3 = new MockPSM3(nst, usdc, snst);
 
-        controller = IBaseControllerLike(address(
-            new ForeignController(admin, makeAddr("almProxy"), address(psm3))
-        ));
+        controller = IBaseControllerLike(address(new ForeignController(
+            admin,
+            makeAddr("almProxy"),
+            address(psm3),
+            nst,
+            usdc,
+            snst
+        )));
 
         _setRoles();
     }
