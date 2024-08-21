@@ -3,13 +3,12 @@ pragma solidity >=0.8.0;
 
 import "test/base-fork/ForkTestBase.t.sol";
 
-contract L2ControllerSwapSuccessTestBase is ForkTestBase {
+contract L2ControllerPSMSuccessTestBase is ForkTestBase {
 
     function _assertState(
         IERC20  token,
         uint256 proxyBalance,
         uint256 psmBalance,
-        uint256 returnedShares,
         uint256 proxyShares,
         uint256 totalShares,
         uint256 totalAssets
@@ -23,8 +22,6 @@ contract L2ControllerSwapSuccessTestBase is ForkTestBase {
         assertEq(psmBase.shares(address(almProxy)), proxyShares);
         assertEq(psmBase.totalShares(),             totalShares);
         assertEq(psmBase.totalAssets(),             totalAssets);
-
-        assertEq(returnedShares, proxyShares);
 
         // Should always be 0 before and after calls
         assertEq(nstBase.allowance(address(almProxy), address(psmBase)), 0);
@@ -55,32 +52,32 @@ contract L2ControllerDepositPSMFailureTests is ForkTestBase {
 
 }
 
-contract L2ControllerDepositTests is L2ControllerSwapSuccessTestBase {
+contract L2ControllerDepositTests is L2ControllerPSMSuccessTestBase {
 
     function test_deposit_nst() external {
         deal(address(nstBase), address(almProxy), 100e18);
 
         _assertState({
-            token          : nstBase,
-            proxyBalance   : 100e18,
-            psmBalance     : 1e18,  // From seeding
-            returnedShares : 0,
-            proxyShares    : 0,
-            totalShares    : 1e18,  // From seeding
-            totalAssets    : 1e18   // From seeding
+            token        : nstBase,
+            proxyBalance : 100e18,
+            psmBalance   : 1e18,  // From seeding
+            proxyShares  : 0,
+            totalShares  : 1e18,  // From seeding
+            totalAssets  : 1e18   // From seeding
         });
 
         vm.prank(relayer);
         uint256 shares = l2Controller.depositPSM(address(nstBase), 100e18);
 
+        assertEq(shares, 100e18);
+
         _assertState({
-            token          : nstBase,
-            proxyBalance   : 0,
-            psmBalance     : 101e18,
-            returnedShares : shares,
-            proxyShares    : 100e18,
-            totalShares    : 101e18,
-            totalAssets    : 101e18
+            token        : nstBase,
+            proxyBalance : 0,
+            psmBalance   : 101e18,
+            proxyShares  : 100e18,
+            totalShares  : 101e18,
+            totalAssets  : 101e18
         });
     }
 
@@ -88,26 +85,26 @@ contract L2ControllerDepositTests is L2ControllerSwapSuccessTestBase {
         deal(address(usdcBase), address(almProxy), 100e6);
 
         _assertState({
-            token          : usdcBase,
-            proxyBalance   : 100e6,
-            psmBalance     : 0,
-            returnedShares : 0,
-            proxyShares    : 0,
-            totalShares    : 1e18,  // From seeding
-            totalAssets    : 1e18   // From seeding
+            token        : usdcBase,
+            proxyBalance : 100e6,
+            psmBalance   : 0,
+            proxyShares  : 0,
+            totalShares  : 1e18,  // From seeding
+            totalAssets  : 1e18   // From seeding
         });
 
         vm.prank(relayer);
         uint256 shares = l2Controller.depositPSM(address(usdcBase), 100e6);
 
+        assertEq(shares, 100e18);
+
         _assertState({
-            token          : usdcBase,
-            proxyBalance   : 0,
-            psmBalance     : 100e6,
-            returnedShares : shares,
-            proxyShares    : 100e18,
-            totalShares    : 101e18,
-            totalAssets    : 101e18
+            token        : usdcBase,
+            proxyBalance : 0,
+            psmBalance   : 100e6,
+            proxyShares  : 100e18,
+            totalShares  : 101e18,
+            totalAssets  : 101e18
         });
     }
 
@@ -115,81 +112,140 @@ contract L2ControllerDepositTests is L2ControllerSwapSuccessTestBase {
         deal(address(snstBase), address(almProxy), 100e18);
 
         _assertState({
-            token          : snstBase,
-            proxyBalance   : 100e18,
-            psmBalance     : 0,
-            returnedShares : 0,
-            proxyShares    : 0,
-            totalShares    : 1e18,  // From seeding
-            totalAssets    : 1e18   // From seeding
+            token        : snstBase,
+            proxyBalance : 100e18,
+            psmBalance   : 0,
+            proxyShares  : 0,
+            totalShares  : 1e18,  // From seeding
+            totalAssets  : 1e18   // From seeding
         });
 
         vm.prank(relayer);
         uint256 shares = l2Controller.depositPSM(address(snstBase), 100e18);
 
+        assertEq(shares, 125e18);
+
         _assertState({
-            token          : snstBase,
-            proxyBalance   : 0,
-            psmBalance     : 100e18,
-            returnedShares : shares,
-            proxyShares    : 125e18,
-            totalShares    : 126e18,
-            totalAssets    : 126e18
+            token        : snstBase,
+            proxyBalance : 0,
+            psmBalance   : 100e18,
+            proxyShares  : 125e18,
+            totalShares  : 126e18,
+            totalAssets  : 126e18
         });
     }
 
 }
 
-// contract L2ControllerSwapExactOutFailureTests is ForkTestBase {
+contract L2ControllerWithdrawPSMFailureTests is ForkTestBase {
 
-//     function test_swapExactOut_notRelayer() external {
-//         vm.expectRevert(abi.encodeWithSignature(
-//             "AccessControlUnauthorizedAccount(address,bytes32)",
-//             address(this),
-//             RELAYER
-//         ));
-//         // l2Controller.swapExactOut({
-//         //     assetIn      : address(nstBase),
-//         //     assetOut     : address(usdcBase),
-//         //     amountOut    : 1e18,
-//         //     maxAmountIn  : type(uint256).max,
-//         //     referralCode : 0
-//         // });
-//     }
+    function test_withdrawPSM_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        l2Controller.withdrawPSM(address(nstBase), 100e18);
+    }
 
-//     function test_swapExactOut_frozen() external {
-//         vm.prank(freezer);
-//         l2Controller.freeze();
+    function test_withdrawPSM_frozen() external {
+        vm.prank(freezer);
+        l2Controller.freeze();
 
-//         vm.prank(relayer);
-//         vm.expectRevert("L2Controller/not-active");
-//         // l2Controller.swapExactOut({
-//         //     assetIn      : address(nstBase),
-//         //     assetOut     : address(usdcBase),
-//         //     amountOut    : 1e18,
-//         //     maxAmountIn  : type(uint256).max,
-//         //     referralCode : 0
-//         // });
-//     }
+        vm.prank(relayer);
+        vm.expectRevert("L2Controller/not-active");
+        l2Controller.withdrawPSM(address(nstBase), 100e18);
+    }
 
-// }
+}
 
-// contract L2ControllerSwapExactOutTests is L2ControllerSwapSuccessTestBase {
+contract L2ControllerWithdrawTests is L2ControllerPSMSuccessTestBase {
 
-//     // function test_swapExactOut_usdcToSNst() external {
-//     //     deal(address(usdcBase), address(almProxy), 1e6);
+    function test_withdraw_nst() external {
+        deal(address(nstBase), address(almProxy), 100e18);
+        vm.prank(relayer);
+        l2Controller.depositPSM(address(nstBase), 100e18);
 
-//     //     _assertBalances({ token: usdcBase, proxyBalance: 1e6, psmBalance: 100e6 });
-//     //     _assertBalances({ token: snstBase, proxyBalance: 0,   psmBalance: 100e18 });
+        _assertState({
+            token        : nstBase,
+            proxyBalance : 0,
+            psmBalance   : 101e18,
+            proxyShares  : 100e18,
+            totalShares  : 101e18,
+            totalAssets  : 101e18
+        });
 
-//     //     uint256 amountIn = _doSwapExactOut(usdcBase, snstBase, 0.8e18);
+        vm.prank(relayer);
+        uint256 amountWithdrawn = l2Controller.withdrawPSM(address(nstBase), 100e18);
 
-//     //     assertEq(amountIn, 1e6);
+        assertEq(amountWithdrawn, 100e18);
 
-//     //     _assertBalances({ token: usdcBase, proxyBalance: 0,      psmBalance: 101e6 });
-//     //     _assertBalances({ token: snstBase, proxyBalance: 0.8e18, psmBalance: 99.2e18 });
-//     // }
+        _assertState({
+            token          : nstBase,
+            proxyBalance   : 100e18,
+            psmBalance     : 1e18,  // From seeding
+            proxyShares    : 0,
+            totalShares    : 1e18,  // From seeding
+            totalAssets    : 1e18   // From seeding
+        });
+    }
 
-// }
+    function test_withdraw_usdc() external {
+        deal(address(usdcBase), address(almProxy), 100e6);
+        vm.prank(relayer);
+        l2Controller.depositPSM(address(usdcBase), 100e6);
 
+        _assertState({
+            token        : usdcBase,
+            proxyBalance : 0,
+            psmBalance   : 100e6,
+            proxyShares  : 100e18,
+            totalShares  : 101e18,
+            totalAssets  : 101e18
+        });
 
+        vm.prank(relayer);
+        uint256 amountWithdrawn = l2Controller.withdrawPSM(address(usdcBase), 100e6);
+
+        assertEq(amountWithdrawn, 100e6);
+
+        _assertState({
+            token          : usdcBase,
+            proxyBalance   : 100e6,
+            psmBalance     : 0,
+            proxyShares    : 0,
+            totalShares    : 1e18,  // From seeding
+            totalAssets    : 1e18   // From seeding
+        });
+    }
+
+    function test_withdraw_snst() external {
+        deal(address(snstBase), address(almProxy), 100e18);
+        vm.prank(relayer);
+        l2Controller.depositPSM(address(snstBase), 100e18);
+
+        _assertState({
+            token        : snstBase,
+            proxyBalance : 0,
+            psmBalance   : 100e18,
+            proxyShares  : 125e18,
+            totalShares  : 126e18,
+            totalAssets  : 126e18
+        });
+
+        vm.prank(relayer);
+        uint256 amountWithdrawn = l2Controller.withdrawPSM(address(snstBase), 100e18);
+
+        assertEq(amountWithdrawn, 100e18);
+
+        _assertState({
+            token          : snstBase,
+            proxyBalance   : 100e18,
+            psmBalance     : 0,
+            proxyShares    : 0,
+            totalShares    : 1e18,  // From seeding
+            totalAssets    : 1e18   // From seeding
+        });
+    }
+
+}
