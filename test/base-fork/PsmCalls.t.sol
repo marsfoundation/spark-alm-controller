@@ -77,10 +77,64 @@ contract L2ControllerDepositTests is L2ControllerSwapSuccessTestBase {
             token          : nstBase,
             proxyBalance   : 0,
             psmBalance     : 101e18,
-            returnedShares : 100e18,
+            returnedShares : shares,
             proxyShares    : 100e18,
             totalShares    : 101e18,
             totalAssets    : 101e18
+        });
+    }
+
+    function test_deposit_usdc() external {
+        deal(address(usdcBase), address(almProxy), 100e6);
+
+        _assertState({
+            token          : usdcBase,
+            proxyBalance   : 100e6,
+            psmBalance     : 0,
+            returnedShares : 0,
+            proxyShares    : 0,
+            totalShares    : 1e18,  // From seeding
+            totalAssets    : 1e18   // From seeding
+        });
+
+        vm.prank(relayer);
+        uint256 shares = l2Controller.depositPSM(address(usdcBase), 100e6);
+
+        _assertState({
+            token          : usdcBase,
+            proxyBalance   : 0,
+            psmBalance     : 100e6,
+            returnedShares : shares,
+            proxyShares    : 100e18,
+            totalShares    : 101e18,
+            totalAssets    : 101e18
+        });
+    }
+
+    function test_deposit_snst() external {
+        deal(address(snstBase), address(almProxy), 100e18);
+
+        _assertState({
+            token          : snstBase,
+            proxyBalance   : 100e18,
+            psmBalance     : 0,
+            returnedShares : 0,
+            proxyShares    : 0,
+            totalShares    : 1e18,  // From seeding
+            totalAssets    : 1e18   // From seeding
+        });
+
+        vm.prank(relayer);
+        uint256 shares = l2Controller.depositPSM(address(snstBase), 100e18);
+
+        _assertState({
+            token          : snstBase,
+            proxyBalance   : 0,
+            psmBalance     : 100e18,
+            returnedShares : shares,
+            proxyShares    : 125e18,
+            totalShares    : 126e18,
+            totalAssets    : 126e18
         });
     }
 
