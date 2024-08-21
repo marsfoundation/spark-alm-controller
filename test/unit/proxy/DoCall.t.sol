@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
+import { ALMProxy } from "src/ALMProxy.sol";
+
 import "test/unit/UnitTestBase.t.sol";
 
 import { MockTarget } from "test/unit/mocks/MockTarget.sol";
@@ -15,8 +17,11 @@ contract ALMProxyCallTestBase is UnitTestBase {
         uint256 value
     );
 
+    ALMProxy almProxy;
+
     address target;
 
+    address controller     = makeAddr("controller");
     address exampleAddress = makeAddr("exampleAddress");
 
     bytes data = abi.encodeWithSignature(
@@ -25,8 +30,11 @@ contract ALMProxyCallTestBase is UnitTestBase {
         42
     );
 
-    function setUp() public override {
-        super.setUp();
+    function setUp() public {
+        almProxy = new ALMProxy(admin);
+
+        vm.prank(admin);
+        almProxy.grantRole(CONTROLLER, controller);
 
         target = address(new MockTarget());
     }
@@ -60,19 +68,19 @@ contract ALMProxyDoCallTests is ALMProxyCallTestBase {
         // ALM Proxy is msg.sender, target emits the event
         vm.expectEmit(target);
         emit ExampleEvent(exampleAddress, 42, 84, address(almProxy), 0);
-        vm.prank(address(mainnetController));
+        vm.prank(controller);
         bytes memory returnData = almProxy.doCall(target, data);
 
         assertEq(abi.decode(returnData, (uint256)), 84);
     }
 
     function test_doCall_msgValue() public {
-        vm.deal(address(mainnetController), 1e18);
+        vm.deal(controller, 1e18);
 
         // ALM Proxy is msg.sender, target emits the event, msg.value is sent to target
         vm.expectEmit(target);
         emit ExampleEvent(exampleAddress, 42, 84, address(almProxy), 1e18);
-        vm.prank(address(mainnetController));
+        vm.prank(controller);
         bytes memory returnData = almProxy.doCall{value: 1e18}(target, data);
 
         assertEq(abi.decode(returnData, (uint256)), 84);
@@ -102,7 +110,7 @@ contract ALMProxyDoCallWithValueFailureTests is ALMProxyCallTestBase {
     function test_doCallWithValue_notEnoughBalanceBoundary() public {
         vm.deal(address(almProxy), 1e18 - 1);
 
-        vm.startPrank(address(mainnetController));
+        vm.startPrank(controller);
 
         vm.expectRevert(abi.encodeWithSignature(
             "AddressInsufficientBalance(address)",
@@ -125,19 +133,19 @@ contract ALMProxyDoCallWithValueTests is ALMProxyCallTestBase {
         // ALM Proxy is msg.sender, target emits the event
         vm.expectEmit(target);
         emit ExampleEvent(exampleAddress, 42, 84, address(almProxy), 1e18);
-        vm.prank(address(mainnetController));
+        vm.prank(controller);
         bytes memory returnData = almProxy.doCallWithValue(target, data, 1e18);
 
         assertEq(abi.decode(returnData, (uint256)), 84);
     }
 
     function test_doCallWithValue_msgValue() public {
-        vm.deal(address(mainnetController), 1e18);
+        vm.deal(controller, 1e18);
 
         // ALM Proxy is msg.sender, target emits the event, msg.value sent to proxy then target
         vm.expectEmit(target);
         emit ExampleEvent(exampleAddress, 42, 84, address(almProxy), 1e18);
-        vm.prank(address(mainnetController));
+        vm.prank(controller);
         bytes memory returnData = almProxy.doCallWithValue{value: 1e18}(target, data, 1e18);
 
         assertEq(abi.decode(returnData, (uint256)), 84);
@@ -171,20 +179,20 @@ contract ALMProxyDoDelegateCallTests is ALMProxyCallTestBase {
     function test_doDelegateCall() public {
         // L1 Controller is msg.sender, almProxy emits the event
         vm.expectEmit(address(almProxy));
-        emit ExampleEvent(exampleAddress, 42, 84, address(mainnetController), 0);
-        vm.prank(address(mainnetController));
+        emit ExampleEvent(exampleAddress, 42, 84, controller, 0);
+        vm.prank(controller);
         bytes memory returnData = almProxy.doDelegateCall(target, data);
 
         assertEq(abi.decode(returnData, (uint256)), 84);
     }
 
     function test_doDelegateCall_msgValue() public {
-        vm.deal(address(mainnetController), 1e18);
+        vm.deal(controller, 1e18);
 
         // L1 Controller is msg.sender, almProxy emits the event, msg.value sent to proxy
         vm.expectEmit(address(almProxy));
-        emit ExampleEvent(exampleAddress, 42, 84, address(mainnetController), 1e18);
-        vm.prank(address(mainnetController));
+        emit ExampleEvent(exampleAddress, 42, 84, controller, 1e18);
+        vm.prank(controller);
         bytes memory returnData = almProxy.doDelegateCall{value: 1e18}(target, data);
 
         assertEq(abi.decode(returnData, (uint256)), 84);

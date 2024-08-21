@@ -3,10 +3,35 @@ pragma solidity ^0.8.21;
 
 import "test/unit/UnitTestBase.t.sol";
 
-contract MainnetAdminTests is UnitTestBase {
+import { MainnetController } from "src/MainnetController.sol";
+
+import { MockDaiNst } from "test/unit/mocks/MockDaiNst.sol";
+import { MockPSM }    from "test/unit/mocks/MockPSM.sol";
+import { MockSNst }   from "test/unit/mocks/MockSNst.sol";
+
+contract MainnetControllerAdminTests is UnitTestBase {
 
     bytes32 mintRecipient1 = bytes32(uint256(uint160(makeAddr("mintRecipient1"))));
     bytes32 mintRecipient2 = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));
+
+    MainnetController mainnetController;
+
+    function setUp() public {
+        MockDaiNst daiNst = new MockDaiNst(makeAddr("dai"));
+        MockPSM    psm    = new MockPSM(makeAddr("usdc"));
+        MockSNst   snst   = new MockSNst(makeAddr("nst"));
+
+        mainnetController = new MainnetController(
+            admin,
+            makeAddr("almProxy"),
+            makeAddr("vault"),
+            makeAddr("buffer"),
+            address(psm),
+            address(daiNst),
+            makeAddr("cctp"),
+            address(snst)
+        );
+    }
 
     function test_setMintRecipient_unauthorizedAccount() public {
         vm.expectRevert(abi.encodeWithSignature(
