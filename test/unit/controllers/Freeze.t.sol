@@ -4,7 +4,7 @@ pragma solidity ^0.8.21;
 import "test/unit/UnitTestBase.t.sol";
 
 import { MainnetController } from "src/MainnetController.sol";
-import { L2Controller }      from "src/L2Controller.sol";
+import { ForeignController } from "src/ForeignController.sol";
 
 import { MockDaiNst } from "test/unit/mocks/MockDaiNst.sol";
 import { MockPSM }    from "test/unit/mocks/MockPSM.sol";
@@ -128,30 +128,48 @@ contract ControllerReactivateTests is ControllerTestBase {
 
 }
 
-contract L2ControllerFreezeTest is ControllerFreezeTests {
+contract ForeignControllerFreezeTest is ControllerFreezeTests {
+
+    address nst  = makeAddr("nst");
+    address usdc = makeAddr("usdc");
+    address snst = makeAddr("snst");
 
     // Override setUp to run the same tests against the L2 controller
     function setUp() public override {
-        MockPSM3 psm3 = new MockPSM3(makeAddr("nst"), makeAddr("usdc"), makeAddr("snst"));
+        MockPSM3 psm3 = new MockPSM3(nst, usdc, snst);
 
-        controller = IBaseControllerLike(address(
-            new L2Controller(admin, makeAddr("almProxy"), address(psm3))
-        ));
+        controller = IBaseControllerLike(address(new ForeignController(
+            admin,
+            makeAddr("almProxy"),
+            address(psm3),
+            nst,
+            usdc,
+            snst
+        )));
 
         _setRoles();
     }
 
 }
 
-contract L2ControllerReactivateTest is ControllerReactivateTests {
+contract ForeignControllerReactivateTest is ControllerReactivateTests {
+
+    address nst  = makeAddr("nst");
+    address usdc = makeAddr("usdc");
+    address snst = makeAddr("snst");
 
     // Override setUp to run the same tests against the L2 controller
     function setUp() public override {
-        MockPSM3 psm3 = new MockPSM3(makeAddr("nst"), makeAddr("usdc"), makeAddr("snst"));
+        MockPSM3 psm3 = new MockPSM3(nst, usdc, snst);
 
-        controller = IBaseControllerLike(address(
-            new L2Controller(admin, makeAddr("almProxy"), address(psm3))
-        ));
+        controller = IBaseControllerLike(address(new ForeignController(
+            admin,
+            makeAddr("almProxy"),
+            address(psm3),
+            nst,
+            usdc,
+            snst
+        )));
 
         _setRoles();
     }
