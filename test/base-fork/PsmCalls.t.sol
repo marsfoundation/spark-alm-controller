@@ -15,9 +15,9 @@ contract ForeignControllerPSMSuccessTestBase is ForkTestBase {
     )
         internal view
     {
-        assertEq(token.balanceOf(address(almProxy)),     proxyBalance);
+        assertEq(token.balanceOf(address(almProxy)),          proxyBalance);
         assertEq(token.balanceOf(address(foreignController)), 0);  // Should always be zero
-        assertEq(token.balanceOf(address(psmBase)),      psmBalance);
+        assertEq(token.balanceOf(address(psmBase)),           psmBalance);
 
         assertEq(psmBase.shares(address(almProxy)), proxyShares);
         assertEq(psmBase.totalShares(),             totalShares);
@@ -60,10 +60,10 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
         _assertState({
             token        : nstBase,
             proxyBalance : 100e18,
-            psmBalance   : 1e18,  // From seeding
+            psmBalance   : 1e18,  // From seeding NST
             proxyShares  : 0,
-            totalShares  : 1e18,  // From seeding
-            totalAssets  : 1e18   // From seeding
+            totalShares  : 1e18,  // From seeding NST
+            totalAssets  : 1e18   // From seeding NST
         });
 
         vm.prank(relayer);
@@ -89,8 +89,8 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
             proxyBalance : 100e6,
             psmBalance   : 0,
             proxyShares  : 0,
-            totalShares  : 1e18,  // From seeding
-            totalAssets  : 1e18   // From seeding
+            totalShares  : 1e18,  // From seeding NST
+            totalAssets  : 1e18   // From seeding NST
         });
 
         vm.prank(relayer);
@@ -116,8 +116,8 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
             proxyBalance : 100e18,
             psmBalance   : 0,
             proxyShares  : 0,
-            totalShares  : 1e18,  // From seeding
-            totalAssets  : 1e18   // From seeding
+            totalShares  : 1e18,  // From seeding NST
+            totalAssets  : 1e18   // From seeding NST
         });
 
         vm.prank(relayer);
@@ -181,12 +181,12 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
         assertEq(amountWithdrawn, 100e18);
 
         _assertState({
-            token          : nstBase,
-            proxyBalance   : 100e18,
-            psmBalance     : 1e18,  // From seeding
-            proxyShares    : 0,
-            totalShares    : 1e18,  // From seeding
-            totalAssets    : 1e18   // From seeding
+            token        : nstBase,
+            proxyBalance : 100e18,
+            psmBalance   : 1e18,  // From seeding NST
+            proxyShares  : 0,
+            totalShares  : 1e18,  // From seeding NST
+            totalAssets  : 1e18   // From seeding NST
         });
     }
 
@@ -210,12 +210,12 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
         assertEq(amountWithdrawn, 100e6);
 
         _assertState({
-            token          : usdcBase,
-            proxyBalance   : 100e6,
-            psmBalance     : 0,
-            proxyShares    : 0,
-            totalShares    : 1e18,  // From seeding
-            totalAssets    : 1e18   // From seeding
+            token        : usdcBase,
+            proxyBalance : 100e6,
+            psmBalance   : 0,
+            proxyShares  : 0,
+            totalShares  : 1e18,  // From seeding NST
+            totalAssets  : 1e18   // From seeding NST
         });
     }
 
@@ -239,12 +239,12 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
         assertEq(amountWithdrawn, 100e18);
 
         _assertState({
-            token          : snstBase,
-            proxyBalance   : 100e18,
-            psmBalance     : 0,
-            proxyShares    : 0,
-            totalShares    : 1e18,  // From seeding
-            totalAssets    : 1e18   // From seeding
+            token        : snstBase,
+            proxyBalance : 100e18,
+            psmBalance   : 0,
+            proxyShares  : 0,
+            totalShares  : 1e18,  // From seeding NST
+            totalAssets  : 1e18   // From seeding NST
         });
     }
 
