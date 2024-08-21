@@ -11,8 +11,8 @@ import { PSM3Deploy }       from "spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }            from "spark-psm/src/PSM3.sol";
 import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
 
-import { ALMProxy }     from "src/ALMProxy.sol";
-import { L2Controller } from "src/L2Controller.sol";
+import { ALMProxy }          from "src/ALMProxy.sol";
+import { ForeignController } from "src/ForeignController.sol";
 
 contract ForkTestBase is Test {
 
@@ -42,8 +42,8 @@ contract ForkTestBase is Test {
     /*** ALM system deployments                                                                 ***/
     /**********************************************************************************************/
 
-    ALMProxy     almProxy;
-    L2Controller l2Controller;
+    ALMProxy          almProxy;
+    ForeignController foreignController;
 
     /**********************************************************************************************/
     /*** Casted addresses for testing                                                           ***/
@@ -80,22 +80,25 @@ contract ForkTestBase is Test {
 
         almProxy = new ALMProxy(admin);
 
-        l2Controller = new L2Controller({
+        foreignController = new ForeignController({
             admin_ : admin,
             proxy_ : address(almProxy),
-            psm_   : address(psmBase)
+            psm_   : address(psmBase),
+            nst_   : address(nstBase),
+            usdc_  : USDC_BASE,
+            snst_  : address(snstBase)
         });
 
         CONTROLLER = almProxy.CONTROLLER();
-        FREEZER    = l2Controller.FREEZER();
-        RELAYER    = l2Controller.RELAYER();
+        FREEZER    = foreignController.FREEZER();
+        RELAYER    = foreignController.RELAYER();
 
         vm.startPrank(admin);
 
-        l2Controller.grantRole(FREEZER, freezer);
-        l2Controller.grantRole(RELAYER, relayer);
+        foreignController.grantRole(FREEZER, freezer);
+        foreignController.grantRole(RELAYER, relayer);
 
-        almProxy.grantRole(CONTROLLER, address(l2Controller));
+        almProxy.grantRole(CONTROLLER, address(foreignController));
 
         vm.stopPrank();
     }

@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "test/base-fork/ForkTestBase.t.sol";
 
-contract L2ControllerPSMSuccessTestBase is ForkTestBase {
+contract ForeignControllerPSMSuccessTestBase is ForkTestBase {
 
     function _assertState(
         IERC20  token,
@@ -16,7 +16,7 @@ contract L2ControllerPSMSuccessTestBase is ForkTestBase {
         internal view
     {
         assertEq(token.balanceOf(address(almProxy)),     proxyBalance);
-        assertEq(token.balanceOf(address(l2Controller)), 0);  // Should always be zero
+        assertEq(token.balanceOf(address(foreignController)), 0);  // Should always be zero
         assertEq(token.balanceOf(address(psmBase)),      psmBalance);
 
         assertEq(psmBase.shares(address(almProxy)), proxyShares);
@@ -30,7 +30,7 @@ contract L2ControllerPSMSuccessTestBase is ForkTestBase {
 }
 
 
-contract L2ControllerDepositPSMFailureTests is ForkTestBase {
+contract ForeignControllerDepositPSMFailureTests is ForkTestBase {
 
     function test_depositPSM_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -38,21 +38,21 @@ contract L2ControllerDepositPSMFailureTests is ForkTestBase {
             address(this),
             RELAYER
         ));
-        l2Controller.depositPSM(address(nstBase), 100e18);
+        foreignController.depositPSM(address(nstBase), 100e18);
     }
 
     function test_depositPSM_frozen() external {
         vm.prank(freezer);
-        l2Controller.freeze();
+        foreignController.freeze();
 
         vm.prank(relayer);
-        vm.expectRevert("L2Controller/not-active");
-        l2Controller.depositPSM(address(nstBase), 100e18);
+        vm.expectRevert("ForeignController/not-active");
+        foreignController.depositPSM(address(nstBase), 100e18);
     }
 
 }
 
-contract L2ControllerDepositTests is L2ControllerPSMSuccessTestBase {
+contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
 
     function test_deposit_nst() external {
         deal(address(nstBase), address(almProxy), 100e18);
@@ -67,7 +67,7 @@ contract L2ControllerDepositTests is L2ControllerPSMSuccessTestBase {
         });
 
         vm.prank(relayer);
-        uint256 shares = l2Controller.depositPSM(address(nstBase), 100e18);
+        uint256 shares = foreignController.depositPSM(address(nstBase), 100e18);
 
         assertEq(shares, 100e18);
 
@@ -94,7 +94,7 @@ contract L2ControllerDepositTests is L2ControllerPSMSuccessTestBase {
         });
 
         vm.prank(relayer);
-        uint256 shares = l2Controller.depositPSM(address(usdcBase), 100e6);
+        uint256 shares = foreignController.depositPSM(address(usdcBase), 100e6);
 
         assertEq(shares, 100e18);
 
@@ -121,7 +121,7 @@ contract L2ControllerDepositTests is L2ControllerPSMSuccessTestBase {
         });
 
         vm.prank(relayer);
-        uint256 shares = l2Controller.depositPSM(address(snstBase), 100e18);
+        uint256 shares = foreignController.depositPSM(address(snstBase), 100e18);
 
         assertEq(shares, 125e18);
 
@@ -137,7 +137,7 @@ contract L2ControllerDepositTests is L2ControllerPSMSuccessTestBase {
 
 }
 
-contract L2ControllerWithdrawPSMFailureTests is ForkTestBase {
+contract ForeignControllerWithdrawPSMFailureTests is ForkTestBase {
 
     function test_withdrawPSM_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -145,26 +145,26 @@ contract L2ControllerWithdrawPSMFailureTests is ForkTestBase {
             address(this),
             RELAYER
         ));
-        l2Controller.withdrawPSM(address(nstBase), 100e18);
+        foreignController.withdrawPSM(address(nstBase), 100e18);
     }
 
     function test_withdrawPSM_frozen() external {
         vm.prank(freezer);
-        l2Controller.freeze();
+        foreignController.freeze();
 
         vm.prank(relayer);
-        vm.expectRevert("L2Controller/not-active");
-        l2Controller.withdrawPSM(address(nstBase), 100e18);
+        vm.expectRevert("ForeignController/not-active");
+        foreignController.withdrawPSM(address(nstBase), 100e18);
     }
 
 }
 
-contract L2ControllerWithdrawTests is L2ControllerPSMSuccessTestBase {
+contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
 
     function test_withdraw_nst() external {
         deal(address(nstBase), address(almProxy), 100e18);
         vm.prank(relayer);
-        l2Controller.depositPSM(address(nstBase), 100e18);
+        foreignController.depositPSM(address(nstBase), 100e18);
 
         _assertState({
             token        : nstBase,
@@ -176,7 +176,7 @@ contract L2ControllerWithdrawTests is L2ControllerPSMSuccessTestBase {
         });
 
         vm.prank(relayer);
-        uint256 amountWithdrawn = l2Controller.withdrawPSM(address(nstBase), 100e18);
+        uint256 amountWithdrawn = foreignController.withdrawPSM(address(nstBase), 100e18);
 
         assertEq(amountWithdrawn, 100e18);
 
@@ -193,7 +193,7 @@ contract L2ControllerWithdrawTests is L2ControllerPSMSuccessTestBase {
     function test_withdraw_usdc() external {
         deal(address(usdcBase), address(almProxy), 100e6);
         vm.prank(relayer);
-        l2Controller.depositPSM(address(usdcBase), 100e6);
+        foreignController.depositPSM(address(usdcBase), 100e6);
 
         _assertState({
             token        : usdcBase,
@@ -205,7 +205,7 @@ contract L2ControllerWithdrawTests is L2ControllerPSMSuccessTestBase {
         });
 
         vm.prank(relayer);
-        uint256 amountWithdrawn = l2Controller.withdrawPSM(address(usdcBase), 100e6);
+        uint256 amountWithdrawn = foreignController.withdrawPSM(address(usdcBase), 100e6);
 
         assertEq(amountWithdrawn, 100e6);
 
@@ -222,7 +222,7 @@ contract L2ControllerWithdrawTests is L2ControllerPSMSuccessTestBase {
     function test_withdraw_snst() external {
         deal(address(snstBase), address(almProxy), 100e18);
         vm.prank(relayer);
-        l2Controller.depositPSM(address(snstBase), 100e18);
+        foreignController.depositPSM(address(snstBase), 100e18);
 
         _assertState({
             token        : snstBase,
@@ -234,7 +234,7 @@ contract L2ControllerWithdrawTests is L2ControllerPSMSuccessTestBase {
         });
 
         vm.prank(relayer);
-        uint256 amountWithdrawn = l2Controller.withdrawPSM(address(snstBase), 100e18);
+        uint256 amountWithdrawn = foreignController.withdrawPSM(address(snstBase), 100e18);
 
         assertEq(amountWithdrawn, 100e18);
 
