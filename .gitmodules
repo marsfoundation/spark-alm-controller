@@ -16,3 +16,6 @@
 [submodule "lib/spark-psm"]
 	path = lib/spark-psm
 	url = https://github.com/marsfoundation/spark-psm
+[submodule "lib/xchain-helpers"]
+	path = lib/xchain-helpers
+	url = https://github.com/marsfoundation/xchain-helpers
