@@ -3,6 +3,17 @@ pragma solidity >=0.8.0;
 
 import "test/mainnet-fork/ForkTestBase.t.sol";
 
+import { IERC20 } from "lib/forge-std/src/interfaces/IERC20.sol";
+
+import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
+
+import { PSM3Deploy }       from "spark-psm/deploy/PSM3Deploy.sol";
+import { IPSM3 }            from "spark-psm/src/PSM3.sol";
+import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
+
+import { ALMProxy }          from "src/ALMProxy.sol";
+import { ForeignController } from "src/ForeignController.sol";
+
 contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
 
     uint32 constant DOMAIN_ID_CIRCLE_ARBITRUM = 3;
@@ -77,6 +88,80 @@ contract MainnetControllerTransferUSDCToCCTPTests is ForkTestBase {
         assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 1e6);
 
         assertEq(nst.allowance(address(almProxy), CCTP_MESSENGER),  0);
+    }
+
+}
+
+// TODO: Figure out finalized structure for this repo/testing structure wise
+contract MainnetControllerTransferUSDCToCCTPIntegrationTests is ForkTestBase {
+
+    address admin = makeAddr("admin");
+
+    /**********************************************************************************************/
+    /*** Base addresses                                                                         ***/
+    /**********************************************************************************************/
+
+    address USDC_BASE = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
+
+    /**********************************************************************************************/
+    /*** ALM system deployments                                                                 ***/
+    /**********************************************************************************************/
+
+    ALMProxy          foreignAlmProxy;
+    ForeignController foreignController;
+
+    /**********************************************************************************************/
+    /*** Casted addresses for testing                                                           ***/
+    /**********************************************************************************************/
+
+    IERC20 nstBase;
+    IERC20 snstBase;
+    IERC20 usdcBase;
+
+    MockRateProvider rateProvider;
+
+    IPSM3 psmBase;
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.createSelectFork(getChain('base').rpcUrl, 18181500);  // August 8, 2024
+
+        nstBase  = IERC20(address(new ERC20Mock()));
+        snstBase = IERC20(address(new ERC20Mock()));
+        usdcBase = IERC20(USDC_BASE);
+
+        rateProvider = new MockRateProvider();
+
+        rateProvider.__setConversionRate(1.25e27);
+
+        deal(address(nstBase), address(this), 1e18);  // For seeding PSM during deployment
+
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            address(nstBase), USDC_BASE, address(snstBase), address(rateProvider)
+        ));
+
+        foreignAlmProxy = new ALMProxy(admin);
+
+        foreignController = new ForeignController({
+            admin_ : admin,
+            proxy_ : address(foreignAlmProxy),
+            psm_   : address(psmBase),
+            nst_   : address(nstBase),
+            usdc_  : USDC_BASE,
+            snst_  : address(snstBase)
+        });
+
+        // NOTE: FREEZER, RELAYER, and CONTROLLER are taken from super.setUp()
+
+        vm.startPrank(admin);
+
+        foreignController.grantRole(FREEZER, freezer);
+        foreignController.grantRole(RELAYER, relayer);
+
+        foreignAlmProxy.grantRole(CONTROLLER, address(foreignController));
+
+        vm.stopPrank();
     }
 
 }
