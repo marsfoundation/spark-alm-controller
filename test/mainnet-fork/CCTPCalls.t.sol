@@ -11,6 +11,9 @@ import { PSM3Deploy }       from "spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }            from "spark-psm/src/PSM3.sol";
 import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
 
+import { CCTPBridgeTesting } from "xchain-helpers/src/testing/bridges/CCTPBridgeTesting.sol";
+import { CCTPForwarder }     from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
+
 import { ALMProxy }          from "src/ALMProxy.sol";
 import { ForeignController } from "src/ForeignController.sol";
 
@@ -24,7 +27,7 @@ contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
             address(this),
             RELAYER
         ));
-        mainnetController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_OPTIMISM);
+        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
     }
 
     function test_transferUSDCToCCTP_frozen() external {
@@ -33,7 +36,7 @@ contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_OPTIMISM);
+        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
     }
 
     function test_transferUSDCToCCTP_invalidMintRecipient() external {
@@ -74,14 +77,14 @@ contract MainnetControllerTransferUSDCToCCTPTests is ForkTestBase {
             address(usdc),
             1e6,
             address(almProxy),
-            mainnetController.mintRecipients(DOMAIN_ID_CIRCLE_OPTIMISM),
-            DOMAIN_ID_CIRCLE_OPTIMISM,
-            bytes32(0x0000000000000000000000002b4069517957735be00cee0fadae88a26365528f),
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(0x0000000000000000000000001682ae6375c4e4a97e4b583bc394c861a46d8962),
             bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
         );
 
         vm.prank(relayer);
-        mainnetController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_OPTIMISM);
+        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
         assertEq(usdc.balanceOf(address(almProxy)),          0);
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
@@ -94,6 +97,9 @@ contract MainnetControllerTransferUSDCToCCTPTests is ForkTestBase {
 
 // TODO: Figure out finalized structure for this repo/testing structure wise
 contract MainnetControllerTransferUSDCToCCTPIntegrationTests is ForkTestBase {
+
+    using DomainHelpers     for *;
+    using CCTPBridgeTesting for Bridge;
 
     address admin = makeAddr("admin");
 
@@ -125,7 +131,7 @@ contract MainnetControllerTransferUSDCToCCTPIntegrationTests is ForkTestBase {
     function setUp() public override {
         super.setUp();
 
-        vm.createSelectFork(getChain('base').rpcUrl, 18181500);  // August 8, 2024
+        destination = getChain("base").createSelectFork(18181500);  // August 8, 2024
 
         nstBase  = IERC20(address(new ERC20Mock()));
         snstBase = IERC20(address(new ERC20Mock()));
@@ -162,6 +168,21 @@ contract MainnetControllerTransferUSDCToCCTPIntegrationTests is ForkTestBase {
         foreignAlmProxy.grantRole(CONTROLLER, address(foreignController));
 
         vm.stopPrank();
+
+        source.selectFork();
+
+        bridge = CCTPBridgeTesting.createCircleBridge(source, destination);
+    }
+
+    function test_transferUSDCToCCTP_integration() external {
+        deal(address(usdc), address(almProxy), 1e6);
+
+        vm.prank(relayer);
+        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+
+        bridge.relayMessagesToDestination(true);
+
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 0);
     }
 
 }
