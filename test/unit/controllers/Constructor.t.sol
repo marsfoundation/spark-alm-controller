@@ -49,30 +49,32 @@ contract MainnetControllerConstructorTests is UnitTestBase {
 
 contract ForeignControllerConstructorTests is UnitTestBase {
 
-    address nst  = makeAddr("nst");
-    address usdc = makeAddr("usdc");
-    address snst = makeAddr("snst");
+    address almProxy = makeAddr("almProxy");
+    address cctp     = makeAddr("cctp");
+    address nst      = makeAddr("nst");
+    address psm      = makeAddr("psm");
+    address snst     = makeAddr("snst");
+    address usdc     = makeAddr("usdc");
 
     function test_constructor() public {
-        MockPSM3 psm3 = new MockPSM3(nst, usdc, snst);
-
         ForeignController foreignController = new ForeignController(
             admin,
-            makeAddr("almProxy"),
-            address(psm3),
+            almProxy,
+            psm,
             nst,
             usdc,
             snst,
-            makeAddr("cctp")
+            cctp
         );
 
         assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
-        assertEq(address(foreignController.proxy()), makeAddr("almProxy"));
-        assertEq(address(foreignController.psm()),   address(psm3));
+        assertEq(address(foreignController.proxy()), almProxy);
+        assertEq(address(foreignController.psm()),   psm);
         assertEq(address(foreignController.nst()),   nst);   // asset0 param in MockPSM3
         assertEq(address(foreignController.usdc()),  usdc);  // asset1 param in MockPSM3
         assertEq(address(foreignController.snst()),  snst);  // asset2 param in MockPSM3
+        assertEq(address(foreignController.cctp()),  cctp);
 
         assertEq(foreignController.active(), true);
     }
