@@ -147,8 +147,6 @@ contract ForeignControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPT
 
     using DomainHelpers for *;
 
-    uint32 constant DOMAIN_ID_CIRCLE_ARBITRUM = 3;
-
     function setUp( ) public override {
         super.setUp();
         destination.selectFork();
