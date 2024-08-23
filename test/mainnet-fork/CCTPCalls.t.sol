@@ -143,7 +143,7 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
 }
 
-contract L2ControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPTestBase {
+contract ForeignControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPTestBase {
 
     using DomainHelpers for *;
 
@@ -175,7 +175,7 @@ contract L2ControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPTestBa
     function test_transferUSDCToCCTP_invalidMintRecipient() external {
         vm.prank(relayer);
         vm.expectRevert("ForeignController/domain-not-configured");
-        foreignController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_ARBITRUM);
+        foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE);
     }
 
 }
