@@ -19,8 +19,6 @@ import { ForeignController } from "src/ForeignController.sol";
 
 contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
 
-    uint32 constant DOMAIN_ID_CIRCLE_ARBITRUM = 3;
-
     function test_transferUSDCToCCTP_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
@@ -42,7 +40,7 @@ contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
     function test_transferUSDCToCCTP_invalidMintRecipient() external {
         vm.prank(relayer);
         vm.expectRevert("MainnetController/domain-not-configured");
-        mainnetController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_ARBITRUM);
+        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE);
     }
 
 }
