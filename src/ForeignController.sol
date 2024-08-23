@@ -9,6 +9,15 @@ import { IPSM3 } from "spark-psm/src/interfaces/IPSM3.sol";
 
 import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 
+interface ICCTPLike {
+    function depositForBurn(
+        uint256 amount,
+        uint32 destinationDomain,
+        bytes32 mintRecipient,
+        address burnToken
+    ) external returns (uint64 nonce);
+}
+
 contract ForeignController is AccessControl {
 
     // TODO: Inherit and override interface
@@ -27,7 +36,11 @@ contract ForeignController is AccessControl {
     IERC20 public immutable usdc;
     IERC20 public immutable snst;
 
+    ICCTPLike public cctp;
+
     bool public active;
+
+    mapping(uint32 destinationDomain => bytes32 mintRecipient) public mintRecipients;
 
     /**********************************************************************************************/
     /*** Initialization                                                                         ***/
@@ -39,7 +52,8 @@ contract ForeignController is AccessControl {
         address psm_,
         address nst_,
         address usdc_,
-        address snst_
+        address snst_,
+        address cctp_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
@@ -49,6 +63,8 @@ contract ForeignController is AccessControl {
         nst  = IERC20(nst_);
         usdc = IERC20(usdc_);
         snst = IERC20(snst_);
+
+        cctp = ICCTPLike(cctp_);
 
         active = true;
     }
@@ -63,6 +79,16 @@ contract ForeignController is AccessControl {
     }
 
     /**********************************************************************************************/
+    /*** Admin functions                                                                        ***/
+    /**********************************************************************************************/
+
+    function setMintRecipient(uint32 destinationDomain, bytes32 mintRecipient)
+        external onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        mintRecipients[destinationDomain] = mintRecipient;
+    }
+
+    /**********************************************************************************************/
     /*** Freezer functions                                                                      ***/
     /**********************************************************************************************/
 
@@ -72,6 +98,38 @@ contract ForeignController is AccessControl {
 
     function reactivate() external onlyRole(DEFAULT_ADMIN_ROLE) {
         active = true;
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer bridging functions                                                             ***/
+    /**********************************************************************************************/
+
+    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
+        external onlyRole(RELAYER) isActive
+    {
+        bytes32 mintRecipient = mintRecipients[destinationDomain];
+
+        require(mintRecipient != 0, "MainnetController/domain-not-configured");
+
+        // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC)
+        proxy.doCall(
+            address(usdc),
+            abi.encodeCall(usdc.approve, (address(cctp), usdcAmount))
+        );
+
+        // Send USDC to CCTP for bridging to destinationDomain
+        proxy.doCall(
+            address(cctp),
+            abi.encodeCall(
+                cctp.depositForBurn,
+                (
+                    usdcAmount,
+                    destinationDomain,
+                    mintRecipient,
+                    address(usdc)
+                )
+            )
+        );
     }
 
     /**********************************************************************************************/

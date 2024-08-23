@@ -144,7 +144,8 @@ contract ForeignControllerFreezeTest is ControllerFreezeTests {
             address(psm3),
             nst,
             usdc,
-            snst
+            snst,
+            makeAddr("cctp")
         )));
 
         _setRoles();
@@ -168,7 +169,8 @@ contract ForeignControllerReactivateTest is ControllerReactivateTests {
             address(psm3),
             nst,
             usdc,
-            snst
+            snst,
+            makeAddr("cctp")
         )));
 
         _setRoles();

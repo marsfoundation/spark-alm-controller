@@ -62,7 +62,8 @@ contract ForeignControllerConstructorTests is UnitTestBase {
             address(psm3),
             nst,
             usdc,
-            snst
+            snst,
+            makeAddr("cctp")
         );
 
         assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
