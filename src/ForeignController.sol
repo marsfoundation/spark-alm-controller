@@ -104,7 +104,7 @@ contract ForeignController is AccessControl {
         external onlyRole(RELAYER) isActive returns (uint256 assetsWithdrawn)
     {
         // Withdraw up to `maxAmount` of `asset` in the PSM, decode the result
-        // to get `assetsWithdrawn`.
+        // to get `assetsWithdrawn` (assumes the proxy has enough PSM shares).
         assetsWithdrawn = abi.decode(
             proxy.doCall(
                 address(psm),

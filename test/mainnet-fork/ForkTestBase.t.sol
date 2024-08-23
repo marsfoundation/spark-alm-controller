@@ -67,8 +67,6 @@ contract ForkTestBase is DssTest {
     address freezer = makeAddr("freezer");
     address relayer = makeAddr("relayer");
 
-    bytes32 mintRecipient = bytes32(uint256(uint160(makeAddr("mintRecipient"))));
-
     bytes32 CONTROLLER;
     bytes32 FREEZER;
     bytes32 RELAYER;
@@ -224,8 +222,6 @@ contract ForkTestBase is DssTest {
 
         mainnetController.grantRole(FREEZER, freezer);
         mainnetController.grantRole(RELAYER, relayer);
-
-        mainnetController.setMintRecipient(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE, mintRecipient);
 
         almProxy.grantRole(CONTROLLER, address(mainnetController));
 

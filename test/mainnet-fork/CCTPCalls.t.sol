@@ -47,56 +47,8 @@ contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
 
 }
 
-contract MainnetControllerTransferUSDCToCCTPTests is ForkTestBase {
-
-    event DepositForBurn(
-        uint64  indexed nonce,
-        address indexed burnToken,
-        uint256 amount,
-        address indexed depositor,
-        bytes32 mintRecipient,
-        uint32  destinationDomain,
-        bytes32 destinationTokenMessenger,
-        bytes32 destinationCaller
-    );
-
-    function test_transferUSDCToCCTP() external {
-        deal(address(usdc), address(almProxy), 1e6);
-
-        assertEq(usdc.balanceOf(address(almProxy)),          1e6);
-        assertEq(usdc.balanceOf(address(mainnetController)), 0);
-        assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
-
-        assertEq(nst.allowance(address(almProxy), CCTP_MESSENGER),  0);
-
-        // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
-        //       for assertions
-        vm.expectEmit(CCTP_MESSENGER);
-        emit DepositForBurn(
-            94773,
-            address(usdc),
-            1e6,
-            address(almProxy),
-            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            bytes32(0x0000000000000000000000001682ae6375c4e4a97e4b583bc394c861a46d8962),
-            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
-        );
-
-        vm.prank(relayer);
-        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-
-        assertEq(usdc.balanceOf(address(almProxy)),          0);
-        assertEq(usdc.balanceOf(address(mainnetController)), 0);
-        assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 1e6);
-
-        assertEq(nst.allowance(address(almProxy), CCTP_MESSENGER),  0);
-    }
-
-}
-
 // TODO: Figure out finalized structure for this repo/testing structure wise
-contract MainnetControllerTransferUSDCToCCTPIntegrationTests is ForkTestBase {
+contract TransferUSDCToCCTPIntegrationTests is ForkTestBase {
 
     using DomainHelpers     for *;
     using CCTPBridgeTesting for Bridge;
@@ -172,17 +124,70 @@ contract MainnetControllerTransferUSDCToCCTPIntegrationTests is ForkTestBase {
         source.selectFork();
 
         bridge = CCTPBridgeTesting.createCircleBridge(source, destination);
+
+        vm.prank(SPARK_PROXY);
+        mainnetController.setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(uint256(uint160(address(foreignAlmProxy))))
+        );
     }
 
-    function test_transferUSDCToCCTP_integration() external {
+    event DepositForBurn(
+        uint64  indexed nonce,
+        address indexed burnToken,
+        uint256 amount,
+        address indexed depositor,
+        bytes32 mintRecipient,
+        uint32  destinationDomain,
+        bytes32 destinationTokenMessenger,
+        bytes32 destinationCaller
+    );
+
+    function test_transferUSDCToCCTP() external {
         deal(address(usdc), address(almProxy), 1e6);
+
+        assertEq(usdc.balanceOf(address(almProxy)),          1e6);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
+
+        assertEq(nst.allowance(address(almProxy), CCTP_MESSENGER),  0);
+
+        // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
+        //       for assertions
+        vm.expectEmit(CCTP_MESSENGER);
+        emit DepositForBurn(
+            94773,
+            address(usdc),
+            1e6,
+            address(almProxy),
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(0x0000000000000000000000001682ae6375c4e4a97e4b583bc394c861a46d8962),
+            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
+        );
 
         vm.prank(relayer);
         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
+        assertEq(usdc.balanceOf(address(almProxy)),          0);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 1e6);
+
+        assertEq(nst.allowance(address(almProxy), CCTP_MESSENGER),  0);
+
+        destination.selectFork();
+
+        uint256 usdcBaseTotalSupply = usdcBase.totalSupply();
+
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   0);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         usdcBaseTotalSupply);
+
         bridge.relayMessagesToDestination(true);
 
-        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 0);
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   1e6);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         usdcBaseTotalSupply + 1e6);
     }
 
 }
