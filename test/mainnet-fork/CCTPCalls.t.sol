@@ -48,7 +48,7 @@ contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
 }
 
 // TODO: Figure out finalized structure for this repo/testing structure wise
-contract TransferUSDCToCCTPIntegrationTests is ForkTestBase {
+contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
     using DomainHelpers     for *;
     using CCTPBridgeTesting for Bridge;
@@ -83,7 +83,7 @@ contract TransferUSDCToCCTPIntegrationTests is ForkTestBase {
 
     uint256 USDC_BASE_SUPPLY;
 
-    function setUp() public override {
+    function setUp() public override virtual {
         super.setUp();
 
         destination = getChain("base").createSelectFork(18181500);  // August 8, 2024
@@ -142,6 +142,51 @@ contract TransferUSDCToCCTPIntegrationTests is ForkTestBase {
             bytes32(uint256(uint160(address(foreignAlmProxy))))
         );
     }
+
+}
+
+contract L2ControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPTestBase {
+
+    using DomainHelpers for *;
+
+    uint32 constant DOMAIN_ID_CIRCLE_ARBITRUM = 3;
+
+    function setUp( ) public override {
+        super.setUp();
+        destination.selectFork();
+    }
+
+    function test_transferUSDCToCCTP_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    }
+
+    function test_transferUSDCToCCTP_frozen() external {
+        vm.prank(freezer);
+        foreignController.freeze();
+
+        vm.prank(relayer);
+        vm.expectRevert("ForeignController/not-active");
+        foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    }
+
+    function test_transferUSDCToCCTP_invalidMintRecipient() external {
+        vm.prank(relayer);
+        vm.expectRevert("ForeignController/domain-not-configured");
+        foreignController.transferUSDCToCCTP(1e6, DOMAIN_ID_CIRCLE_ARBITRUM);
+    }
+
+}
+
+
+contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
+
+    using DomainHelpers     for *;
+    using CCTPBridgeTesting for Bridge;
 
     event DepositForBurn(
         uint64  indexed nonce,
