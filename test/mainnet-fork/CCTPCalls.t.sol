@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import "test/fork/ForkTestBase.t.sol";
+import "test/mainnet-fork/ForkTestBase.t.sol";
 
-contract MainnetControllerTransferUSDCToCTTPFailureTests is ForkTestBase {
+contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
 
     uint32 constant DOMAIN_ID_CIRCLE_ARBITRUM = 3;
 
@@ -33,7 +33,7 @@ contract MainnetControllerTransferUSDCToCTTPFailureTests is ForkTestBase {
 
 }
 
-contract MainnetControllerTransferUSDCToCTTPTests is ForkTestBase {
+contract MainnetControllerTransferUSDCToCCTPTests is ForkTestBase {
 
     event DepositForBurn(
         uint64  indexed nonce,

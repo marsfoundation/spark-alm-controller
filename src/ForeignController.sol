@@ -5,13 +5,9 @@ import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
-import { IALMProxy } from "src/interfaces/IALMProxy.sol";
+import { IPSM3 } from "spark-psm/src/interfaces/IPSM3.sol";
 
-interface IPSM3Like {
-    function asset0() external view returns(address);
-    function asset1() external view returns(address);
-    function asset2() external view returns(address);
-}
+import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 
 contract ForeignController is AccessControl {
 
@@ -25,7 +21,7 @@ contract ForeignController is AccessControl {
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
     IALMProxy public immutable proxy;
-    IPSM3Like public immutable psm;
+    IPSM3     public immutable psm;
 
     IERC20 public immutable nst;
     IERC20 public immutable usdc;
@@ -48,7 +44,7 @@ contract ForeignController is AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
         proxy = IALMProxy(proxy_);
-        psm   = IPSM3Like(psm_);
+        psm   = IPSM3(psm_);
 
         nst  = IERC20(nst_);
         usdc = IERC20(usdc_);
@@ -76,6 +72,49 @@ contract ForeignController is AccessControl {
 
     function reactivate() external onlyRole(DEFAULT_ADMIN_ROLE) {
         active = true;
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer PSM functions                                                                  ***/
+    /**********************************************************************************************/
+
+    function depositPSM(address asset, uint256 amount)
+        external onlyRole(RELAYER) isActive returns (uint256 shares)
+    {
+        // Approve `asset` to PSM from the proxy (assumes the proxy has enough `asset`).
+        proxy.doCall(
+            asset,
+            abi.encodeCall(IERC20.approve, (address(psm), amount))
+        );
+
+        // Deposit `amount` of `asset` in the PSM, decode the result to get `shares`.
+        shares = abi.decode(
+            proxy.doCall(
+                address(psm),
+                abi.encodeCall(
+                    psm.deposit,
+                    (asset, address(proxy), amount)
+                )
+            ),
+            (uint256)
+        );
+    }
+
+    function withdrawPSM(address asset, uint256 maxAmount)
+        external onlyRole(RELAYER) isActive returns (uint256 assetsWithdrawn)
+    {
+        // Withdraw up to `maxAmount` of `asset` in the PSM, decode the result
+        // to get `assetsWithdrawn`.
+        assetsWithdrawn = abi.decode(
+            proxy.doCall(
+                address(psm),
+                abi.encodeCall(
+                    psm.withdraw,
+                    (asset, address(proxy), maxAmount)
+                )
+            ),
+            (uint256)
+        );
     }
 
 }

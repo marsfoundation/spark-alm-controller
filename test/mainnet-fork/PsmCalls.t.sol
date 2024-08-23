@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import "test/fork/ForkTestBase.t.sol";
+import "test/mainnet-fork/ForkTestBase.t.sol";
 
 contract MainnetControllerSwapNSTToUSDCFailureTests is ForkTestBase {
 
@@ -20,7 +20,7 @@ contract MainnetControllerSwapNSTToUSDCFailureTests is ForkTestBase {
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.swapNSTToUSDC(1e6);
+        mainnetController.swapUSDCToNST(1e6);
     }
 
 }

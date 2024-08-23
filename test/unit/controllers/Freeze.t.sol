@@ -27,7 +27,7 @@ contract ControllerTestBase is UnitTestBase {
         MockPSM    psm    = new MockPSM(makeAddr("usdc"));
         MockSNst   snst   = new MockSNst(makeAddr("nst"));
 
-        // Default to mainnet controller for tests and override with L2 controller
+        // Default to mainnet controller for tests and override with foreign controller
         controller = IBaseControllerLike(address(new MainnetController(
             admin,
             makeAddr("almProxy"),
@@ -134,7 +134,7 @@ contract ForeignControllerFreezeTest is ControllerFreezeTests {
     address usdc = makeAddr("usdc");
     address snst = makeAddr("snst");
 
-    // Override setUp to run the same tests against the L2 controller
+    // Override setUp to run the same tests against the foreign controller
     function setUp() public override {
         MockPSM3 psm3 = new MockPSM3(nst, usdc, snst);
 
@@ -158,7 +158,7 @@ contract ForeignControllerReactivateTest is ControllerReactivateTests {
     address usdc = makeAddr("usdc");
     address snst = makeAddr("snst");
 
-    // Override setUp to run the same tests against the L2 controller
+    // Override setUp to run the same tests against the foreign controller
     function setUp() public override {
         MockPSM3 psm3 = new MockPSM3(nst, usdc, snst);
 
