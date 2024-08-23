@@ -33,9 +33,9 @@ interface IVaultLike {
 }
 
 interface IPSMLike {
-    function buyGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 daiInnstAmount);
+    function buyGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 nstAmount);
     function gem() external view returns(address);
-    function sellGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 daiOutnstAmount);
+    function sellGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 nstAmount);
     function to18ConversionFactor() external view returns (uint256);
 }
 
@@ -237,7 +237,7 @@ contract MainnetController is AccessControl {
             abi.encodeCall(dai.approve, (address(psm), nstAmount))
         );
 
-        // Swap NST to USDC through the PSM
+        // Swap DAI to USDC through the PSM
         proxy.doCall(
             address(psm),
             abi.encodeCall(psm.buyGemNoFee, (address(proxy), usdcAmount))
@@ -259,7 +259,7 @@ contract MainnetController is AccessControl {
             abi.encodeCall(psm.sellGemNoFee, (address(proxy), usdcAmount))
         );
 
-        // Approve DAI to  DaiNst migrator from the proxy (assumes the proxy has enough DAI)
+        // Approve DAI to DaiNst migrator from the proxy (assumes the proxy has enough DAI)
         proxy.doCall(
             address(dai),
             abi.encodeCall(dai.approve, (address(daiNst), nstAmount))

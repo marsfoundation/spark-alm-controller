@@ -23,6 +23,10 @@ import { SNstDeploy }           from "sdai/deploy/SNstDeploy.sol";
 import { SNstInit, SNstConfig } from "sdai/deploy/SNstInit.sol";
 import { SNstInstance }         from "sdai/deploy/SNstInstance.sol";
 
+import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
+import { Bridge }                from "xchain-helpers/src/testing/Bridge.sol";
+import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
+
 import { ALMProxy }          from "src/ALMProxy.sol";
 import { MainnetController } from "src/MainnetController.sol";
 
@@ -45,6 +49,8 @@ interface IVaultLike {
 
 contract ForkTestBase is DssTest {
 
+    using DomainHelpers for *;
+
     /**********************************************************************************************/
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
@@ -56,14 +62,10 @@ contract ForkTestBase is DssTest {
     uint256 constant SEVEN_PCT_APY = 1.000000002145441671308778766e27;  // 7% APY (current DSR)
     uint256 constant EIGHT_PCT_APY = 1.000000002440418608258400030e27;  // 8% APY (current DSR + 1%)
 
-    uint32 constant DOMAIN_ID_CIRCLE_OPTIMISM = 2;
-
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     address freezer = makeAddr("freezer");
     address relayer = makeAddr("relayer");
-
-    bytes32 mintRecipient = bytes32(uint256(uint160(makeAddr("mintRecipient"))));
 
     bytes32 CONTROLLER;
     bytes32 FREEZER;
@@ -122,11 +124,19 @@ contract ForkTestBase is DssTest {
     address vault;
 
     /**********************************************************************************************/
+    /*** Bridging setup                                                                         ***/
+    /**********************************************************************************************/
+
+    Bridge bridge;
+    Domain source;
+    Domain destination;
+
+    /**********************************************************************************************/
     /*** Test setup                                                                             ***/
     /**********************************************************************************************/
 
     function setUp() public virtual {
-        vm.createSelectFork(getChain('mainnet').rpcUrl, 20484600);  // August 8, 2024
+        source = getChain("mainnet").createSelectFork(20484600);  // August 8, 2024
 
         dss          = MCD.loadFromChainlog(LOG);
         DAI          = IChainlogLike(LOG).getAddress("MCD_DAI");
@@ -212,8 +222,6 @@ contract ForkTestBase is DssTest {
 
         mainnetController.grantRole(FREEZER, freezer);
         mainnetController.grantRole(RELAYER, relayer);
-
-        mainnetController.setMintRecipient(DOMAIN_ID_CIRCLE_OPTIMISM, mintRecipient);
 
         almProxy.grantRole(CONTROLLER, address(mainnetController));
 

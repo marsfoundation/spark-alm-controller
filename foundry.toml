@@ -9,7 +9,8 @@ remappings = [
     "dss-test/=lib/dss-allocator/lib/dss-test/src/",
     "nst/=lib/nst/",
     "sdai/=lib/sdai/",
-    "spark-psm/=lib/spark-psm/"
+    "spark-psm/=lib/spark-psm/",
+    "xchain-helpers/=lib/xchain-helpers/",
 ]
 
 [fuzz]
