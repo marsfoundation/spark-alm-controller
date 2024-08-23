@@ -36,7 +36,8 @@ contract ForkTestBase is Test {
     /*** Base addresses                                                                         ***/
     /**********************************************************************************************/
 
-    address USDC_BASE = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
+    address CCTP_MESSENGER_BASE = 0x1682Ae6375C4E4A97e4B583BC394c861A46D8962;
+    address USDC_BASE           = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
@@ -86,7 +87,8 @@ contract ForkTestBase is Test {
             psm_   : address(psmBase),
             nst_   : address(nstBase),
             usdc_  : USDC_BASE,
-            snst_  : address(snstBase)
+            snst_  : address(snstBase),
+            cctp_  : CCTP_MESSENGER_BASE
         });
 
         CONTROLLER = almProxy.CONTROLLER();
