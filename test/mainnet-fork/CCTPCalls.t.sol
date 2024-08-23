@@ -182,7 +182,6 @@ contract L2ControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPTestBa
 
 }
 
-
 contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
 
     using DomainHelpers     for *;
