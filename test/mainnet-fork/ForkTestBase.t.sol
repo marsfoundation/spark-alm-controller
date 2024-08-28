@@ -96,8 +96,6 @@ contract ForkTestBase is DssTest {
     /*** Deployment instances                                                                   ***/
     /**********************************************************************************************/
 
-    // TODO: Need to update submodules to get proper types
-
     AllocatorIlkInstance    ilkInst;
     AllocatorSharedInstance sharedInst;
     UsdsInstance            usdsInst;

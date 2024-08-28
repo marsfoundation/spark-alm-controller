@@ -40,7 +40,7 @@ contract MainnetControllerConstructorTests is UnitTestBase {
         assertEq(address(mainnetController.susds()),   address(susds));
         assertEq(address(mainnetController.dai()),     makeAddr("dai"));   // Dai param in MockDaiUsds
         assertEq(address(mainnetController.usdc()),    makeAddr("usdc"));  // Gem param in MockPSM
-        assertEq(address(mainnetController.usds()),    makeAddr("usds"));   // Nst param in MockSUsds
+        assertEq(address(mainnetController.usds()),    makeAddr("usds"));  // Nst param in MockSUsds
 
         assertEq(mainnetController.active(), true);
     }
@@ -72,7 +72,7 @@ contract ForeignControllerConstructorTests is UnitTestBase {
         assertEq(address(foreignController.proxy()), almProxy);
         assertEq(address(foreignController.psm()),   psm);
         assertEq(address(foreignController.usds()),  usds);   // asset0 param in MockPSM3
-        assertEq(address(foreignController.usdc()),  usdc);  // asset1 param in MockPSM3
+        assertEq(address(foreignController.usdc()),  usdc);   // asset1 param in MockPSM3
         assertEq(address(foreignController.susds()), susds);  // asset2 param in MockPSM3
         assertEq(address(foreignController.cctp()),  cctp);
 

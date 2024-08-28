@@ -72,7 +72,7 @@ contract MainnetControllerDepositToSUSDSTests is SUSDSTestBase {
         assertEq(usds.balanceOf(address(susds)),             1e18);
 
         assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
-        assertEq(usds.allowance(address(almProxy), address(susds)),  0);
+        assertEq(usds.allowance(address(almProxy), address(susds)), 0);
 
         assertEq(susds.totalSupply(),                SUSDS_CONVERTED_SHARES);
         assertEq(susds.totalAssets(),                1e18 - 1);  // Rounding
