@@ -3,31 +3,31 @@ pragma solidity ^0.8.21;
 
 import "test/mainnet-fork/ForkTestBase.t.sol";
 
-contract MainnetControllerMintNSTTests is ForkTestBase {
+contract MainnetControllerMintUSDSTests is ForkTestBase {
 
-    function test_mintNST_notRelayer() external {
+    function test_mintUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.mintNST(1e18);
+        mainnetController.mintUSDS(1e18);
     }
 
-    function test_mintNST_frozen() external {
+    function test_mintUSDS_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.mintNST(1e18);
+        mainnetController.mintUSDS(1e18);
     }
 
-    function test_mintNST() external {
+    function test_mintUSDS() external {
         ( uint256 ink, uint256 art ) = dss.vat.urns(ilk, vault);
         ( uint256 Art,,,, )          = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(nstJoin), 0);
+        assertEq(dss.vat.dai(usdsJoin), 0);
 
         assertEq(Art, 0);
         assertEq(ink, INK);
@@ -37,12 +37,12 @@ contract MainnetControllerMintNSTTests is ForkTestBase {
         assertEq(usds.totalSupply(),                0);
 
         vm.prank(relayer);
-        mainnetController.mintNST(1e18);
+        mainnetController.mintUSDS(1e18);
 
         ( ink, art ) = dss.vat.urns(ilk, vault);
         ( Art,,,, )  = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(nstJoin), 1e45);
+        assertEq(dss.vat.dai(usdsJoin), 1e45);
 
         assertEq(Art, 1e18);
         assertEq(ink, INK);
@@ -56,33 +56,33 @@ contract MainnetControllerMintNSTTests is ForkTestBase {
 
 contract MainnetControllerBurnNSTTests is ForkTestBase {
 
-    function test_burnNST_notRelayer() external {
+    function test_burnUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.burnNST(1e18);
+        mainnetController.burnUSDS(1e18);
     }
 
-    function test_burnNST_frozen() external {
+    function test_burnUSDS_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.burnNST(1e18);
+        mainnetController.burnUSDS(1e18);
     }
 
-    function test_burnNST() external {
+    function test_burnUSDS() external {
         // Setup
         vm.prank(relayer);
-        mainnetController.mintNST(1e18);
+        mainnetController.mintUSDS(1e18);
 
         ( uint256 ink, uint256 art ) = dss.vat.urns(ilk, vault);
         ( uint256 Art,,,, )          = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(address(nstJoin)), 1e45);
+        assertEq(dss.vat.dai(address(usdsJoin)), 1e45);
 
         assertEq(Art, 1e18);
         assertEq(ink, INK);
@@ -92,12 +92,12 @@ contract MainnetControllerBurnNSTTests is ForkTestBase {
         assertEq(usds.totalSupply(),                1e18);
 
         vm.prank(relayer);
-        mainnetController.burnNST(1e18);
+        mainnetController.burnUSDS(1e18);
 
         ( ink, art ) = dss.vat.urns(ilk, vault);
         ( Art,,,, )  = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(address(nstJoin)), 0);
+        assertEq(dss.vat.dai(address(usdsJoin)), 0);
 
         assertEq(Art, 0);
         assertEq(ink, INK);

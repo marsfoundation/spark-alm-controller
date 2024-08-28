@@ -5,31 +5,31 @@ import "test/mainnet-fork/ForkTestBase.t.sol";
 
 contract MainnetControllerSwapNSTToUSDCFailureTests is ForkTestBase {
 
-    function test_swapUSDCToNST_notRelayer() external {
+    function test_swapUSDCToUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.swapUSDCToNST(1e6);
+        mainnetController.swapUSDCToUSDS(1e6);
     }
 
-    function test_swapUSDCToNST_frozen() external {
+    function test_swapUSDCToUSDS_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.swapUSDCToNST(1e6);
+        mainnetController.swapUSDCToUSDS(1e6);
     }
 
 }
 
 contract MainnetControllerSwapNSTToUSDCTests is ForkTestBase {
 
-    function test_swapNSTToUSDC() external {
+    function test_swapUSDSToUSDC() external {
         vm.prank(relayer);
-        mainnetController.mintNST(1e18);
+        mainnetController.mintUSDS(1e18);
 
         assertEq(usds.balanceOf(address(almProxy)),          1e18);
         assertEq(usds.balanceOf(address(mainnetController)), 0);
@@ -48,7 +48,7 @@ contract MainnetControllerSwapNSTToUSDCTests is ForkTestBase {
         assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
 
         vm.prank(relayer);
-        mainnetController.swapNSTToUSDC(1e6);
+        mainnetController.swapUSDSToUSDC(1e6);
 
         assertEq(usds.balanceOf(address(almProxy)),          0);
         assertEq(usds.balanceOf(address(mainnetController)), 0);
@@ -71,29 +71,29 @@ contract MainnetControllerSwapNSTToUSDCTests is ForkTestBase {
 
 contract MainnetControllerSwapUSDCToNSTFailureTests is ForkTestBase {
 
-    function test_swapUSDCToNST_notRelayer() external {
+    function test_swapUSDCToUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.swapUSDCToNST(1e6);
+        mainnetController.swapUSDCToUSDS(1e6);
     }
 
-    function test_swapUSDCToNST_frozen() external {
+    function test_swapUSDCToUSDS_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.swapUSDCToNST(1e6);
+        mainnetController.swapUSDCToUSDS(1e6);
     }
 
 }
 
 contract MainnetControllerSwapUSDCToNSTTests is ForkTestBase {
 
-    function test_swapUSDCToNST() external {
+    function test_swapUSDCToUSDS() external {
         deal(address(usdc), address(almProxy), 1e6);
 
         assertEq(usds.balanceOf(address(almProxy)),          0);
@@ -113,7 +113,7 @@ contract MainnetControllerSwapUSDCToNSTTests is ForkTestBase {
         assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
 
         vm.prank(relayer);
-        mainnetController.swapUSDCToNST(1e6);
+        mainnetController.swapUSDCToUSDS(1e6);
 
         assertEq(usds.balanceOf(address(almProxy)),          1e18);
         assertEq(usds.balanceOf(address(mainnetController)), 0);

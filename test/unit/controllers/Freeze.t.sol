@@ -7,8 +7,8 @@ import { MainnetController } from "src/MainnetController.sol";
 import { ForeignController } from "src/ForeignController.sol";
 
 import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
-import { MockPSM }    from "test/unit/mocks/MockPSM.sol";
-import { MockPSM3 }   from "test/unit/mocks/MockPSM3.sol";
+import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
+import { MockPSM3 }    from "test/unit/mocks/MockPSM3.sol";
 import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
 
 interface IBaseControllerLike {
@@ -24,8 +24,8 @@ contract ControllerTestBase is UnitTestBase {
 
     function setUp() public virtual {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
-        MockPSM     psm    = new MockPSM(makeAddr("usdc"));
-        MockSUsds   susds  = new MockSUsds(makeAddr("susds"));
+        MockPSM     psm     = new MockPSM(makeAddr("usdc"));
+        MockSUsds   susds   = new MockSUsds(makeAddr("susds"));
 
         // Default to mainnet controller for tests and override with foreign controller
         controller = IBaseControllerLike(address(new MainnetController(
@@ -142,7 +142,7 @@ contract ForeignControllerFreezeTest is ControllerFreezeTests {
             admin,
             makeAddr("almProxy"),
             address(psm3),
-            nst,
+            usds,
             usdc,
             susds,
             makeAddr("cctp")

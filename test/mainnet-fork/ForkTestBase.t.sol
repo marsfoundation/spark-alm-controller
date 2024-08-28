@@ -14,14 +14,14 @@ import { AllocatorDeploy } from "dss-allocator/deploy/AllocatorDeploy.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
-import { NstDeploy }   from "nst/deploy/NstDeploy.sol";
-import { NstInit }     from "nst/deploy/NstInit.sol";
-import { NstInstance } from "nst/deploy/NstInstance.sol";
+import { UsdsDeploy }   from "usds/deploy/UsdsDeploy.sol";
+import { UsdsInit }     from "usds/deploy/UsdsInit.sol";
+import { UsdsInstance } from "usds/deploy/UsdsInstance.sol";
 
-import { ISNst }                from "sdai/src/ISNst.sol";
-import { SNstDeploy }           from "sdai/deploy/SNstDeploy.sol";
-import { SNstInit, SNstConfig } from "sdai/deploy/SNstInit.sol";
-import { SNstInstance }         from "sdai/deploy/SNstInstance.sol";
+import { ISUsds }                 from "sdai/src/ISUsds.sol";
+import { SUsdsDeploy }            from "sdai/deploy/SUsdsDeploy.sol";
+import { SUsdsInit, SUsdsConfig } from "sdai/deploy/SUsdsInit.sol";
+import { SUsdsInstance }          from "sdai/deploy/SUsdsInstance.sol";
 
 import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { Bridge }                from "xchain-helpers/src/testing/Bridge.sol";
@@ -100,8 +100,8 @@ contract ForkTestBase is DssTest {
 
     AllocatorIlkInstance    ilkInst;
     AllocatorSharedInstance sharedInst;
-    NstInstance             usdsInst;
-    SNstInstance            susdsInst;
+    UsdsInstance            usdsInst;
+    SUsdsInstance           susdsInst;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
@@ -115,9 +115,9 @@ contract ForkTestBase is DssTest {
     /**********************************************************************************************/
 
     IERC20 dai;
-    IERC20 nst;
+    IERC20 usds;
     IERC20 usdc;
-    ISNst  snst;
+    ISUsds susds;
 
     address buffer;
     address daiUsds;
@@ -148,13 +148,13 @@ contract ForkTestBase is DssTest {
 
         /*** Step 1: Deploy NST, sNST and allocation system ***/
 
-        nstInst = NstDeploy.deploy(
+        usdsInst = UsdsDeploy.deploy(
             address(this),
             PAUSE_PROXY,
             IChainlogLike(LOG).getAddress("MCD_JOIN_DAI")
         );
 
-        snstInst = SNstDeploy.deploy({
+        susdsInst = SUsdsDeploy.deploy({
             deployer : address(this),
             owner    : PAUSE_PROXY,
             usdsJoin : usdsInst.usdsJoin
@@ -172,10 +172,10 @@ contract ForkTestBase is DssTest {
 
         /*** Step 2: Configure NST, sNST and allocation system ***/
 
-        SNstConfig memory snstConfig = SNstConfig({
-            usdsJoin: address(usdsInst.usdsJoin),
-            nst: address(usdsInst.usds),
-            nsr: SEVEN_PCT_APY
+        SUsdsConfig memory susdsConfig = SUsdsConfig({
+            usdsJoin : address(usdsInst.usdsJoin),
+            usds     : address(usdsInst.usds),
+            ssr      : SEVEN_PCT_APY
         });
 
         AllocatorIlkConfig memory ilkConfig = AllocatorIlkConfig({
@@ -190,8 +190,8 @@ contract ForkTestBase is DssTest {
 
         vm.startPrank(PAUSE_PROXY);
 
-        NstInit.init(dss, nstInst);
-        SNstInit.init(dss, snstInst, snstConfig);
+        UsdsInit.init(dss, usdsInst);
+        SUsdsInit.init(dss, susdsInst, susdsConfig);
         AllocatorInit.initShared(dss, sharedInst);
         AllocatorInit.initIlk(dss, sharedInst, ilkInst, ilkConfig);
 
@@ -209,7 +209,7 @@ contract ForkTestBase is DssTest {
             psm_     : PSM,
             daiUsds_ : usdsInst.daiUsds,
             cctp_    : CCTP_MESSENGER,
-            susds_   : susdsInst.sNst
+            susds_   : susdsInst.sUsds
         });
 
         CONTROLLER = almProxy.CONTROLLER();
@@ -242,7 +242,7 @@ contract ForkTestBase is DssTest {
         usds     = IERC20(address(usdsInst.usds));
         usdsJoin = usdsInst.usdsJoin;
         pocket   = IPSMLike(PSM).pocket();
-        susds    = ISNst(address(susdsInst.sNst));
+        susds    = ISUsds(address(susdsInst.sUsds));
         usdc     = IERC20(USDC);
         vault    = ilkInst.vault;
 
