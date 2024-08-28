@@ -6,9 +6,9 @@ import "test/unit/UnitTestBase.t.sol";
 import { ForeignController } from "src/ForeignController.sol";
 import { MainnetController } from "src/MainnetController.sol";
 
-import { MockDaiNst } from "test/unit/mocks/MockDaiNst.sol";
-import { MockPSM }    from "test/unit/mocks/MockPSM.sol";
-import { MockSNst }   from "test/unit/mocks/MockSNst.sol";
+import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
+import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
+import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
 
 contract MainnetControllerAdminTests is UnitTestBase {
 
@@ -18,9 +18,9 @@ contract MainnetControllerAdminTests is UnitTestBase {
     MainnetController mainnetController;
 
     function setUp() public {
-        MockDaiNst daiNst = new MockDaiNst(makeAddr("dai"));
-        MockPSM    psm    = new MockPSM(makeAddr("usdc"));
-        MockSNst   snst   = new MockSNst(makeAddr("nst"));
+        MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
+        MockPSM     psm     = new MockPSM(makeAddr("usdc"));
+        MockSUsds   susds   = new MockSUsds(makeAddr("susds"));
 
         mainnetController = new MainnetController(
             admin,
@@ -28,9 +28,9 @@ contract MainnetControllerAdminTests is UnitTestBase {
             makeAddr("vault"),
             makeAddr("buffer"),
             address(psm),
-            address(daiNst),
+            address(daiUsds),
             makeAddr("cctp"),
-            address(snst)
+            address(susds)
         );
     }
 
@@ -85,9 +85,9 @@ contract ForeignControllerAdminTests is UnitTestBase {
             admin,
             makeAddr("almProxy"),
             makeAddr("psm"),
-            makeAddr("nst"),
+            makeAddr("usds"),
             makeAddr("usdc"),
-            makeAddr("snst"),
+            makeAddr("susds"),
             makeAddr("cctp")
         );
     }

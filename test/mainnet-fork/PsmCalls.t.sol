@@ -3,37 +3,37 @@ pragma solidity >=0.8.0;
 
 import "test/mainnet-fork/ForkTestBase.t.sol";
 
-contract MainnetControllerSwapNSTToUSDCFailureTests is ForkTestBase {
+contract MainnetControllerSwapUSDSToUSDCFailureTests is ForkTestBase {
 
-    function test_swapUSDCToNST_notRelayer() external {
+    function test_swapUSDCToUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.swapUSDCToNST(1e6);
+        mainnetController.swapUSDCToUSDS(1e6);
     }
 
-    function test_swapUSDCToNST_frozen() external {
+    function test_swapUSDCToUSDS_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.swapUSDCToNST(1e6);
+        mainnetController.swapUSDCToUSDS(1e6);
     }
 
 }
 
-contract MainnetControllerSwapNSTToUSDCTests is ForkTestBase {
+contract MainnetControllerSwapUSDSToUSDCTests is ForkTestBase {
 
-    function test_swapNSTToUSDC() external {
+    function test_swapUSDSToUSDC() external {
         vm.prank(relayer);
-        mainnetController.mintNST(1e18);
+        mainnetController.mintUSDS(1e18);
 
-        assertEq(nst.balanceOf(address(almProxy)),          1e18);
-        assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.totalSupply(),                         1e18);
+        assertEq(usds.balanceOf(address(almProxy)),          1e18);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.totalSupply(),                         1e18);
 
         assertEq(dai.balanceOf(address(almProxy)), 0);
         assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM);
@@ -43,16 +43,16 @@ contract MainnetControllerSwapNSTToUSDCTests is ForkTestBase {
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
         assertEq(usdc.balanceOf(address(pocket)),            USDC_BAL_PSM);
 
-        assertEq(nst.allowance(address(buffer),   address(vault)),  type(uint256).max);
-        assertEq(nst.allowance(address(almProxy), address(daiNst)), 0);
-        assertEq(dai.allowance(address(almProxy), address(PSM)),    0);
+        assertEq(usds.allowance(address(buffer),   address(vault)),   type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(daiUsds)), 0);
+        assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
 
         vm.prank(relayer);
-        mainnetController.swapNSTToUSDC(1e6);
+        mainnetController.swapUSDSToUSDC(1e6);
 
-        assertEq(nst.balanceOf(address(almProxy)),          0);
-        assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.totalSupply(),                         0);
+        assertEq(usds.balanceOf(address(almProxy)),          0);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.totalSupply(),                         0);
 
         assertEq(dai.balanceOf(address(almProxy)), 0);
         assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM + 1e18);
@@ -62,43 +62,43 @@ contract MainnetControllerSwapNSTToUSDCTests is ForkTestBase {
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
         assertEq(usdc.balanceOf(address(pocket)),            USDC_BAL_PSM - 1e6);
 
-        assertEq(nst.allowance(address(buffer),   address(vault)),  type(uint256).max);
-        assertEq(nst.allowance(address(almProxy), address(daiNst)), 0);
-        assertEq(dai.allowance(address(almProxy), address(PSM)),    0);
+        assertEq(usds.allowance(address(buffer),   address(vault)),   type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(daiUsds)), 0);
+        assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
     }
 
 }
 
-contract MainnetControllerSwapUSDCToNSTFailureTests is ForkTestBase {
+contract MainnetControllerSwapUSDCToUSDSFailureTests is ForkTestBase {
 
-    function test_swapUSDCToNST_notRelayer() external {
+    function test_swapUSDCToUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.swapUSDCToNST(1e6);
+        mainnetController.swapUSDCToUSDS(1e6);
     }
 
-    function test_swapUSDCToNST_frozen() external {
+    function test_swapUSDCToUSDS_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.swapUSDCToNST(1e6);
+        mainnetController.swapUSDCToUSDS(1e6);
     }
 
 }
 
-contract MainnetControllerSwapUSDCToNSTTests is ForkTestBase {
+contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
 
-    function test_swapUSDCToNST() external {
+    function test_swapUSDCToUSDS() external {
         deal(address(usdc), address(almProxy), 1e6);
 
-        assertEq(nst.balanceOf(address(almProxy)),          0);
-        assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.totalSupply(),                         0);
+        assertEq(usds.balanceOf(address(almProxy)),          0);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.totalSupply(),                         0);
 
         assertEq(dai.balanceOf(address(almProxy)), 0);
         assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM);
@@ -108,16 +108,16 @@ contract MainnetControllerSwapUSDCToNSTTests is ForkTestBase {
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
         assertEq(usdc.balanceOf(address(pocket)),            USDC_BAL_PSM);
 
-        assertEq(nst.allowance(address(buffer),   address(vault)),  type(uint256).max);
-        assertEq(nst.allowance(address(almProxy), address(daiNst)), 0);
-        assertEq(dai.allowance(address(almProxy), address(PSM)),    0);
+        assertEq(usds.allowance(address(buffer),   address(vault)),   type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(daiUsds)), 0);
+        assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
 
         vm.prank(relayer);
-        mainnetController.swapUSDCToNST(1e6);
+        mainnetController.swapUSDCToUSDS(1e6);
 
-        assertEq(nst.balanceOf(address(almProxy)),          1e18);
-        assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.totalSupply(),                         1e18);
+        assertEq(usds.balanceOf(address(almProxy)),          1e18);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.totalSupply(),                         1e18);
 
         assertEq(dai.balanceOf(address(almProxy)), 0);
         assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM - 1e18);
@@ -127,9 +127,9 @@ contract MainnetControllerSwapUSDCToNSTTests is ForkTestBase {
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
         assertEq(usdc.balanceOf(address(pocket)),            USDC_BAL_PSM + 1e6);
 
-        assertEq(nst.allowance(address(buffer),   address(vault)),  type(uint256).max);
-        assertEq(nst.allowance(address(almProxy), address(daiNst)), 0);
-        assertEq(dai.allowance(address(almProxy), address(PSM)),    0);
+        assertEq(usds.allowance(address(buffer),   address(vault)),   type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(daiUsds)), 0);
+        assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
     }
 
 }

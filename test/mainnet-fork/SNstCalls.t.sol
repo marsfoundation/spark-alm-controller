@@ -3,10 +3,10 @@ pragma solidity >=0.8.0;
 
 import "test/mainnet-fork/ForkTestBase.t.sol";
 
-contract SNSTTestBase is ForkTestBase {
+contract SUSDSTestBase is ForkTestBase {
 
-    uint256 SNST_CONVERTED_ASSETS;
-    uint256 SNST_CONVERTED_SHARES;
+    uint256 SUSDS_CONVERTED_ASSETS;
+    uint256 SUSDS_CONVERTED_SHARES;
 
     function setUp() override public {
         super.setUp();
@@ -14,191 +14,191 @@ contract SNSTTestBase is ForkTestBase {
         // Warp to accrue value over 1:1 exchange rate
         skip(10 days);
 
-        SNST_CONVERTED_ASSETS = snst.convertToAssets(1e18);
-        SNST_CONVERTED_SHARES = snst.convertToShares(1e18);
+        SUSDS_CONVERTED_ASSETS = susds.convertToAssets(1e18);
+        SUSDS_CONVERTED_SHARES = susds.convertToShares(1e18);
 
-        assertEq(SNST_CONVERTED_ASSETS, 1.001855380694731009e18);
-        assertEq(SNST_CONVERTED_SHARES, 0.998148055367587678e18);
+        assertEq(SUSDS_CONVERTED_ASSETS, 1.001855380694731009e18);
+        assertEq(SUSDS_CONVERTED_SHARES, 0.998148055367587678e18);
     }
 
 }
 
-contract MainnetControllerDepositToSNSTFailureTests is SNSTTestBase {
+contract MainnetControllerDepositToSUSDSFailureTests is SUSDSTestBase {
 
-    function test_depositToSNST_notRelayer() external {
+    function test_depositToSUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.depositToSNST(1e18);
+        mainnetController.depositToSUSDS(1e18);
     }
 
-    function test_depositToSNST_frozen() external {
+    function test_depositToSUSDS_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.depositToSNST(1e18);
+        mainnetController.depositToSUSDS(1e18);
     }
 
 }
 
-contract MainnetControllerDepositToSNSTTests is SNSTTestBase {
+contract MainnetControllerDepositToSUSDSTests is SUSDSTestBase {
 
-    function test_depositToSNST() external {
+    function test_depositToSUSDS() external {
         vm.prank(relayer);
-        mainnetController.mintNST(1e18);
+        mainnetController.mintUSDS(1e18);
 
-        assertEq(nst.balanceOf(address(almProxy)),          1e18);
-        assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.balanceOf(address(snst)),              0);
+        assertEq(usds.balanceOf(address(almProxy)),          1e18);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.balanceOf(address(susds)),             0);
 
-        assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
-        assertEq(nst.allowance(address(almProxy), address(snst)),  0);
+        assertEq(usds.allowance(address(buffer),   address(vault)),  type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(susds)),  0);
 
-        assertEq(snst.totalSupply(),                0);
-        assertEq(snst.totalAssets(),                0);
-        assertEq(snst.balanceOf(address(almProxy)), 0);
+        assertEq(susds.totalSupply(),                0);
+        assertEq(susds.totalAssets(),                0);
+        assertEq(susds.balanceOf(address(almProxy)), 0);
 
         vm.prank(relayer);
-        uint256 shares = mainnetController.depositToSNST(1e18);
+        uint256 shares = mainnetController.depositToSUSDS(1e18);
 
-        assertEq(shares, SNST_CONVERTED_SHARES);
+        assertEq(shares, SUSDS_CONVERTED_SHARES);
 
-        assertEq(nst.balanceOf(address(almProxy)),          0);
-        assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.balanceOf(address(snst)),              1e18);
+        assertEq(usds.balanceOf(address(almProxy)),          0);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.balanceOf(address(susds)),             1e18);
 
-        assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
-        assertEq(nst.allowance(address(almProxy), address(snst)),  0);
+        assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(susds)), 0);
 
-        assertEq(snst.totalSupply(),                SNST_CONVERTED_SHARES);
-        assertEq(snst.totalAssets(),                1e18 - 1);  // Rounding
-        assertEq(snst.balanceOf(address(almProxy)), SNST_CONVERTED_SHARES);
+        assertEq(susds.totalSupply(),                SUSDS_CONVERTED_SHARES);
+        assertEq(susds.totalAssets(),                1e18 - 1);  // Rounding
+        assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
     }
 
 }
 
-contract MainnetControllerWithdrawFromSNSTFailureTests is SNSTTestBase {
+contract MainnetControllerWithdrawFromSUSDSFailureTests is SUSDSTestBase {
 
-    function test_withdrawFromSNST_notRelayer() external {
+    function test_withdrawFromSUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.withdrawFromSNST(1e18);
+        mainnetController.withdrawFromSUSDS(1e18);
     }
 
-    function test_withdrawFromSNST_frozen() external {
+    function test_withdrawFromSUSDS_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.withdrawFromSNST(1e18);
+        mainnetController.withdrawFromSUSDS(1e18);
     }
 
 }
 
-contract MainnetControllerWithdrawFromSNSTTests is SNSTTestBase {
+contract MainnetControllerWithdrawFromSUSDSTests is SUSDSTestBase {
 
-    function test_withdrawFromSNST() external {
+    function test_withdrawFromSUSDS() external {
         vm.startPrank(relayer);
-        mainnetController.mintNST(1e18);
-        mainnetController.depositToSNST(1e18);
+        mainnetController.mintUSDS(1e18);
+        mainnetController.depositToSUSDS(1e18);
         vm.stopPrank();
 
-        assertEq(nst.balanceOf(address(almProxy)),          0);
-        assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.balanceOf(address(snst)),              1e18);
+        assertEq(usds.balanceOf(address(almProxy)),          0);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.balanceOf(address(susds)),             1e18);
 
-        assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
-        assertEq(nst.allowance(address(almProxy), address(snst)),  0);
+        assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(susds)),  0);
 
-        assertEq(snst.totalSupply(),                SNST_CONVERTED_SHARES);
-        assertEq(snst.totalAssets(),                1e18 - 1);  // Rounding
-        assertEq(snst.balanceOf(address(almProxy)), SNST_CONVERTED_SHARES);
+        assertEq(susds.totalSupply(),                SUSDS_CONVERTED_SHARES);
+        assertEq(susds.totalAssets(),                1e18 - 1);  // Rounding
+        assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
 
         // Max available with rounding
         vm.prank(relayer);
-        uint256 shares = mainnetController.withdrawFromSNST(1e18 - 1);  // Rounding
+        uint256 shares = mainnetController.withdrawFromSUSDS(1e18 - 1);  // Rounding
 
-        assertEq(shares, SNST_CONVERTED_SHARES);
+        assertEq(shares, SUSDS_CONVERTED_SHARES);
 
-        assertEq(nst.balanceOf(address(almProxy)),          1e18 - 1);
-        assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.balanceOf(address(snst)),              1);
+        assertEq(usds.balanceOf(address(almProxy)),          1e18 - 1);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.balanceOf(address(susds)),             1);
 
-        assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
-        assertEq(nst.allowance(address(almProxy), address(snst)),  0);
+        assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(susds)),  0);
 
-        assertEq(snst.totalSupply(),                0);
-        assertEq(snst.totalAssets(),                0);
-        assertEq(snst.balanceOf(address(almProxy)), 0);
+        assertEq(susds.totalSupply(),                0);
+        assertEq(susds.totalAssets(),                0);
+        assertEq(susds.balanceOf(address(almProxy)), 0);
     }
 
 }
 
-contract MainnetControllerRedeemFromSNSTFailureTests is SNSTTestBase {
+contract MainnetControllerRedeemFromSUSDSFailureTests is SUSDSTestBase {
 
-    function test_redeemFromSNST_notRelayer() external {
+    function test_redeemFromSUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.redeemFromSNST(1e18);
+        mainnetController.redeemFromSUSDS(1e18);
     }
 
-    function test_redeemFromSNST_frozen() external {
+    function test_redeemFromSUSDS_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.redeemFromSNST(1e18);
+        mainnetController.redeemFromSUSDS(1e18);
     }
 
 }
 
 
-contract MainnetControllerRedeemFromSNSTTests is SNSTTestBase {
+contract MainnetControllerRedeemFromSUSDSTests is SUSDSTestBase {
 
-    function test_redeemFromSNST() external {
+    function test_redeemFromSUSDS() external {
         vm.startPrank(relayer);
-        mainnetController.mintNST(1e18);
-        mainnetController.depositToSNST(1e18);
+        mainnetController.mintUSDS(1e18);
+        mainnetController.depositToSUSDS(1e18);
         vm.stopPrank();
 
-        assertEq(nst.balanceOf(address(almProxy)),          0);
-        assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.balanceOf(address(snst)),              1e18);
+        assertEq(usds.balanceOf(address(almProxy)),          0);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.balanceOf(address(susds)),             1e18);
 
-        assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
-        assertEq(nst.allowance(address(almProxy), address(snst)),  0);
+        assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(susds)),  0);
 
-        assertEq(snst.totalSupply(),                SNST_CONVERTED_SHARES);
-        assertEq(snst.totalAssets(),                1e18 - 1);  // Rounding
-        assertEq(snst.balanceOf(address(almProxy)), SNST_CONVERTED_SHARES);
+        assertEq(susds.totalSupply(),                SUSDS_CONVERTED_SHARES);
+        assertEq(susds.totalAssets(),                1e18 - 1);  // Rounding
+        assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
 
         vm.prank(relayer);
-        uint256 assets = mainnetController.redeemFromSNST(SNST_CONVERTED_SHARES);
+        uint256 assets = mainnetController.redeemFromSUSDS(SUSDS_CONVERTED_SHARES);
 
         assertEq(assets, 1e18 - 1);  // Rounding
 
-        assertEq(nst.balanceOf(address(almProxy)),          1e18 - 1);  // Rounding
-        assertEq(nst.balanceOf(address(mainnetController)), 0);
-        assertEq(nst.balanceOf(address(snst)),              1);  // Rounding
+        assertEq(usds.balanceOf(address(almProxy)),          1e18 - 1);  // Rounding
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.balanceOf(address(susds)),             1);  // Rounding
 
-        assertEq(nst.allowance(address(buffer),   address(vault)), type(uint256).max);
-        assertEq(nst.allowance(address(almProxy), address(snst)),  0);
+        assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(susds)), 0);
 
-        assertEq(snst.totalSupply(),                0);
-        assertEq(snst.totalAssets(),                0);
-        assertEq(snst.balanceOf(address(almProxy)), 0);
+        assertEq(susds.totalSupply(),                0);
+        assertEq(susds.totalAssets(),                0);
+        assertEq(susds.balanceOf(address(almProxy)), 0);
     }
 
 }

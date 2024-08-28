@@ -71,8 +71,8 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
     /*** Casted addresses for testing                                                           ***/
     /**********************************************************************************************/
 
-    IERC20 nstBase;
-    IERC20 snstBase;
+    IERC20 usdsBase;
+    IERC20 susdsBase;
     IERC20 usdcBase;
 
     MockRateProvider rateProvider;
@@ -86,18 +86,18 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
         destination = getChain("base").createSelectFork(18181500);  // August 8, 2024
 
-        nstBase  = IERC20(address(new ERC20Mock()));
-        snstBase = IERC20(address(new ERC20Mock()));
-        usdcBase = IERC20(USDC_BASE);
+        usdsBase  = IERC20(address(new ERC20Mock()));
+        susdsBase = IERC20(address(new ERC20Mock()));
+        usdcBase  = IERC20(USDC_BASE);
 
         rateProvider = new MockRateProvider();
 
         rateProvider.__setConversionRate(1.25e27);
 
-        deal(address(nstBase), address(this), 1e18);  // For seeding PSM during deployment
+        deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
 
         psmBase = IPSM3(PSM3Deploy.deploy(
-            address(nstBase), USDC_BASE, address(snstBase), address(rateProvider)
+            address(usdsBase), USDC_BASE, address(susdsBase), address(rateProvider)
         ));
 
         foreignAlmProxy = new ALMProxy(admin);
@@ -106,9 +106,9 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
             admin_ : admin,
             proxy_ : address(foreignAlmProxy),
             psm_   : address(psmBase),
-            nst_   : address(nstBase),
+            usds_  : address(usdsBase),
             usdc_  : USDC_BASE,
-            snst_  : address(snstBase),
+            susds_ : address(susdsBase),
             cctp_  : CCTP_MESSENGER_BASE
         });
 
@@ -201,7 +201,7 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
         assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
 
-        assertEq(nst.allowance(address(almProxy), CCTP_MESSENGER),  0);
+        assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
         // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
         //       for assertions
@@ -224,7 +224,7 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
         assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 1e6);
 
-        assertEq(nst.allowance(address(almProxy), CCTP_MESSENGER),  0);
+        assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
         destination.selectFork();
 
@@ -248,7 +248,7 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usdcBase.balanceOf(address(foreignController)), 0);
         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY);
 
-        assertEq(nstBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
+        assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
         // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
         //       for assertions
@@ -271,7 +271,7 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usdcBase.balanceOf(address(foreignController)), 0);
         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY - 1e6);
 
-        assertEq(nstBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
+        assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
         source.selectFork();
 

@@ -24,7 +24,7 @@ contract ForeignControllerPSMSuccessTestBase is ForkTestBase {
         assertEq(psmBase.totalAssets(),             totalAssets);
 
         // Should always be 0 before and after calls
-        assertEq(nstBase.allowance(address(almProxy), address(psmBase)), 0);
+        assertEq(usdsBase.allowance(address(almProxy), address(psmBase)), 0);
     }
 
 }
@@ -38,7 +38,7 @@ contract ForeignControllerDepositPSMFailureTests is ForkTestBase {
             address(this),
             RELAYER
         ));
-        foreignController.depositPSM(address(nstBase), 100e18);
+        foreignController.depositPSM(address(usdsBase), 100e18);
     }
 
     function test_depositPSM_frozen() external {
@@ -47,32 +47,32 @@ contract ForeignControllerDepositPSMFailureTests is ForkTestBase {
 
         vm.prank(relayer);
         vm.expectRevert("ForeignController/not-active");
-        foreignController.depositPSM(address(nstBase), 100e18);
+        foreignController.depositPSM(address(usdsBase), 100e18);
     }
 
 }
 
 contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
 
-    function test_deposit_nst() external {
-        deal(address(nstBase), address(almProxy), 100e18);
+    function test_deposit_usds() external {
+        deal(address(usdsBase), address(almProxy), 100e18);
 
         _assertState({
-            token        : nstBase,
+            token        : usdsBase,
             proxyBalance : 100e18,
-            psmBalance   : 1e18,  // From seeding NST
+            psmBalance   : 1e18,  // From seeding USDS
             proxyShares  : 0,
-            totalShares  : 1e18,  // From seeding NST
-            totalAssets  : 1e18   // From seeding NST
+            totalShares  : 1e18,  // From seeding USDS
+            totalAssets  : 1e18   // From seeding USDS
         });
 
         vm.prank(relayer);
-        uint256 shares = foreignController.depositPSM(address(nstBase), 100e18);
+        uint256 shares = foreignController.depositPSM(address(usdsBase), 100e18);
 
         assertEq(shares, 100e18);
 
         _assertState({
-            token        : nstBase,
+            token        : usdsBase,
             proxyBalance : 0,
             psmBalance   : 101e18,
             proxyShares  : 100e18,
@@ -89,8 +89,8 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
             proxyBalance : 100e6,
             psmBalance   : 0,
             proxyShares  : 0,
-            totalShares  : 1e18,  // From seeding NST
-            totalAssets  : 1e18   // From seeding NST
+            totalShares  : 1e18,  // From seeding USDS
+            totalAssets  : 1e18   // From seeding USDS
         });
 
         vm.prank(relayer);
@@ -108,25 +108,25 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
         });
     }
 
-    function test_deposit_snst() external {
-        deal(address(snstBase), address(almProxy), 100e18);
+    function test_deposit_susds() external {
+        deal(address(susdsBase), address(almProxy), 100e18);
 
         _assertState({
-            token        : snstBase,
+            token        : susdsBase,
             proxyBalance : 100e18,
             psmBalance   : 0,
             proxyShares  : 0,
-            totalShares  : 1e18,  // From seeding NST
-            totalAssets  : 1e18   // From seeding NST
+            totalShares  : 1e18,  // From seeding USDS
+            totalAssets  : 1e18   // From seeding USDS
         });
 
         vm.prank(relayer);
-        uint256 shares = foreignController.depositPSM(address(snstBase), 100e18);
+        uint256 shares = foreignController.depositPSM(address(susdsBase), 100e18);
 
         assertEq(shares, 125e18);
 
         _assertState({
-            token        : snstBase,
+            token        : susdsBase,
             proxyBalance : 0,
             psmBalance   : 100e18,
             proxyShares  : 125e18,
@@ -145,7 +145,7 @@ contract ForeignControllerWithdrawPSMFailureTests is ForkTestBase {
             address(this),
             RELAYER
         ));
-        foreignController.withdrawPSM(address(nstBase), 100e18);
+        foreignController.withdrawPSM(address(usdsBase), 100e18);
     }
 
     function test_withdrawPSM_frozen() external {
@@ -154,20 +154,20 @@ contract ForeignControllerWithdrawPSMFailureTests is ForkTestBase {
 
         vm.prank(relayer);
         vm.expectRevert("ForeignController/not-active");
-        foreignController.withdrawPSM(address(nstBase), 100e18);
+        foreignController.withdrawPSM(address(usdsBase), 100e18);
     }
 
 }
 
 contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
 
-    function test_withdraw_nst() external {
-        deal(address(nstBase), address(almProxy), 100e18);
+    function test_withdraw_usds() external {
+        deal(address(usdsBase), address(almProxy), 100e18);
         vm.prank(relayer);
-        foreignController.depositPSM(address(nstBase), 100e18);
+        foreignController.depositPSM(address(usdsBase), 100e18);
 
         _assertState({
-            token        : nstBase,
+            token        : usdsBase,
             proxyBalance : 0,
             psmBalance   : 101e18,
             proxyShares  : 100e18,
@@ -176,17 +176,17 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
         });
 
         vm.prank(relayer);
-        uint256 amountWithdrawn = foreignController.withdrawPSM(address(nstBase), 100e18);
+        uint256 amountWithdrawn = foreignController.withdrawPSM(address(usdsBase), 100e18);
 
         assertEq(amountWithdrawn, 100e18);
 
         _assertState({
-            token        : nstBase,
+            token        : usdsBase,
             proxyBalance : 100e18,
-            psmBalance   : 1e18,  // From seeding NST
+            psmBalance   : 1e18,  // From seeding USDS
             proxyShares  : 0,
-            totalShares  : 1e18,  // From seeding NST
-            totalAssets  : 1e18   // From seeding NST
+            totalShares  : 1e18,  // From seeding USDS
+            totalAssets  : 1e18   // From seeding USDS
         });
     }
 
@@ -214,18 +214,18 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
             proxyBalance : 100e6,
             psmBalance   : 0,
             proxyShares  : 0,
-            totalShares  : 1e18,  // From seeding NST
-            totalAssets  : 1e18   // From seeding NST
+            totalShares  : 1e18,  // From seeding USDS
+            totalAssets  : 1e18   // From seeding USDS
         });
     }
 
-    function test_withdraw_snst() external {
-        deal(address(snstBase), address(almProxy), 100e18);
+    function test_withdraw_susds() external {
+        deal(address(susdsBase), address(almProxy), 100e18);
         vm.prank(relayer);
-        foreignController.depositPSM(address(snstBase), 100e18);
+        foreignController.depositPSM(address(susdsBase), 100e18);
 
         _assertState({
-            token        : snstBase,
+            token        : susdsBase,
             proxyBalance : 0,
             psmBalance   : 100e18,
             proxyShares  : 125e18,
@@ -234,17 +234,17 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
         });
 
         vm.prank(relayer);
-        uint256 amountWithdrawn = foreignController.withdrawPSM(address(snstBase), 100e18);
+        uint256 amountWithdrawn = foreignController.withdrawPSM(address(susdsBase), 100e18);
 
         assertEq(amountWithdrawn, 100e18);
 
         _assertState({
-            token        : snstBase,
+            token        : susdsBase,
             proxyBalance : 100e18,
             psmBalance   : 0,
             proxyShares  : 0,
-            totalShares  : 1e18,  // From seeding NST
-            totalAssets  : 1e18   // From seeding NST
+            totalShares  : 1e18,  // From seeding USDS
+            totalAssets  : 1e18   // From seeding USDS
         });
     }
 

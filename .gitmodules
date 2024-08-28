@@ -7,15 +7,15 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
-[submodule "lib/nst"]
-	path = lib/nst
-	url = https://github.com/makerdao/nst
-[submodule "lib/sdai"]
-	path = lib/sdai
-	url = https://github.com/makerdao/sdai
 [submodule "lib/spark-psm"]
 	path = lib/spark-psm
 	url = https://github.com/marsfoundation/spark-psm
 [submodule "lib/xchain-helpers"]
 	path = lib/xchain-helpers
 	url = https://github.com/marsfoundation/xchain-helpers
+[submodule "lib/usds"]
+	path = lib/usds
+	url = https://github.com/makerdao/usds
+[submodule "lib/sdai"]
+	path = lib/sdai
+	url = https://github.com/makerdao/sdai
