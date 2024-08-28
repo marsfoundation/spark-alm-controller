@@ -16,3 +16,6 @@
 [submodule "lib/usds"]
 	path = lib/usds
 	url = https://github.com/makerdao/usds
+[submodule "lib/sdai"]
+	path = lib/sdai
+	url = https://github.com/makerdao/sdai
