@@ -6,10 +6,10 @@ import "test/unit/UnitTestBase.t.sol";
 import { MainnetController } from "src/MainnetController.sol";
 import { ForeignController } from "src/ForeignController.sol";
 
-import { MockDaiNst } from "test/unit/mocks/MockDaiNst.sol";
+import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
 import { MockPSM }    from "test/unit/mocks/MockPSM.sol";
-import { MockPSM3 }    from "test/unit/mocks/MockPSM3.sol";
-import { MockSNst }   from "test/unit/mocks/MockSNst.sol";
+import { MockPSM3 }   from "test/unit/mocks/MockPSM3.sol";
+import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
 
 interface IBaseControllerLike {
     function active() external view returns (bool);
@@ -23,9 +23,9 @@ contract ControllerTestBase is UnitTestBase {
     IBaseControllerLike controller;
 
     function setUp() public virtual {
-        MockDaiNst daiNst = new MockDaiNst(makeAddr("dai"));
-        MockPSM    psm    = new MockPSM(makeAddr("usdc"));
-        MockSNst   snst   = new MockSNst(makeAddr("nst"));
+        MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
+        MockPSM     psm    = new MockPSM(makeAddr("usdc"));
+        MockSUsds   susds  = new MockSUsds(makeAddr("susds"));
 
         // Default to mainnet controller for tests and override with foreign controller
         controller = IBaseControllerLike(address(new MainnetController(
@@ -34,9 +34,9 @@ contract ControllerTestBase is UnitTestBase {
             makeAddr("vault"),
             makeAddr("buffer"),
             address(psm),
-            address(daiNst),
+            address(daiUsds),
             makeAddr("cctp"),
-            address(snst)
+            address(susds)
         )));
 
         _setRoles();
@@ -130,13 +130,13 @@ contract ControllerReactivateTests is ControllerTestBase {
 
 contract ForeignControllerFreezeTest is ControllerFreezeTests {
 
-    address nst  = makeAddr("nst");
-    address usdc = makeAddr("usdc");
-    address snst = makeAddr("snst");
+    address usds  = makeAddr("usds");
+    address usdc  = makeAddr("usdc");
+    address susds = makeAddr("susds");
 
     // Override setUp to run the same tests against the foreign controller
     function setUp() public override {
-        MockPSM3 psm3 = new MockPSM3(nst, usdc, snst);
+        MockPSM3 psm3 = new MockPSM3(usds, usdc, susds);
 
         controller = IBaseControllerLike(address(new ForeignController(
             admin,
@@ -144,7 +144,7 @@ contract ForeignControllerFreezeTest is ControllerFreezeTests {
             address(psm3),
             nst,
             usdc,
-            snst,
+            susds,
             makeAddr("cctp")
         )));
 
@@ -155,21 +155,21 @@ contract ForeignControllerFreezeTest is ControllerFreezeTests {
 
 contract ForeignControllerReactivateTest is ControllerReactivateTests {
 
-    address nst  = makeAddr("nst");
-    address usdc = makeAddr("usdc");
-    address snst = makeAddr("snst");
+    address usds  = makeAddr("usds");
+    address usdc  = makeAddr("usdc");
+    address susds = makeAddr("susds");
 
     // Override setUp to run the same tests against the foreign controller
     function setUp() public override {
-        MockPSM3 psm3 = new MockPSM3(nst, usdc, snst);
+        MockPSM3 psm3 = new MockPSM3(usds, usdc, susds);
 
         controller = IBaseControllerLike(address(new ForeignController(
             admin,
             makeAddr("almProxy"),
             address(psm3),
-            nst,
+            usds,
             usdc,
-            snst,
+            susds,
             makeAddr("cctp")
         )));
 

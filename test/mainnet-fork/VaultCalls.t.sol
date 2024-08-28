@@ -33,8 +33,8 @@ contract MainnetControllerMintNSTTests is ForkTestBase {
         assertEq(ink, INK);
         assertEq(art, 0);
 
-        assertEq(nst.balanceOf(address(almProxy)), 0);
-        assertEq(nst.totalSupply(),                0);
+        assertEq(usds.balanceOf(address(almProxy)), 0);
+        assertEq(usds.totalSupply(),                0);
 
         vm.prank(relayer);
         mainnetController.mintNST(1e18);
@@ -48,8 +48,8 @@ contract MainnetControllerMintNSTTests is ForkTestBase {
         assertEq(ink, INK);
         assertEq(art, 1e18);
 
-        assertEq(nst.balanceOf(address(almProxy)), 1e18);
-        assertEq(nst.totalSupply(),                1e18);
+        assertEq(usds.balanceOf(address(almProxy)), 1e18);
+        assertEq(usds.totalSupply(),                1e18);
     }
 
 }
@@ -88,8 +88,8 @@ contract MainnetControllerBurnNSTTests is ForkTestBase {
         assertEq(ink, INK);
         assertEq(art, 1e18);
 
-        assertEq(nst.balanceOf(address(almProxy)), 1e18);
-        assertEq(nst.totalSupply(),                1e18);
+        assertEq(usds.balanceOf(address(almProxy)), 1e18);
+        assertEq(usds.totalSupply(),                1e18);
 
         vm.prank(relayer);
         mainnetController.burnNST(1e18);
@@ -103,8 +103,8 @@ contract MainnetControllerBurnNSTTests is ForkTestBase {
         assertEq(ink, INK);
         assertEq(art, 0);
 
-        assertEq(nst.balanceOf(address(almProxy)), 0);
-        assertEq(nst.totalSupply(),                0);
+        assertEq(usds.balanceOf(address(almProxy)), 0);
+        assertEq(usds.totalSupply(),                0);
     }
 
 }

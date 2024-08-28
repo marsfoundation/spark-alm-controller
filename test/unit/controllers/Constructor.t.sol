@@ -6,17 +6,17 @@ import "test/unit/UnitTestBase.t.sol";
 import { ForeignController } from "src/ForeignController.sol";
 import { MainnetController } from "src/MainnetController.sol";
 
-import { MockDaiNst } from "test/unit/mocks/MockDaiNst.sol";
-import { MockPSM }    from "test/unit/mocks/MockPSM.sol";
-import { MockPSM3 }   from "test/unit/mocks/MockPSM3.sol";
-import { MockSNst }   from "test/unit/mocks/MockSNst.sol";
+import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
+import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
+import { MockPSM3 }    from "test/unit/mocks/MockPSM3.sol";
+import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
 
 contract MainnetControllerConstructorTests is UnitTestBase {
 
     function test_constructor() public {
-        MockDaiNst daiNst = new MockDaiNst(makeAddr("dai"));
-        MockPSM    psm    = new MockPSM(makeAddr("usdc"));
-        MockSNst   snst   = new MockSNst(makeAddr("nst"));
+        MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
+        MockPSM     psm     = new MockPSM(makeAddr("usdc"));
+        MockSUsds   susds   = new MockSUsds(makeAddr("usds"));
 
         MainnetController mainnetController = new MainnetController(
             admin,
@@ -24,23 +24,23 @@ contract MainnetControllerConstructorTests is UnitTestBase {
             makeAddr("vault"),
             makeAddr("buffer"),
             address(psm),
-            address(daiNst),
+            address(daiUsds),
             makeAddr("cctp"),
-            address(snst)
+            address(susds)
         );
 
         assertEq(mainnetController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
-        assertEq(address(mainnetController.proxy()),  makeAddr("almProxy"));
-        assertEq(address(mainnetController.vault()),  makeAddr("vault"));
-        assertEq(address(mainnetController.buffer()), makeAddr("buffer"));
-        assertEq(address(mainnetController.psm()),    address(psm));
-        assertEq(address(mainnetController.daiNst()), address(daiNst));
-        assertEq(address(mainnetController.cctp()),   makeAddr("cctp"));
-        assertEq(address(mainnetController.snst()),   address(snst));
-        assertEq(address(mainnetController.dai()),    makeAddr("dai"));   // Dai param in MockDaiNst
-        assertEq(address(mainnetController.usdc()),   makeAddr("usdc"));  // Gem param in MockPSM
-        assertEq(address(mainnetController.nst()),    makeAddr("nst"));   // Nst param in MockSNst
+        assertEq(address(mainnetController.proxy()),   makeAddr("almProxy"));
+        assertEq(address(mainnetController.vault()),   makeAddr("vault"));
+        assertEq(address(mainnetController.buffer()),  makeAddr("buffer"));
+        assertEq(address(mainnetController.psm()),     address(psm));
+        assertEq(address(mainnetController.daiUsds()), address(daiUsds));
+        assertEq(address(mainnetController.cctp()),    makeAddr("cctp"));
+        assertEq(address(mainnetController.susds()),   address(susds));
+        assertEq(address(mainnetController.dai()),     makeAddr("dai"));   // Dai param in MockDaiUsds
+        assertEq(address(mainnetController.usdc()),    makeAddr("usdc"));  // Gem param in MockPSM
+        assertEq(address(mainnetController.usds()),    makeAddr("usds"));   // Nst param in MockSUsds
 
         assertEq(mainnetController.active(), true);
     }
@@ -51,9 +51,9 @@ contract ForeignControllerConstructorTests is UnitTestBase {
 
     address almProxy = makeAddr("almProxy");
     address cctp     = makeAddr("cctp");
-    address nst      = makeAddr("nst");
+    address usds     = makeAddr("usds");
     address psm      = makeAddr("psm");
-    address snst     = makeAddr("snst");
+    address susds    = makeAddr("susds");
     address usdc     = makeAddr("usdc");
 
     function test_constructor() public {
@@ -61,9 +61,9 @@ contract ForeignControllerConstructorTests is UnitTestBase {
             admin,
             almProxy,
             psm,
-            nst,
+            usds,
             usdc,
-            snst,
+            susds,
             cctp
         );
 
@@ -71,9 +71,9 @@ contract ForeignControllerConstructorTests is UnitTestBase {
 
         assertEq(address(foreignController.proxy()), almProxy);
         assertEq(address(foreignController.psm()),   psm);
-        assertEq(address(foreignController.nst()),   nst);   // asset0 param in MockPSM3
+        assertEq(address(foreignController.usds()),  usds);   // asset0 param in MockPSM3
         assertEq(address(foreignController.usdc()),  usdc);  // asset1 param in MockPSM3
-        assertEq(address(foreignController.snst()),  snst);  // asset2 param in MockPSM3
+        assertEq(address(foreignController.susds()), susds);  // asset2 param in MockPSM3
         assertEq(address(foreignController.cctp()),  cctp);
 
         assertEq(foreignController.active(), true);

@@ -96,10 +96,12 @@ contract ForkTestBase is DssTest {
     /*** Deployment instances                                                                   ***/
     /**********************************************************************************************/
 
+    // TODO: Need to update submodules to get proper types
+
     AllocatorIlkInstance    ilkInst;
     AllocatorSharedInstance sharedInst;
-    NstInstance             nstInst;
-    SNstInstance            snstInst;
+    NstInstance             usdsInst;
+    SNstInstance            susdsInst;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
@@ -118,8 +120,8 @@ contract ForkTestBase is DssTest {
     ISNst  snst;
 
     address buffer;
-    address daiNst;
-    address nstJoin;
+    address daiUsds;
+    address usdsJoin;
     address pocket;
     address vault;
 
@@ -155,7 +157,7 @@ contract ForkTestBase is DssTest {
         snstInst = SNstDeploy.deploy({
             deployer : address(this),
             owner    : PAUSE_PROXY,
-            nstJoin  : nstInst.nstJoin
+            usdsJoin : usdsInst.usdsJoin
         });
 
         sharedInst = AllocatorDeploy.deployShared(address(this), PAUSE_PROXY);
@@ -165,14 +167,14 @@ contract ForkTestBase is DssTest {
             owner    : PAUSE_PROXY,
             roles    : sharedInst.roles,
             ilk      : ilk,
-            nstJoin  : nstInst.nstJoin
+            usdsJoin : usdsInst.usdsJoin
         });
 
         /*** Step 2: Configure NST, sNST and allocation system ***/
 
         SNstConfig memory snstConfig = SNstConfig({
-            nstJoin: address(nstInst.nstJoin),
-            nst: address(nstInst.nst),
+            usdsJoin: address(usdsInst.usdsJoin),
+            nst: address(usdsInst.usds),
             nsr: SEVEN_PCT_APY
         });
 
@@ -200,14 +202,14 @@ contract ForkTestBase is DssTest {
         almProxy = new ALMProxy(SPARK_PROXY);
 
         mainnetController = new MainnetController({
-            admin_  : SPARK_PROXY,
-            proxy_  : address(almProxy),
-            vault_  : ilkInst.vault,
-            buffer_ : ilkInst.buffer,
-            psm_    : PSM,
-            daiNst_ : nstInst.daiNst,
-            cctp_   : CCTP_MESSENGER,
-            snst_   : snstInst.sNst
+            admin_   : SPARK_PROXY,
+            proxy_   : address(almProxy),
+            vault_   : ilkInst.vault,
+            buffer_  : ilkInst.buffer,
+            psm_     : PSM,
+            daiUsds_ : usdsInst.daiUsds,
+            cctp_    : CCTP_MESSENGER,
+            susds_   : susdsInst.sNst
         });
 
         CONTROLLER = almProxy.CONTROLLER();
@@ -225,7 +227,7 @@ contract ForkTestBase is DssTest {
 
         almProxy.grantRole(CONTROLLER, address(mainnetController));
 
-        IBufferLike(ilkInst.buffer).approve(nstInst.nst, address(almProxy), type(uint256).max);
+        IBufferLike(ilkInst.buffer).approve(usdsInst.usds, address(almProxy), type(uint256).max);
 
         vm.stopPrank();
 
@@ -234,15 +236,15 @@ contract ForkTestBase is DssTest {
 
         /*** Step 5: Perform casting for easier testing, cache values from mainnet ***/
 
-        buffer  = ilkInst.buffer;
-        dai     = IERC20(DAI);
-        daiNst  = nstInst.daiNst;
-        nst     = IERC20(address(nstInst.nst));
-        nstJoin = nstInst.nstJoin;
-        pocket  = IPSMLike(PSM).pocket();
-        snst    = ISNst(address(snstInst.sNst));
-        usdc    = IERC20(USDC);
-        vault   = ilkInst.vault;
+        buffer   = ilkInst.buffer;
+        dai      = IERC20(DAI);
+        daiUsds  = usdsInst.daiUsds;
+        usds     = IERC20(address(usdsInst.usds));
+        usdsJoin = usdsInst.usdsJoin;
+        pocket   = IPSMLike(PSM).pocket();
+        susds    = ISNst(address(susdsInst.sNst));
+        usdc     = IERC20(USDC);
+        vault    = ilkInst.vault;
 
         DAI_BAL_PSM  = dai.balanceOf(PSM);
         DAI_SUPPLY   = dai.totalSupply();
