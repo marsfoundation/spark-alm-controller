@@ -198,7 +198,7 @@ contract MainnetController is AccessControl {
         );
     }
 
-    function redeemFromSUSDS(uint256 snstSharesAmount)
+    function redeemFromSUSDS(uint256 susdsSharesAmount)
         external onlyRole(RELAYER) isActive returns (uint256 assets)
     {
         // Redeem shares for USDS from sUSDS, decode the resulting assets.
@@ -206,7 +206,7 @@ contract MainnetController is AccessControl {
         assets = abi.decode(
             proxy.doCall(
                 address(susds),
-                abi.encodeCall(susds.redeem, (snstSharesAmount, address(proxy), address(proxy)))
+                abi.encodeCall(susds.redeem, (susdsSharesAmount, address(proxy), address(proxy)))
             ),
             (uint256)
         );
