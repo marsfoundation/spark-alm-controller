@@ -40,7 +40,7 @@ contract MainnetControllerConstructorTests is UnitTestBase {
         assertEq(address(mainnetController.susds()),   address(susds));
         assertEq(address(mainnetController.dai()),     makeAddr("dai"));   // Dai param in MockDaiUsds
         assertEq(address(mainnetController.usdc()),    makeAddr("usdc"));  // Gem param in MockPSM
-        assertEq(address(mainnetController.usds()),    makeAddr("usds"));  // Nst param in MockSUsds
+        assertEq(address(mainnetController.usds()),    makeAddr("usds"));  // Usds param in MockSUsds
 
         assertEq(mainnetController.active(), true);
     }

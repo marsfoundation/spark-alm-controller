@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "test/mainnet-fork/ForkTestBase.t.sol";
 
-contract MainnetControllerSwapNSTToUSDCFailureTests is ForkTestBase {
+contract MainnetControllerSwapUSDSToUSDCFailureTests is ForkTestBase {
 
     function test_swapUSDCToUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -25,7 +25,7 @@ contract MainnetControllerSwapNSTToUSDCFailureTests is ForkTestBase {
 
 }
 
-contract MainnetControllerSwapNSTToUSDCTests is ForkTestBase {
+contract MainnetControllerSwapUSDSToUSDCTests is ForkTestBase {
 
     function test_swapUSDSToUSDC() external {
         vm.prank(relayer);
@@ -69,7 +69,7 @@ contract MainnetControllerSwapNSTToUSDCTests is ForkTestBase {
 
 }
 
-contract MainnetControllerSwapUSDCToNSTFailureTests is ForkTestBase {
+contract MainnetControllerSwapUSDCToUSDSFailureTests is ForkTestBase {
 
     function test_swapUSDCToUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -91,7 +91,7 @@ contract MainnetControllerSwapUSDCToNSTFailureTests is ForkTestBase {
 
 }
 
-contract MainnetControllerSwapUSDCToNSTTests is ForkTestBase {
+contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
 
     function test_swapUSDCToUSDS() external {
         deal(address(usdc), address(almProxy), 1e6);

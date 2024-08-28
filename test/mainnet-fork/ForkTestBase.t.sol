@@ -144,7 +144,7 @@ contract ForkTestBase is DssTest {
         PAUSE_PROXY  = IChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
         USDC         = IChainlogLike(LOG).getAddress("USDC");
 
-        /*** Step 1: Deploy NST, sNST and allocation system ***/
+        /*** Step 1: Deploy USDS, sUSDS and allocation system ***/
 
         usdsInst = UsdsDeploy.deploy(
             address(this),
@@ -168,7 +168,7 @@ contract ForkTestBase is DssTest {
             usdsJoin : usdsInst.usdsJoin
         });
 
-        /*** Step 2: Configure NST, sNST and allocation system ***/
+        /*** Step 2: Configure USDS, sUSDS and allocation system ***/
 
         SUsdsConfig memory susdsConfig = SUsdsConfig({
             usdsJoin : address(usdsInst.usdsJoin),

@@ -219,7 +219,7 @@ contract MainnetController is AccessControl {
     function swapUSDSToUSDC(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
         uint256 usdsAmount = usdcAmount * psm.to18ConversionFactor();
 
-        // Approve USDS to DaiNst migrator from the proxy (assumes the proxy has enough USDS)
+        // Approve USDS to DaiUsds migrator from the proxy (assumes the proxy has enough USDS)
         proxy.doCall(
             address(usds),
             abi.encodeCall(usds.approve, (address(daiUsds), usdsAmount))
@@ -259,7 +259,7 @@ contract MainnetController is AccessControl {
             abi.encodeCall(psm.sellGemNoFee, (address(proxy), usdcAmount))
         );
 
-        // Approve DAI to DaiNst migrator from the proxy (assumes the proxy has enough DAI)
+        // Approve DAI to DaiUsds migrator from the proxy (assumes the proxy has enough DAI)
         proxy.doCall(
             address(dai),
             abi.encodeCall(dai.approve, (address(daiUsds), usdsAmount))

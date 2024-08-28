@@ -54,7 +54,7 @@ contract MainnetControllerMintUSDSTests is ForkTestBase {
 
 }
 
-contract MainnetControllerBurnNSTTests is ForkTestBase {
+contract MainnetControllerBurnUSDSTests is ForkTestBase {
 
     function test_burnUSDS_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
