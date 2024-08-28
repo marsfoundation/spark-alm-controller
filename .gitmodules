@@ -16,3 +16,6 @@
 [submodule "lib/xchain-helpers"]
 	path = lib/xchain-helpers
 	url = https://github.com/marsfoundation/xchain-helpers
+[submodule "lib/usds"]
+	path = lib/usds
+	url = https://github.com/makerdao/usds
