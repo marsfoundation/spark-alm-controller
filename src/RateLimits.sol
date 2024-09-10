@@ -40,7 +40,7 @@ contract RateLimits is IRateLimits, AccessControl {
         public override onlyRole(DEFAULT_ADMIN_ROLE)
     {
         require(minAmount <= maxAmount,                     "RateLimits/invalid-minAmount-maxAmount");
-        require(lastUpdated >= block.timestamp,             "RateLimits/invalid-lastUpdated");
+        require(lastUpdated <= block.timestamp,             "RateLimits/invalid-lastUpdated");
         require(amount >= minAmount && amount <= maxAmount, "RateLimits/invalid-amount");
 
         limits[key] = RateLimit({
