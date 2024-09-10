@@ -95,12 +95,36 @@ contract RateLimits is IRateLimits, AccessControl {
     }
 
     /**********************************************************************************************/
+    /*** Getter Functions                                                                       ***/
+    /**********************************************************************************************/
+
+    function getCurrentRateLimit(bytes32 key) public override view returns (uint256) {
+        RateLimit memory limit = limits[key];
+
+        // Unlimited rate limit case
+        if (limit.minAmount == type(uint256).max) {
+            return type(uint256).max;
+        }
+
+        return _min(
+            limit.slope * (block.timestamp - limit.lastUpdated) + limit.amount,
+            limit.maxAmount
+        );
+    }
+
+    function getCurrentRateLimit(bytes32 key, address asset) external override view returns (uint256) {
+        return getCurrentRateLimit(keccak256(abi.encode(key, asset)));
+    }
+
+    /**********************************************************************************************/
     /*** Controller functions                                                                   ***/
     /**********************************************************************************************/
 
     function triggerRateLimit(bytes32 key, uint256 amount)
         public override onlyRole(CONTROLLER) returns (uint256 newLimit)
     {
+        require(amount > 0, "RateLimits/invalid-amount");
+
         uint256 currentRateLimit = getCurrentRateLimit(key);
 
         // Unlimited rate limit case
@@ -122,28 +146,6 @@ contract RateLimits is IRateLimits, AccessControl {
         external override returns (uint256 newLimit)
     {
         return triggerRateLimit(keccak256(abi.encode(key, asset)), amount);
-    }
-
-    /**********************************************************************************************/
-    /*** Getter Functions                                                                       ***/
-    /**********************************************************************************************/
-
-    function getCurrentRateLimit(bytes32 key) public override view returns (uint256) {
-        RateLimit memory limit = limits[key];
-
-        // Unlimited rate limit case
-        if (limit.minAmount == type(uint256).max) {
-            return type(uint256).max;
-        }
-
-        return _min(
-            limit.slope * (block.timestamp - limit.lastUpdated) + limit.minAmount,
-            limit.maxAmount
-        );
-    }
-
-    function getCurrentRateLimit(bytes32 key, address asset) external override view returns (uint256) {
-        return getCurrentRateLimit(keccak256(abi.encode(key, asset)));
     }
 
     /**********************************************************************************************/

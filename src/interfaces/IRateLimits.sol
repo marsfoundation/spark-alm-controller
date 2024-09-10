@@ -158,6 +158,25 @@ interface IRateLimits {
     ) external;
 
     /**********************************************************************************************/
+    /*** Getter Functions                                                                       ***/
+    /**********************************************************************************************/
+
+    /**
+     * @dev Retrieves the current rate limit for a specific key.
+     * @param key The identifier for the rate limit.
+     * @return uint256 The current rate limit value for the given key.
+     */
+    function getCurrentRateLimit(bytes32 key) external view returns (uint256);
+
+    /**
+     * @dev Retrieves the current rate limit for a specific key and asset.
+     * @param key The identifier for the rate limit.
+     * @param asset The address of the asset to retrieve the rate limit for.
+     * @return uint256 The current rate limit value for the given key and asset.
+     */
+    function getCurrentRateLimit(bytes32 key, address asset) external view returns (uint256);
+
+    /**********************************************************************************************/
     /*** Controller functions                                                                   ***/
     /**********************************************************************************************/
 
@@ -177,24 +196,5 @@ interface IRateLimits {
      * @return newLimit The updated rate limit after the deduction.
      */
     function triggerRateLimit(bytes32 key, address asset, uint256 amount) external returns (uint256 newLimit);
-
-    /**********************************************************************************************/
-    /*** Getter Functions                                                                       ***/
-    /**********************************************************************************************/
-
-    /**
-     * @dev Retrieves the current rate limit for a specific key.
-     * @param key The identifier for the rate limit.
-     * @return uint256 The current rate limit value for the given key.
-     */
-    function getCurrentRateLimit(bytes32 key) external view returns (uint256);
-
-    /**
-     * @dev Retrieves the current rate limit for a specific key and asset.
-     * @param key The identifier for the rate limit.
-     * @param asset The address of the asset to retrieve the rate limit for.
-     * @return uint256 The current rate limit value for the given key and asset.
-     */
-    function getCurrentRateLimit(bytes32 key, address asset) external view returns (uint256);
 
 }
