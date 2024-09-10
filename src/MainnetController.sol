@@ -6,7 +6,8 @@ import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
-import { IALMProxy } from "src/interfaces/IALMProxy.sol";
+import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
+import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
 interface ICCTPLike {
     function depositForBurn(
@@ -50,9 +51,16 @@ contract MainnetController is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
+    bytes32 public constant LIMIT_USDS_MINT    = keccak256("LIMIT_USDS_MINT");
+    bytes32 public constant LIMIT_USDS_BURN    = keccak256("LIMIT_USDS_BURN");
+    bytes32 public constant LIMIT_USDS_TO_USDC = keccak256("LIMIT_USDS_TO_USDC");
+    bytes32 public constant LIMIT_USDC_TO_USDS = keccak256("LIMIT_USDC_TO_USDS");
+    bytes32 public constant LIMIT_USDC_TO_CCTP = keccak256("LIMIT_USDC_TO_CCTP");
+
     address public immutable buffer;
 
     IALMProxy    public immutable proxy;
+    IRateLimits  public immutable rateLimits;
     ICCTPLike    public immutable cctp;
     IDaiUsdsLike public immutable daiUsds;
     IPSMLike     public immutable psm;
@@ -74,6 +82,7 @@ contract MainnetController is AccessControl {
     constructor(
         address admin_,
         address proxy_,
+        address rateLimits_,
         address vault_,
         address buffer_,
         address psm_,
@@ -83,12 +92,13 @@ contract MainnetController is AccessControl {
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
-        proxy   = IALMProxy(proxy_);
-        vault   = IVaultLike(vault_);
-        buffer  = buffer_;
-        psm     = IPSMLike(psm_);
-        daiUsds = IDaiUsdsLike(daiUsds_);
-        cctp    = ICCTPLike(cctp_);
+        proxy      = IALMProxy(proxy_);
+        rateLimits = IRateLimits(rateLimits_);
+        vault      = IVaultLike(vault_);
+        buffer     = buffer_;
+        psm        = IPSMLike(psm_);
+        daiUsds    = IDaiUsdsLike(daiUsds_);
+        cctp       = ICCTPLike(cctp_);
 
        susds = ISUSDSLike(susds_ );
        dai   = IERC20(daiUsds.dai());
@@ -104,6 +114,11 @@ contract MainnetController is AccessControl {
 
     modifier isActive {
         require(active, "MainnetController/not-active");
+        _;
+    }
+
+    modifier rateLimited(bytes32 key, uint256 amount) {
+        rateLimits.triggerRateLimit(key, amount);
         _;
     }
 
@@ -133,7 +148,7 @@ contract MainnetController is AccessControl {
     /*** Relayer vault functions                                                                ***/
     /**********************************************************************************************/
 
-    function mintUSDS(uint256 usdsAmount) external onlyRole(RELAYER) isActive {
+    function mintUSDS(uint256 usdsAmount) external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDS_MINT, usdsAmount) {
         // Mint USDS into the buffer
         proxy.doCall(
             address(vault),
@@ -147,7 +162,7 @@ contract MainnetController is AccessControl {
         );
     }
 
-    function burnUSDS(uint256 usdsAmount) external onlyRole(RELAYER) isActive {
+    function burnUSDS(uint256 usdsAmount) external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDS_BURN, usdsAmount) {
         // Transfer USDS from the proxy to the buffer
         proxy.doCall(
             address(usds),
@@ -216,7 +231,7 @@ contract MainnetController is AccessControl {
     /*** Relayer PSM functions                                                                  ***/
     /**********************************************************************************************/
 
-    function swapUSDSToUSDC(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
+    function swapUSDSToUSDC(uint256 usdcAmount) external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDS_TO_USDC, usdcAmount) {
         uint256 usdsAmount = usdcAmount * psm.to18ConversionFactor();
 
         // Approve USDS to DaiUsds migrator from the proxy (assumes the proxy has enough USDS)
@@ -244,7 +259,7 @@ contract MainnetController is AccessControl {
         );
     }
 
-    function swapUSDCToUSDS(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
+    function swapUSDCToUSDS(uint256 usdcAmount) external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDC_TO_USDS, usdcAmount) {
         uint256 usdsAmount = usdcAmount * psm.to18ConversionFactor();
 
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
@@ -277,7 +292,7 @@ contract MainnetController is AccessControl {
     /**********************************************************************************************/
 
     function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
-        external onlyRole(RELAYER) isActive
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
     {
         bytes32 mintRecipient = mintRecipients[destinationDomain];
 

@@ -21,6 +21,7 @@ contract MainnetControllerConstructorTests is UnitTestBase {
         MainnetController mainnetController = new MainnetController(
             admin,
             makeAddr("almProxy"),
+            makeAddr("rateLimits"),
             makeAddr("vault"),
             makeAddr("buffer"),
             address(psm),
@@ -31,16 +32,17 @@ contract MainnetControllerConstructorTests is UnitTestBase {
 
         assertEq(mainnetController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
-        assertEq(address(mainnetController.proxy()),   makeAddr("almProxy"));
-        assertEq(address(mainnetController.vault()),   makeAddr("vault"));
-        assertEq(address(mainnetController.buffer()),  makeAddr("buffer"));
-        assertEq(address(mainnetController.psm()),     address(psm));
-        assertEq(address(mainnetController.daiUsds()), address(daiUsds));
-        assertEq(address(mainnetController.cctp()),    makeAddr("cctp"));
-        assertEq(address(mainnetController.susds()),   address(susds));
-        assertEq(address(mainnetController.dai()),     makeAddr("dai"));   // Dai param in MockDaiUsds
-        assertEq(address(mainnetController.usdc()),    makeAddr("usdc"));  // Gem param in MockPSM
-        assertEq(address(mainnetController.usds()),    makeAddr("usds"));  // Usds param in MockSUsds
+        assertEq(address(mainnetController.proxy()),      makeAddr("almProxy"));
+        assertEq(address(mainnetController.rateLimits()), makeAddr("rateLimits"));
+        assertEq(address(mainnetController.vault()),      makeAddr("vault"));
+        assertEq(address(mainnetController.buffer()),     makeAddr("buffer"));
+        assertEq(address(mainnetController.psm()),        address(psm));
+        assertEq(address(mainnetController.daiUsds()),    address(daiUsds));
+        assertEq(address(mainnetController.cctp()),       makeAddr("cctp"));
+        assertEq(address(mainnetController.susds()),      address(susds));
+        assertEq(address(mainnetController.dai()),        makeAddr("dai"));   // Dai param in MockDaiUsds
+        assertEq(address(mainnetController.usdc()),       makeAddr("usdc"));  // Gem param in MockPSM
+        assertEq(address(mainnetController.usds()),       makeAddr("usds"));  // Usds param in MockSUsds
 
         assertEq(mainnetController.active(), true);
     }
@@ -49,17 +51,19 @@ contract MainnetControllerConstructorTests is UnitTestBase {
 
 contract ForeignControllerConstructorTests is UnitTestBase {
 
-    address almProxy = makeAddr("almProxy");
-    address cctp     = makeAddr("cctp");
-    address usds     = makeAddr("usds");
-    address psm      = makeAddr("psm");
-    address susds    = makeAddr("susds");
-    address usdc     = makeAddr("usdc");
+    address almProxy   = makeAddr("almProxy");
+    address rateLimits = makeAddr("rateLimits");
+    address cctp       = makeAddr("cctp");
+    address usds       = makeAddr("usds");
+    address psm        = makeAddr("psm");
+    address susds      = makeAddr("susds");
+    address usdc       = makeAddr("usdc");
 
     function test_constructor() public {
         ForeignController foreignController = new ForeignController(
             admin,
             almProxy,
+            rateLimits,
             psm,
             usds,
             usdc,
@@ -69,12 +73,13 @@ contract ForeignControllerConstructorTests is UnitTestBase {
 
         assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
-        assertEq(address(foreignController.proxy()), almProxy);
-        assertEq(address(foreignController.psm()),   psm);
-        assertEq(address(foreignController.usds()),  usds);   // asset0 param in MockPSM3
-        assertEq(address(foreignController.usdc()),  usdc);   // asset1 param in MockPSM3
-        assertEq(address(foreignController.susds()), susds);  // asset2 param in MockPSM3
-        assertEq(address(foreignController.cctp()),  cctp);
+        assertEq(address(foreignController.proxy()),      almProxy);
+        assertEq(address(foreignController.rateLimits()), rateLimits);
+        assertEq(address(foreignController.psm()),        psm);
+        assertEq(address(foreignController.usds()),       usds);   // asset0 param in MockPSM3
+        assertEq(address(foreignController.usdc()),       usdc);   // asset1 param in MockPSM3
+        assertEq(address(foreignController.susds()),      susds);  // asset2 param in MockPSM3
+        assertEq(address(foreignController.cctp()),       cctp);
 
         assertEq(foreignController.active(), true);
     }

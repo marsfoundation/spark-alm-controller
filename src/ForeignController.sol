@@ -7,7 +7,8 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 
 import { IPSM3 } from "spark-psm/src/interfaces/IPSM3.sol";
 
-import { IALMProxy } from "src/interfaces/IALMProxy.sol";
+import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
+import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
 interface ICCTPLike {
     function depositForBurn(
@@ -29,8 +30,13 @@ contract ForeignController is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    IALMProxy public immutable proxy;
-    IPSM3     public immutable psm;
+    bytes32 public constant LIMIT_USDC_TO_CCTP = keccak256("LIMIT_USDC_TO_CCTP");
+    bytes32 public constant LIMIT_PSM_DEPOSIT  = keccak256("LIMIT_PSM_DEPOSIT");
+    bytes32 public constant LIMIT_PSM_WITHDRAW = keccak256("LIMIT_PSM_WITHDRAW");
+
+    IALMProxy   public immutable proxy;
+    IRateLimits public immutable rateLimits;
+    IPSM3       public immutable psm;
 
     IERC20 public immutable usds;
     IERC20 public immutable usdc;
@@ -49,6 +55,7 @@ contract ForeignController is AccessControl {
     constructor(
         address admin_,
         address proxy_,
+        address rateLimits_,
         address psm_,
         address usds_,
         address usdc_,
@@ -57,8 +64,9 @@ contract ForeignController is AccessControl {
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
-        proxy = IALMProxy(proxy_);
-        psm   = IPSM3(psm_);
+        proxy      = IALMProxy(proxy_);
+        rateLimits = IRateLimits(rateLimits_);
+        psm        = IPSM3(psm_);
 
         usds  = IERC20(usds_);
         usdc  = IERC20(usdc_);
@@ -75,6 +83,16 @@ contract ForeignController is AccessControl {
 
     modifier isActive {
         require(active, "ForeignController/not-active");
+        _;
+    }
+
+    modifier rateLimited(bytes32 key, uint256 amount) {
+        rateLimits.triggerRateLimit(key, amount);
+        _;
+    }
+
+    modifier rateLimitedAsset(bytes32 key, address asset, uint256 amount) {
+        rateLimits.triggerRateLimit(key, asset, amount);
         _;
     }
 
@@ -105,7 +123,7 @@ contract ForeignController is AccessControl {
     /**********************************************************************************************/
 
     function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
-        external onlyRole(RELAYER) isActive
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
     {
         bytes32 mintRecipient = mintRecipients[destinationDomain];
 
@@ -137,7 +155,7 @@ contract ForeignController is AccessControl {
     /**********************************************************************************************/
 
     function depositPSM(address asset, uint256 amount)
-        external onlyRole(RELAYER) isActive returns (uint256 shares)
+        external onlyRole(RELAYER) isActive rateLimitedAsset(LIMIT_PSM_DEPOSIT, asset, amount) returns (uint256 shares)
     {
         // Approve `asset` to PSM from the proxy (assumes the proxy has enough `asset`).
         proxy.doCall(
@@ -173,6 +191,8 @@ contract ForeignController is AccessControl {
             ),
             (uint256)
         );
+
+        rateLimits.triggerRateLimit(LIMIT_PSM_WITHDRAW, asset, assetsWithdrawn);
     }
 
 }

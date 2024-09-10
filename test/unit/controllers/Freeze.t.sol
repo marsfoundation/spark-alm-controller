@@ -31,6 +31,7 @@ contract ControllerTestBase is UnitTestBase {
         controller = IBaseControllerLike(address(new MainnetController(
             admin,
             makeAddr("almProxy"),
+            makeAddr("rateLimits"),
             makeAddr("vault"),
             makeAddr("buffer"),
             address(psm),
@@ -141,6 +142,7 @@ contract ForeignControllerFreezeTest is ControllerFreezeTests {
         controller = IBaseControllerLike(address(new ForeignController(
             admin,
             makeAddr("almProxy"),
+            makeAddr("rateLimits"),
             address(psm3),
             usds,
             usdc,
@@ -166,6 +168,7 @@ contract ForeignControllerReactivateTest is ControllerReactivateTests {
         controller = IBaseControllerLike(address(new ForeignController(
             admin,
             makeAddr("almProxy"),
+            makeAddr("rateLimits"),
             address(psm3),
             usds,
             usdc,

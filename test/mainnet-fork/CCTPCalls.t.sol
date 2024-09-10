@@ -65,6 +65,7 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
     /**********************************************************************************************/
 
     ALMProxy          foreignAlmProxy;
+    RateLimits        foreignRateLimits;
     ForeignController foreignController;
 
     /**********************************************************************************************/
@@ -102,14 +103,17 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
         foreignAlmProxy = new ALMProxy(admin);
 
+        foreignRateLimits = new RateLimits(admin);
+
         foreignController = new ForeignController({
-            admin_ : admin,
-            proxy_ : address(foreignAlmProxy),
-            psm_   : address(psmBase),
-            usds_  : address(usdsBase),
-            usdc_  : USDC_BASE,
-            susds_ : address(susdsBase),
-            cctp_  : CCTP_MESSENGER_BASE
+            admin_      : admin,
+            proxy_      : address(foreignAlmProxy),
+            rateLimits_ : address(foreignRateLimits),
+            psm_        : address(psmBase),
+            usds_       : address(usdsBase),
+            usdc_       : USDC_BASE,
+            susds_      : address(susdsBase),
+            cctp_       : CCTP_MESSENGER_BASE
         });
 
         // NOTE: FREEZER, RELAYER, and CONTROLLER are taken from super.setUp()
@@ -125,6 +129,17 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
         );
 
         foreignAlmProxy.grantRole(CONTROLLER, address(foreignController));
+
+        foreignRateLimits.grantRole(CONTROLLER, address(foreignController));
+
+        // Setup unlimited rate limits
+        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_USDC_TO_CCTP());
+        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase));
+        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase));
+        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase));
+        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase));
+        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase));
+        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase));
 
         vm.stopPrank();
 

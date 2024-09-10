@@ -28,6 +28,7 @@ import { Bridge }                from "xchain-helpers/src/testing/Bridge.sol";
 import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
 
 import { ALMProxy }          from "src/ALMProxy.sol";
+import { RateLimits }        from "src/RateLimits.sol";
 import { MainnetController } from "src/MainnetController.sol";
 
 interface IChainlogLike {
@@ -106,6 +107,7 @@ contract ForkTestBase is DssTest {
     /**********************************************************************************************/
 
     ALMProxy          almProxy;
+    RateLimits        rateLimits;
     MainnetController mainnetController;
 
     /**********************************************************************************************/
@@ -199,15 +201,18 @@ contract ForkTestBase is DssTest {
 
         almProxy = new ALMProxy(SPARK_PROXY);
 
+        rateLimits = new RateLimits(SPARK_PROXY);
+
         mainnetController = new MainnetController({
-            admin_   : SPARK_PROXY,
-            proxy_   : address(almProxy),
-            vault_   : ilkInst.vault,
-            buffer_  : ilkInst.buffer,
-            psm_     : PSM,
-            daiUsds_ : usdsInst.daiUsds,
-            cctp_    : CCTP_MESSENGER,
-            susds_   : susdsInst.sUsds
+            admin_      : SPARK_PROXY,
+            proxy_      : address(almProxy),
+            rateLimits_ : address(rateLimits),
+            vault_      : ilkInst.vault,
+            buffer_     : ilkInst.buffer,
+            psm_        : PSM,
+            daiUsds_    : usdsInst.daiUsds,
+            cctp_       : CCTP_MESSENGER,
+            susds_      : susdsInst.sUsds
         });
 
         CONTROLLER = almProxy.CONTROLLER();
@@ -224,6 +229,15 @@ contract ForkTestBase is DssTest {
         mainnetController.grantRole(RELAYER, relayer);
 
         almProxy.grantRole(CONTROLLER, address(mainnetController));
+
+        rateLimits.grantRole(CONTROLLER, address(mainnetController));
+
+        // Setup unlimited rate limits
+        rateLimits.setUnlimitedRateLimit(mainnetController.LIMIT_USDS_MINT());
+        rateLimits.setUnlimitedRateLimit(mainnetController.LIMIT_USDS_BURN());
+        rateLimits.setUnlimitedRateLimit(mainnetController.LIMIT_USDS_TO_USDC());
+        rateLimits.setUnlimitedRateLimit(mainnetController.LIMIT_USDC_TO_USDS());
+        rateLimits.setUnlimitedRateLimit(mainnetController.LIMIT_USDC_TO_CCTP());
 
         IBufferLike(ilkInst.buffer).approve(usdsInst.usds, address(almProxy), type(uint256).max);
 

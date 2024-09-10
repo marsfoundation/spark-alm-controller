@@ -12,6 +12,7 @@ import { IPSM3 }            from "spark-psm/src/PSM3.sol";
 import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
 
 import { ALMProxy }          from "src/ALMProxy.sol";
+import { RateLimits }        from "src/RateLimits.sol";
 import { ForeignController } from "src/ForeignController.sol";
 
 contract ForkTestBase is Test {
@@ -44,6 +45,7 @@ contract ForkTestBase is Test {
     /**********************************************************************************************/
 
     ALMProxy          almProxy;
+    RateLimits        rateLimits;
     ForeignController foreignController;
 
     /**********************************************************************************************/
@@ -81,14 +83,17 @@ contract ForkTestBase is Test {
 
         almProxy = new ALMProxy(admin);
 
+        rateLimits = new RateLimits(admin);
+
         foreignController = new ForeignController({
-            admin_ : admin,
-            proxy_ : address(almProxy),
-            psm_   : address(psmBase),
-            usds_  : address(usdsBase),
-            usdc_  : USDC_BASE,
-            susds_ : address(susdsBase),
-            cctp_  : CCTP_MESSENGER_BASE
+            admin_      : admin,
+            proxy_      : address(almProxy),
+            rateLimits_ : address(rateLimits),
+            psm_        : address(psmBase),
+            usds_       : address(usdsBase),
+            usdc_       : USDC_BASE,
+            susds_      : address(susdsBase),
+            cctp_       : CCTP_MESSENGER_BASE
         });
 
         CONTROLLER = almProxy.CONTROLLER();
@@ -101,6 +106,17 @@ contract ForkTestBase is Test {
         foreignController.grantRole(RELAYER, relayer);
 
         almProxy.grantRole(CONTROLLER, address(foreignController));
+
+        rateLimits.grantRole(CONTROLLER, address(foreignController));
+
+        // Setup unlimited rate limits
+        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_USDC_TO_CCTP());
+        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase));
+        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase));
+        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase));
+        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase));
+        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase));
+        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase));
 
         vm.stopPrank();
     }
