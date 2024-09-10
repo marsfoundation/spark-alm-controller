@@ -21,8 +21,6 @@ interface ICCTPLike {
 
 contract ForeignController is AccessControl {
 
-    // TODO: Inherit and override interface
-
     /**********************************************************************************************/
     /*** State variables                                                                        ***/
     /**********************************************************************************************/

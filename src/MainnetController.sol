@@ -42,8 +42,6 @@ interface IPSMLike {
 
 contract MainnetController is AccessControl {
 
-    // TODO: Inherit and override interface
-
     /**********************************************************************************************/
     /*** State variables                                                                        ***/
     /**********************************************************************************************/
