@@ -11,9 +11,9 @@ import { PSM3Deploy }       from "spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }            from "spark-psm/src/PSM3.sol";
 import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
 
-import { ALMProxy }          from "src/ALMProxy.sol";
-import { RateLimits }        from "src/RateLimits.sol";
-import { ForeignController } from "src/ForeignController.sol";
+import { ALMProxy }                     from "src/ALMProxy.sol";
+import { RateLimits, RateLimitHelpers } from "src/RateLimits.sol";
+import { ForeignController }            from "src/ForeignController.sol";
 
 contract ForkTestBase is Test {
 
@@ -111,12 +111,12 @@ contract ForkTestBase is Test {
 
         // Setup unlimited rate limits
         rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_USDC_TO_CCTP());
-        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase));
-        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase));
-        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase));
-        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase));
-        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase));
-        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase));
+        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase)));
+        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase)));
+        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase)));
+        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase)));
+        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase)));
+        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase)));
 
         vm.stopPrank();
     }

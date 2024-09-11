@@ -100,35 +100,11 @@ interface IRateLimits {
     ) external;
 
     /**
-     * @dev Sets a rate limit for a specific key with the provided parameters.
-     * @param key The identifier for the rate limit.
-     * @param asset The address of the asset to set the rate limit for.
-     * @param maxAmount The maximum allowed amount for the rate limit.
-     * @param slope The slope value used in the rate limit calculation.
-     */
-    function setRateLimit(
-        bytes32 key,
-        address asset,
-        uint256 maxAmount,
-        uint256 slope
-    ) external;
-
-    /**
      * @dev Sets an unlimited rate limit.
      * @param key The identifier for the rate limit.
      */
     function setUnlimitedRateLimit(
         bytes32 key
-    ) external;
-
-    /**
-     * @dev Sets an unlimited rate limit.
-     * @param key The identifier for the rate limit.
-     * @param asset The address of the asset to set the rate limit for.
-     */
-    function setUnlimitedRateLimit(
-        bytes32 key,
-        address asset
     ) external;
 
     /**********************************************************************************************/
@@ -149,14 +125,6 @@ interface IRateLimits {
      */
     function getCurrentRateLimit(bytes32 key) external view returns (uint256);
 
-    /**
-     * @dev Retrieves the current rate limit for a specific key and asset.
-     * @param key The identifier for the rate limit.
-     * @param asset The address of the asset to retrieve the rate limit for.
-     * @return uint256 The current rate limit value for the given key and asset.
-     */
-    function getCurrentRateLimit(bytes32 key, address asset) external view returns (uint256);
-
     /**********************************************************************************************/
     /*** Controller functions                                                                   ***/
     /**********************************************************************************************/
@@ -168,14 +136,5 @@ interface IRateLimits {
      * @return newLimit The updated rate limit after the deduction.
      */
     function triggerRateLimit(bytes32 key, uint256 amountToDecrease) external returns (uint256 newLimit);
-
-    /**
-     * @dev Triggers the rate limit for a specific key and asset, reducing the available amount by the provided value.
-     * @param key The identifier for the rate limit.
-     * @param asset The address of the asset to trigger the rate limit for.
-     * @param amountToDecrease The amount to decrease from the rate limit.
-     * @return newLimit The updated rate limit after the deduction.
-     */
-    function triggerRateLimit(bytes32 key, address asset, uint256 amountToDecrease) external returns (uint256 newLimit);
 
 }

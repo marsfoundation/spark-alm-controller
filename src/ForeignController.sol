@@ -10,6 +10,8 @@ import { IPSM3 } from "spark-psm/src/interfaces/IPSM3.sol";
 import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
+import { RateLimitHelpers } from "src/RateLimits.sol";
+
 interface ICCTPLike {
     function depositForBurn(
         uint256 amount,
@@ -90,7 +92,7 @@ contract ForeignController is AccessControl {
     }
 
     modifier rateLimitedAsset(bytes32 key, address asset, uint256 amount) {
-        rateLimits.triggerRateLimit(key, asset, amount);
+        rateLimits.triggerRateLimit(RateLimitHelpers.makeAssetKey(key, asset), amount);
         _;
     }
 
@@ -190,7 +192,7 @@ contract ForeignController is AccessControl {
             (uint256)
         );
 
-        rateLimits.triggerRateLimit(LIMIT_PSM_WITHDRAW, asset, assetsWithdrawn);
+        rateLimits.triggerRateLimit(RateLimitHelpers.makeAssetKey(LIMIT_PSM_WITHDRAW, asset), assetsWithdrawn);
     }
 
 }

@@ -16,6 +16,7 @@ import { CCTPForwarder }     from "xchain-helpers/src/forwarders/CCTPForwarder.s
 
 import { ALMProxy }          from "src/ALMProxy.sol";
 import { ForeignController } from "src/ForeignController.sol";
+import { RateLimitHelpers }  from "src/RateLimits.sol";
 
 contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
 
@@ -134,12 +135,12 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
         // Setup unlimited rate limits
         foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_USDC_TO_CCTP());
-        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase));
-        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase));
-        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase));
-        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase));
-        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase));
-        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase));
+        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase)));
+        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase)));
+        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase)));
+        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase)));
+        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase)));
+        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase)));
 
         vm.stopPrank();
 

@@ -61,32 +61,12 @@ contract RateLimits is IRateLimits, AccessControl {
         setRateLimit(key, maxAmount, slope, 0, block.timestamp);
     }
 
-    function setRateLimit(
-        bytes32 key,
-        address asset,
-        uint256 maxAmount,
-        uint256 slope
-    )
-        external override
-    {
-        setRateLimit(keccak256(abi.encode(key, asset)), maxAmount, slope);
-    }
-
     function setUnlimitedRateLimit(
         bytes32 key
     )
         public override
     {
         setRateLimit(key, type(uint256).max, 0, 0, block.timestamp);
-    }
-
-    function setUnlimitedRateLimit(
-        bytes32 key,
-        address asset
-    )
-        external override
-    {
-        setUnlimitedRateLimit(keccak256(abi.encode(key, asset)));
     }
 
     /**********************************************************************************************/
@@ -109,10 +89,6 @@ contract RateLimits is IRateLimits, AccessControl {
             d.slope * (block.timestamp - d.lastUpdated) + d.lastAmount,
             d.maxAmount
         );
-    }
-
-    function getCurrentRateLimit(bytes32 key, address asset) external override view returns (uint256) {
-        return getCurrentRateLimit(keccak256(abi.encode(key, asset)));
     }
 
     /**********************************************************************************************/
@@ -141,18 +117,20 @@ contract RateLimits is IRateLimits, AccessControl {
         emit RateLimitTriggered(key, amountToDecrease, currentRateLimit, newLimit);
     }
 
-    function triggerRateLimit(bytes32 key, address asset, uint256 amount)
-        external override returns (uint256 newLimit)
-    {
-        return triggerRateLimit(keccak256(abi.encode(key, asset)), amount);
-    }
-
     /**********************************************************************************************/
     /*** Internal Utility Functions                                                             ***/
     /**********************************************************************************************/
 
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
+    }
+
+}
+
+library RateLimitHelpers {
+
+    function makeAssetKey(bytes32 key, address asset) internal pure returns (bytes32) {
+        return keccak256(abi.encode(key, asset));
     }
 
 }

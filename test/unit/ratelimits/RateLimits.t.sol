@@ -16,12 +16,9 @@ contract RateLimitsTest is UnitTestBase {
     );
 
     bytes32 constant TEST_KEY1 = keccak256("TEST_KEY1");
-    bytes32 constant TEST_KEY2 = keccak256("TEST_KEY2");
-    bytes32 constant TEST_KEY3 = keccak256("TEST_KEY3");
 
     address controller = makeAddr("controller");
     address asset1     = makeAddr("asset1");
-    address asset2     = makeAddr("asset2");
 
     RateLimits rateLimits;
 
@@ -58,7 +55,7 @@ contract RateLimitsTest is UnitTestBase {
             address(this),
             DEFAULT_ADMIN_ROLE
         ));
-        rateLimits.setRateLimit(TEST_KEY1, asset1, 1000, 10);
+        rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 100, block.timestamp);
 
         // Variant3
         vm.expectRevert(abi.encodeWithSignature(
@@ -66,23 +63,7 @@ contract RateLimitsTest is UnitTestBase {
             address(this),
             DEFAULT_ADMIN_ROLE
         ));
-        rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 100, block.timestamp);
-
-        // Variant4
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
         rateLimits.setUnlimitedRateLimit(TEST_KEY1);
-
-        // Variant5
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            DEFAULT_ADMIN_ROLE
-        ));
-        rateLimits.setUnlimitedRateLimit(TEST_KEY1, asset1);
     }
 
     function test_setRateLimit_invalidLastUpdated_boundary() public {
@@ -116,20 +97,8 @@ contract RateLimitsTest is UnitTestBase {
             lastAmount:  0,
             lastUpdated: block.timestamp
         });
-
-        // Variant2
-        vm.expectEmit(address(rateLimits));
-        emit RateLimitSet(_getKey(TEST_KEY1, asset1), 1000, 10, 0, block.timestamp);
-        rateLimits.setRateLimit(TEST_KEY1, asset1, 1000, 10);
-        _assertLimitData({
-            key:         _getKey(TEST_KEY1, asset1),
-            maxAmount:   1000,
-            slope:       10,
-            lastAmount:  0,
-            lastUpdated: block.timestamp
-        });
         
-        // Variant3
+        // Variant2
         vm.expectEmit(address(rateLimits));
         emit RateLimitSet(TEST_KEY1, 1000, 10, 101, block.timestamp - 1);
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 101, block.timestamp - 1);
@@ -141,24 +110,12 @@ contract RateLimitsTest is UnitTestBase {
             lastUpdated: block.timestamp - 1
         });
 
-        // Variant4
+        // Variant3
         vm.expectEmit(address(rateLimits));
         emit RateLimitSet(TEST_KEY1, type(uint256).max, 0, 0, block.timestamp);
         rateLimits.setUnlimitedRateLimit(TEST_KEY1);
         _assertLimitData({
             key:         TEST_KEY1,
-            maxAmount:   type(uint256).max,
-            slope:       0,
-            lastAmount:  0,
-            lastUpdated: block.timestamp
-        });
-
-        // Variant5
-        vm.expectEmit(address(rateLimits));
-        emit RateLimitSet(_getKey(TEST_KEY1, asset1), type(uint256).max, 0, 0, block.timestamp);
-        rateLimits.setUnlimitedRateLimit(TEST_KEY1, asset1);
-        _assertLimitData({
-            key:         _getKey(TEST_KEY1, asset1),
             maxAmount:   type(uint256).max,
             slope:       0,
             lastAmount:  0,
@@ -198,27 +155,7 @@ contract RateLimitsTest is UnitTestBase {
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 5_000_000e18);
     }
 
-    function test_getCurrentRateLimit_assetVersion() public {
-        vm.prank(admin);
-        rateLimits.setRateLimit(TEST_KEY1, asset1, 5_000_000e18, uint256(1_000_000e18) / 1 days);
-
-        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1, asset1), 0);
-
-        skip(1 days);
-
-        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1, asset1), 999_999.9999999999999936e18);  // ~1m
-
-        skip(36 hours);
-
-        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1, asset1), 2_499_999.999999999999984e18);  // ~2.5m
-
-        skip(365 days);
-
-        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1, asset1), 5_000_000e18);
-    }
-
     function test_triggerRateLimit_unauthorizedAccount() public {
-        // Variant1
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
@@ -232,21 +169,6 @@ contract RateLimitsTest is UnitTestBase {
             CONTROLLER
         ));
         rateLimits.triggerRateLimit(TEST_KEY1, 100);
-
-        // Variant2
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            address(this),
-            CONTROLLER
-        ));
-        rateLimits.triggerRateLimit(TEST_KEY1, asset1, 100);
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSignature(
-            "AccessControlUnauthorizedAccount(address,bytes32)",
-            admin,
-            CONTROLLER
-        ));
-        rateLimits.triggerRateLimit(TEST_KEY1, asset1, 100);
     }
 
     function test_triggerRateLimit_emptyAmount() public {
@@ -346,10 +268,6 @@ contract RateLimitsTest is UnitTestBase {
         assertEq(d.slope,       slope);
         assertEq(d.lastAmount,  lastAmount);
         assertEq(d.lastUpdated, lastUpdated);
-    }
-
-    function _getKey(bytes32 key, address asset) internal pure returns (bytes32) {
-        return keccak256(abi.encode(key, asset));
     }
 
 }
