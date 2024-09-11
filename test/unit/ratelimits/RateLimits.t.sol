@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import "test/unit/UnitTestBase.t.sol";
 
-import { RateLimits } from "src/RateLimits.sol";
+import { RateLimits, IRateLimits } from "src/RateLimits.sol";
 
 contract RateLimitsTest is UnitTestBase {
 
@@ -11,7 +11,7 @@ contract RateLimitsTest is UnitTestBase {
         bytes32 indexed key,
         uint256 maxAmount,
         uint256 slope,
-        uint256 amount,
+        uint256 lastAmount,
         uint256 lastUpdated
     );
 
@@ -95,7 +95,7 @@ contract RateLimitsTest is UnitTestBase {
 
     function test_setRateLimit_invalidAmount_boundary() public {
         vm.startPrank(admin);
-        vm.expectRevert("RateLimits/invalid-amount");
+        vm.expectRevert("RateLimits/invalid-lastAmount");
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 1001, block.timestamp);  // Invalid as amount > maxAmount
 
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 1000, block.timestamp);
@@ -109,11 +109,11 @@ contract RateLimitsTest is UnitTestBase {
         vm.expectEmit(address(rateLimits));
         emit RateLimitSet(TEST_KEY1, 1000, 10, 0, block.timestamp);
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10);
-        _assertLimits({
+        _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   1000,
             slope:       10,
-            amount:      0,
+            lastAmount:  0,
             lastUpdated: block.timestamp
         });
 
@@ -121,11 +121,11 @@ contract RateLimitsTest is UnitTestBase {
         vm.expectEmit(address(rateLimits));
         emit RateLimitSet(_getKey(TEST_KEY1, asset1), 1000, 10, 0, block.timestamp);
         rateLimits.setRateLimit(TEST_KEY1, asset1, 1000, 10);
-        _assertLimits({
+        _assertLimitData({
             key:         _getKey(TEST_KEY1, asset1),
             maxAmount:   1000,
             slope:       10,
-            amount:      0,
+            lastAmount:  0,
             lastUpdated: block.timestamp
         });
         
@@ -133,11 +133,11 @@ contract RateLimitsTest is UnitTestBase {
         vm.expectEmit(address(rateLimits));
         emit RateLimitSet(TEST_KEY1, 1000, 10, 101, block.timestamp - 1);
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 101, block.timestamp - 1);
-        _assertLimits({
+        _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   1000,
             slope:       10,
-            amount:      101,
+            lastAmount:  101,
             lastUpdated: block.timestamp - 1
         });
 
@@ -145,11 +145,11 @@ contract RateLimitsTest is UnitTestBase {
         vm.expectEmit(address(rateLimits));
         emit RateLimitSet(TEST_KEY1, type(uint256).max, 0, 0, block.timestamp);
         rateLimits.setUnlimitedRateLimit(TEST_KEY1);
-        _assertLimits({
+        _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   type(uint256).max,
             slope:       0,
-            amount:      0,
+            lastAmount:  0,
             lastUpdated: block.timestamp
         });
 
@@ -157,11 +157,11 @@ contract RateLimitsTest is UnitTestBase {
         vm.expectEmit(address(rateLimits));
         emit RateLimitSet(_getKey(TEST_KEY1, asset1), type(uint256).max, 0, 0, block.timestamp);
         rateLimits.setUnlimitedRateLimit(TEST_KEY1, asset1);
-        _assertLimits({
+        _assertLimitData({
             key:         _getKey(TEST_KEY1, asset1),
             maxAmount:   type(uint256).max,
             slope:       0,
-            amount:      0,
+            lastAmount:  0,
             lastUpdated: block.timestamp
         });
     }
@@ -254,7 +254,7 @@ contract RateLimitsTest is UnitTestBase {
         rateLimits.setUnlimitedRateLimit(TEST_KEY1);
 
         vm.prank(controller);
-        vm.expectRevert("RateLimits/invalid-amount");
+        vm.expectRevert("RateLimits/invalid-amountToDecrease");
         rateLimits.triggerRateLimit(TEST_KEY1, 0);
     } 
 
@@ -267,7 +267,7 @@ contract RateLimitsTest is UnitTestBase {
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         rateLimits.triggerRateLimit(TEST_KEY1, 1);
 
-        vm.expectRevert("RateLimits/invalid-amount");
+        vm.expectRevert("RateLimits/invalid-amountToDecrease");
         rateLimits.triggerRateLimit(TEST_KEY1, 0);
     }
 
@@ -279,16 +279,13 @@ contract RateLimitsTest is UnitTestBase {
 
         // Unlimited does not update timestamp
         uint256 t = block.timestamp;
-        (,,, uint256 lastUpdated) = rateLimits.limits(TEST_KEY1);
-        assertEq(lastUpdated, block.timestamp);
+        assertEq(rateLimits.getData(TEST_KEY1).lastUpdated, block.timestamp);
         assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 100), type(uint256).max);
         skip(1 days);
-        (,,, lastUpdated) = rateLimits.limits(TEST_KEY1);
-        assertEq(lastUpdated, t);
+        assertEq(rateLimits.getData(TEST_KEY1).lastUpdated, t);
         assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 500_000_000e18), type(uint256).max);
         skip(1 days);
-        (,,, lastUpdated) = rateLimits.limits(TEST_KEY1);
-        assertEq(lastUpdated, t);
+        assertEq(rateLimits.getData(TEST_KEY1).lastUpdated, t);
     }
 
     function test_triggerRateLimit() public {
@@ -299,11 +296,11 @@ contract RateLimitsTest is UnitTestBase {
 
         vm.startPrank(controller);
 
-        _assertLimits({
+        _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   5_000_000e18,
             slope:       rate,
-            amount:      0,
+            lastAmount:  0,
             lastUpdated: block.timestamp
         });
 
@@ -311,11 +308,11 @@ contract RateLimitsTest is UnitTestBase {
         skip(1 days);
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 999_999.9999999999999936e18);
         assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 250_000e18), 749_999.9999999999999936e18);
-        _assertLimits({
+        _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   5_000_000e18,
             slope:       rate,
-            amount:      749_999.9999999999999936e18,
+            lastAmount:  749_999.9999999999999936e18,
             lastUpdated: block.timestamp
         });
 
@@ -323,32 +320,32 @@ contract RateLimitsTest is UnitTestBase {
         skip(2 days);
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 2_749_999.9999999999999808e18);
         assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 1_000_000e18), 1_749_999.9999999999999808e18);
-        _assertLimits({
+        _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   5_000_000e18,
             slope:       rate,
-            amount:      1_749_999.9999999999999808e18,
+            lastAmount:  1_749_999.9999999999999808e18,
             lastUpdated: block.timestamp
         });
 
         skip(365 days);
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 5_000_000e18);
         assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 5_000_000e18), 0);
-        _assertLimits({
+        _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   5_000_000e18,
             slope:       rate,
-            amount:      0,
+            lastAmount:  0,
             lastUpdated: block.timestamp
         });
     }
 
-    function _assertLimits(bytes32 key, uint256 maxAmount, uint256 slope, uint256 amount, uint256 lastUpdated) internal view {
-        (uint256 _maxAmount, uint256 _slope, uint256 _amount, uint256 _lastUpdated) = rateLimits.limits(key);
-        assertEq(_maxAmount,   maxAmount);
-        assertEq(_slope,       slope);
-        assertEq(_amount,      amount);
-        assertEq(_lastUpdated, lastUpdated);
+    function _assertLimitData(bytes32 key, uint256 maxAmount, uint256 slope, uint256 lastAmount, uint256 lastUpdated) internal view {
+        IRateLimits.RateLimitData memory d = rateLimits.getData(key);
+        assertEq(d.maxAmount,   maxAmount);
+        assertEq(d.slope,       slope);
+        assertEq(d.lastAmount,  lastAmount);
+        assertEq(d.lastUpdated, lastUpdated);
     }
 
     function _getKey(bytes32 key, address asset) internal pure returns (bytes32) {

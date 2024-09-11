@@ -13,7 +13,7 @@ contract RateLimits is IRateLimits, AccessControl {
 
     bytes32 public override constant CONTROLLER = keccak256("CONTROLLER");
 
-    mapping(bytes32 => RateLimit) public override limits;
+    mapping(bytes32 => RateLimitData) private _data;
 
     /**********************************************************************************************/
     /*** Initialization                                                                         ***/
@@ -33,22 +33,22 @@ contract RateLimits is IRateLimits, AccessControl {
         bytes32 key,
         uint256 maxAmount,
         uint256 slope,
-        uint256 amount,
+        uint256 lastAmount,
         uint256 lastUpdated
     )
         public override onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(lastUpdated <= block.timestamp,             "RateLimits/invalid-lastUpdated");
-        require(amount <= maxAmount, "RateLimits/invalid-amount");
+        require(lastAmount <= maxAmount,        "RateLimits/invalid-lastAmount");
+        require(lastUpdated <= block.timestamp, "RateLimits/invalid-lastUpdated");
 
-        limits[key] = RateLimit({
+        _data[key] = RateLimitData({
             maxAmount:   maxAmount,
             slope:       slope,
-            amount:      amount,
+            lastAmount:  lastAmount,
             lastUpdated: lastUpdated
         });
 
-        emit RateLimitSet(key, maxAmount, slope, amount, lastUpdated);
+        emit RateLimitSet(key, maxAmount, slope, lastAmount, lastUpdated);
     }
 
     function setRateLimit(
@@ -93,17 +93,21 @@ contract RateLimits is IRateLimits, AccessControl {
     /*** Getter Functions                                                                       ***/
     /**********************************************************************************************/
 
+    function getData(bytes32 key) public override view returns (RateLimitData memory) {
+        return _data[key];
+    }
+
     function getCurrentRateLimit(bytes32 key) public override view returns (uint256) {
-        RateLimit memory limit = limits[key];
+        RateLimitData memory d = _data[key];
 
         // Unlimited rate limit case
-        if (limit.maxAmount == type(uint256).max) {
+        if (d.maxAmount == type(uint256).max) {
             return type(uint256).max;
         }
 
         return _min(
-            limit.slope * (block.timestamp - limit.lastUpdated) + limit.amount,
-            limit.maxAmount
+            d.slope * (block.timestamp - d.lastUpdated) + d.lastAmount,
+            d.maxAmount
         );
     }
 
@@ -115,10 +119,10 @@ contract RateLimits is IRateLimits, AccessControl {
     /*** Controller functions                                                                   ***/
     /**********************************************************************************************/
 
-    function triggerRateLimit(bytes32 key, uint256 amount)
+    function triggerRateLimit(bytes32 key, uint256 amountToDecrease)
         public override onlyRole(CONTROLLER) returns (uint256 newLimit)
     {
-        require(amount > 0, "RateLimits/invalid-amount");
+        require(amountToDecrease > 0, "RateLimits/invalid-amountToDecrease");
 
         uint256 currentRateLimit = getCurrentRateLimit(key);
 
@@ -127,14 +131,14 @@ contract RateLimits is IRateLimits, AccessControl {
             return type(uint256).max;
         }
 
-        require(amount <= currentRateLimit, "RateLimits/rate-limit-exceeded");
+        require(amountToDecrease <= currentRateLimit, "RateLimits/rate-limit-exceeded");
 
-        RateLimit storage limit = limits[key];
+        RateLimitData storage d = _data[key];
 
-        limit.amount = newLimit = currentRateLimit - amount;
-        limit.lastUpdated = block.timestamp;
+        d.lastAmount = newLimit = currentRateLimit - amountToDecrease;
+        d.lastUpdated = block.timestamp;
 
-        emit RateLimitTriggered(key, amount, currentRateLimit, newLimit);
+        emit RateLimitTriggered(key, amountToDecrease, currentRateLimit, newLimit);
     }
 
     function triggerRateLimit(bytes32 key, address asset, uint256 amount)
