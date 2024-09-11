@@ -19,6 +19,11 @@ interface ICCTPLike {
         bytes32 mintRecipient,
         address burnToken
     ) external returns (uint64 nonce);
+    function localMinter() external view returns (ICCTPTokenMinterLike);
+}
+
+interface ICCTPTokenMinterLike {
+    function burnLimitsPerMessage(address) external view returns (uint256);
 }
 
 contract ForeignController is AccessControl {
@@ -135,19 +140,40 @@ contract ForeignController is AccessControl {
             abi.encodeCall(usdc.approve, (address(cctp), usdcAmount))
         );
 
-        // Send USDC to CCTP for bridging to destinationDomain
-        proxy.doCall(
-            address(cctp),
-            abi.encodeCall(
-                cctp.depositForBurn,
-                (
-                    usdcAmount,
-                    destinationDomain,
-                    mintRecipient,
-                    address(usdc)
+        // If amount is larger than limit we must break it up
+        uint256 burnLimit = cctp.localMinter().burnLimitsPerMessage(address(usdc));
+        while (usdcAmount > burnLimit) {
+            proxy.doCall(
+                address(cctp),
+                abi.encodeCall(
+                    cctp.depositForBurn,
+                    (
+                        burnLimit,
+                        destinationDomain,
+                        mintRecipient,
+                        address(usdc)
+                    )
                 )
-            )
-        );
+            );
+
+            usdcAmount -= burnLimit;
+        }
+
+        // Send remainder if any
+        if (usdcAmount > 0) {
+            proxy.doCall(
+                address(cctp),
+                abi.encodeCall(
+                    cctp.depositForBurn,
+                    (
+                        usdcAmount,
+                        destinationDomain,
+                        mintRecipient,
+                        address(usdc)
+                    )
+                )
+            );
+        }
     }
 
     /**********************************************************************************************/
