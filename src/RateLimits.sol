@@ -56,7 +56,7 @@ contract RateLimits is IRateLimits, AccessControl {
         uint256 maxAmount,
         uint256 slope
     )
-        public override
+        external override
     {
         setRateLimit(key, maxAmount, slope, 0, block.timestamp);
     }
@@ -64,7 +64,7 @@ contract RateLimits is IRateLimits, AccessControl {
     function setUnlimitedRateLimit(
         bytes32 key
     )
-        public override
+        external override
     {
         setRateLimit(key, type(uint256).max, 0, 0, block.timestamp);
     }
@@ -73,7 +73,7 @@ contract RateLimits is IRateLimits, AccessControl {
     /*** Getter Functions                                                                       ***/
     /**********************************************************************************************/
 
-    function getData(bytes32 key) public override view returns (RateLimitData memory) {
+    function getData(bytes32 key) external override view returns (RateLimitData memory) {
         return _data[key];
     }
 
@@ -96,7 +96,7 @@ contract RateLimits is IRateLimits, AccessControl {
     /**********************************************************************************************/
 
     function triggerRateLimit(bytes32 key, uint256 amountToDecrease)
-        public override onlyRole(CONTROLLER) returns (uint256 newLimit)
+        external override onlyRole(CONTROLLER) returns (uint256 newLimit)
     {
         require(amountToDecrease > 0, "RateLimits/invalid-amountToDecrease");
 
