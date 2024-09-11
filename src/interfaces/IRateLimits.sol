@@ -9,15 +9,13 @@ interface IRateLimits {
 
     /**
      * @dev Struct representing a rate limit.
-     *      The amount is calculated using the formula: `amount = slope * (block.timestamp - lastUpdated) + minAmount`.
-     * @param minAmount Minimum allowed amount.
+     *      The amount is calculated using the formula: `currentRateLimit = slope * (block.timestamp - lastUpdated) + amount`.
      * @param maxAmount Maximum allowed amount.
      * @param slope The slope of the rate limit, used to calculate the new limit based on time passed.
      * @param amount The current amount available based on the rate limit.
      * @param lastUpdated The timestamp when the rate limit was last updated.
      */
     struct RateLimit {
-        uint256 minAmount;
         uint256 maxAmount;
         uint256 slope;
         uint256 amount;
@@ -31,7 +29,6 @@ interface IRateLimits {
     /**
      * @dev Emitted when a rate limit is set.
      * @param key The identifier for the rate limit.
-     * @param minAmount The minimum allowed amount for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
      * @param amount The current amount available under the rate limit.
@@ -39,7 +36,6 @@ interface IRateLimits {
      */
     event RateLimitSet(
         bytes32 indexed key,
-        uint256 minAmount,
         uint256 maxAmount,
         uint256 slope,
         uint256 amount,
@@ -73,14 +69,12 @@ interface IRateLimits {
     /**
      * @dev Retrieves the RateLimit struct associated with a specific key.
      * @param key The identifier for the rate limit.
-     * @return minAmount Minimum allowed amount.
      * @return maxAmount Maximum allowed amount.
      * @return slope The slope of the rate limit, used to calculate the new limit based on time passed.
      * @return amount The current amount available based on the rate limit.
      * @return lastUpdated The timestamp when the rate limit was last updated.
      */
     function limits(bytes32 key) external view returns (
-        uint256 minAmount,
         uint256 maxAmount,
         uint256 slope,
         uint256 amount,
@@ -94,7 +88,6 @@ interface IRateLimits {
     /**
      * @dev Sets a rate limit for a specific key with the provided parameters, including the current amount and last update time.
      * @param key The identifier for the rate limit.
-     * @param minAmount The minimum allowed amount for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
      * @param amount The current amount available under the rate limit.
@@ -102,7 +95,6 @@ interface IRateLimits {
      */
     function setRateLimit(
         bytes32 key,
-        uint256 minAmount,
         uint256 maxAmount,
         uint256 slope,
         uint256 amount,
@@ -112,13 +104,11 @@ interface IRateLimits {
     /**
      * @dev Sets a rate limit for a specific key with the provided parameters.
      * @param key The identifier for the rate limit.
-     * @param minAmount The minimum allowed amount for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
      */
     function setRateLimit(
         bytes32 key,
-        uint256 minAmount,
         uint256 maxAmount,
         uint256 slope
     ) external;
@@ -127,14 +117,12 @@ interface IRateLimits {
      * @dev Sets a rate limit for a specific key with the provided parameters.
      * @param key The identifier for the rate limit.
      * @param asset The address of the asset to set the rate limit for.
-     * @param minAmount The minimum allowed amount for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
      */
     function setRateLimit(
         bytes32 key,
         address asset,
-        uint256 minAmount,
         uint256 maxAmount,
         uint256 slope
     ) external;

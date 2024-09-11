@@ -31,7 +31,6 @@ contract RateLimits is IRateLimits, AccessControl {
 
     function setRateLimit(
         bytes32 key,
-        uint256 minAmount,
         uint256 maxAmount,
         uint256 slope,
         uint256 amount,
@@ -39,42 +38,38 @@ contract RateLimits is IRateLimits, AccessControl {
     )
         public override onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(minAmount <= maxAmount,                     "RateLimits/invalid-minAmount-maxAmount");
         require(lastUpdated <= block.timestamp,             "RateLimits/invalid-lastUpdated");
-        require(amount >= minAmount && amount <= maxAmount, "RateLimits/invalid-amount");
+        require(amount <= maxAmount, "RateLimits/invalid-amount");
 
         limits[key] = RateLimit({
-            minAmount:   minAmount,
             maxAmount:   maxAmount,
             slope:       slope,
             amount:      amount,
             lastUpdated: lastUpdated
         });
 
-        emit RateLimitSet(key, minAmount, maxAmount, slope, amount, lastUpdated);
+        emit RateLimitSet(key, maxAmount, slope, amount, lastUpdated);
     }
 
     function setRateLimit(
         bytes32 key,
-        uint256 minAmount,
         uint256 maxAmount,
         uint256 slope
     )
         public override
     {
-        setRateLimit(key, minAmount, maxAmount, slope, minAmount, block.timestamp);
+        setRateLimit(key, maxAmount, slope, 0, block.timestamp);
     }
 
     function setRateLimit(
         bytes32 key,
         address asset,
-        uint256 minAmount,
         uint256 maxAmount,
         uint256 slope
     )
         external override
     {
-        setRateLimit(keccak256(abi.encode(key, asset)), minAmount, maxAmount, slope);
+        setRateLimit(keccak256(abi.encode(key, asset)), maxAmount, slope);
     }
 
     function setUnlimitedRateLimit(
@@ -82,7 +77,7 @@ contract RateLimits is IRateLimits, AccessControl {
     )
         public override
     {
-        setRateLimit(key, type(uint256).max, type(uint256).max, 0, type(uint256).max, block.timestamp);
+        setRateLimit(key, type(uint256).max, 0, 0, block.timestamp);
     }
 
     function setUnlimitedRateLimit(
@@ -102,7 +97,7 @@ contract RateLimits is IRateLimits, AccessControl {
         RateLimit memory limit = limits[key];
 
         // Unlimited rate limit case
-        if (limit.minAmount == type(uint256).max) {
+        if (limit.maxAmount == type(uint256).max) {
             return type(uint256).max;
         }
 
@@ -136,7 +131,7 @@ contract RateLimits is IRateLimits, AccessControl {
 
         RateLimit storage limit = limits[key];
 
-        limit.amount = newLimit = _max(currentRateLimit - amount, limit.minAmount);
+        limit.amount = newLimit = currentRateLimit - amount;
         limit.lastUpdated = block.timestamp;
 
         emit RateLimitTriggered(key, amount, currentRateLimit, newLimit);
@@ -151,10 +146,6 @@ contract RateLimits is IRateLimits, AccessControl {
     /**********************************************************************************************/
     /*** Internal Utility Functions                                                             ***/
     /**********************************************************************************************/
-
-    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a > b ? a : b;
-    }
 
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
