@@ -98,7 +98,9 @@ contract RateLimits is IRateLimits, AccessControl {
     function triggerRateLimit(bytes32 key, uint256 amountToDecrease)
         external override onlyRole(CONTROLLER) returns (uint256 newLimit)
     {
-        require(amountToDecrease > 0, "RateLimits/invalid-amountToDecrease");
+        RateLimitData storage d = _data[key];
+
+        require(d.maxAmount > 0, "RateLimits/zero-maxAmount");
 
         uint256 currentRateLimit = getCurrentRateLimit(key);
 
@@ -108,8 +110,6 @@ contract RateLimits is IRateLimits, AccessControl {
         }
 
         require(amountToDecrease <= currentRateLimit, "RateLimits/rate-limit-exceeded");
-
-        RateLimitData storage d = _data[key];
 
         d.lastAmount = newLimit = currentRateLimit - amountToDecrease;
         d.lastUpdated = block.timestamp;

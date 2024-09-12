@@ -12,8 +12,8 @@ interface IRateLimits {
      *      The current rate limit is calculated using the formula:
      *      `currentRateLimit = min(slope * (block.timestamp - lastUpdated) + lastAmount, maxAmount)`.
      * @param maxAmount Maximum allowed amount at any time.
-     * @param slope The slope of the rate limit, used to calculate the new limit based on time passed.
-     * @param lastAmount The amount available at the last update.
+     * @param slope The slope of the rate limit, used to calculate the new limit based on time passed. [tokens / second]
+     * @param lastAmount The amount left available at the last update.
      * @param lastUpdated The timestamp when the rate limit was last updated.
      */
     struct RateLimitData {
@@ -32,7 +32,7 @@ interface IRateLimits {
      * @param key The identifier for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
-     * @param lastAmount The amount available at the last update.
+     * @param lastAmount The amount left available at the last update.
      * @param lastUpdated The timestamp when the rate limit was last updated.
      */
     event RateLimitSet(
@@ -76,7 +76,7 @@ interface IRateLimits {
      * @param key The identifier for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
-     * @param lastAmount The amount available at the last update.
+     * @param lastAmount The amount left available at the last update.
      * @param lastUpdated The timestamp when the rate limit was last updated.
      */
     function setRateLimit(

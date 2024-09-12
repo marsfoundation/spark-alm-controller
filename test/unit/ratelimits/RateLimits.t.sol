@@ -171,25 +171,16 @@ contract RateLimitsTest is UnitTestBase {
         rateLimits.triggerRateLimit(TEST_KEY1, 100);
     }
 
-    function test_triggerRateLimit_emptyAmount() public {
-        vm.prank(admin);
-        rateLimits.setUnlimitedRateLimit(TEST_KEY1);
-
-        vm.prank(controller);
-        vm.expectRevert("RateLimits/invalid-amountToDecrease");
-        rateLimits.triggerRateLimit(TEST_KEY1, 0);
-    } 
-
     function test_triggerRateLimit_emptyRateLimit() public {
         vm.startPrank(controller);
 
-        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.expectRevert("RateLimits/zero-maxAmount");
         rateLimits.triggerRateLimit(TEST_KEY1, 100);
 
-        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.expectRevert("RateLimits/zero-maxAmount");
         rateLimits.triggerRateLimit(TEST_KEY1, 1);
 
-        vm.expectRevert("RateLimits/invalid-amountToDecrease");
+        vm.expectRevert("RateLimits/zero-maxAmount");
         rateLimits.triggerRateLimit(TEST_KEY1, 0);
     }
 
@@ -208,6 +199,35 @@ contract RateLimitsTest is UnitTestBase {
         assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 500_000_000e18), type(uint256).max);
         skip(1 days);
         assertEq(rateLimits.getData(TEST_KEY1).lastUpdated, t);
+    }
+
+    function test_triggerRateLimit_emptyAmount() public {
+        vm.prank(admin);
+        rateLimits.setRateLimit(TEST_KEY1, 100, 10);
+
+        uint256 t1 = block.timestamp;
+        uint256 t2 = block.timestamp + 3;
+
+        skip(3);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   100,
+            slope:       10,
+            lastAmount:  0,
+            lastUpdated: t1
+        });
+
+        vm.prank(controller);
+        rateLimits.triggerRateLimit(TEST_KEY1, 0);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   100,
+            slope:       10,
+            lastAmount:  30,
+            lastUpdated: t2
+        });
     }
 
     function test_triggerRateLimit() public {
