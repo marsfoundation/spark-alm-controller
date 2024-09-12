@@ -116,7 +116,7 @@ contract MainnetController is AccessControl {
     }
 
     modifier rateLimited(bytes32 key, uint256 amount) {
-        rateLimits.triggerRateLimit(key, amount);
+        rateLimits.triggerRateLimitDecrease(key, amount);
         _;
     }
 

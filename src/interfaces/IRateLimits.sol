@@ -46,13 +46,27 @@ interface IRateLimits {
     /**
      * @dev Emitted when a rate limit is triggered.
      * @param key The identifier for the rate limit.
-     * @param amountToDecrease The amount to decrease from the rate limit.
+     * @param amountToDecrease The amount to decrease from the current rate limit.
      * @param oldLimit The previous rate limit value before triggering.
      * @param newLimit The new rate limit value after triggering.
      */
-    event RateLimitTriggered(
+    event RateLimitDecreaseTriggered(
         bytes32 indexed key,
         uint256 amountToDecrease,
+        uint256 oldLimit,
+        uint256 newLimit
+    );
+
+    /**
+     * @dev Emitted when a rate limit is triggered.
+     * @param key The identifier for the rate limit.
+     * @param amountToIncrease The amount to increase from the current rate limit.
+     * @param oldLimit The previous rate limit value before triggering.
+     * @param newLimit The new rate limit value after triggering.
+     */
+    event RateLimitIncreaseTriggered(
+        bytes32 indexed key,
+        uint256 amountToIncrease,
         uint256 oldLimit,
         uint256 newLimit
     );
@@ -132,9 +146,17 @@ interface IRateLimits {
     /**
      * @dev Triggers the rate limit for a specific key and reduces the available amount by the provided value.
      * @param key The identifier for the rate limit.
-     * @param amountToDecrease The amount to decrease from the rate limit.
+     * @param amountToDecrease The amount to decrease from the current rate limit.
      * @return newLimit The updated rate limit after the deduction.
      */
-    function triggerRateLimit(bytes32 key, uint256 amountToDecrease) external returns (uint256 newLimit);
+    function triggerRateLimitDecrease(bytes32 key, uint256 amountToDecrease) external returns (uint256 newLimit);
+
+    /**
+     * @dev Increases the rate limit for a given key up to the maxAmount.
+     * @param key The identifier for the rate limit.
+     * @param amountToIncrease The amount to increase from the current rate limit.
+     * @return newLimit The updated rate limit after the addition.
+     */
+    function triggerRateLimitIncrease(bytes32 key, uint256 amountToIncrease) external returns (uint256 newLimit);
 
 }

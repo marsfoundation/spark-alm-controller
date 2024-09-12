@@ -15,6 +15,20 @@ contract RateLimitsTest is UnitTestBase {
         uint256 lastUpdated
     );
 
+    event RateLimitDecreaseTriggered(
+        bytes32 indexed key,
+        uint256 amountToDecrease,
+        uint256 oldLimit,
+        uint256 newLimit
+    );
+
+    event RateLimitIncreaseTriggered(
+        bytes32 indexed key,
+        uint256 amountToIncrease,
+        uint256 oldLimit,
+        uint256 newLimit
+    );
+
     bytes32 constant TEST_KEY1 = keccak256("TEST_KEY1");
 
     address controller = makeAddr("controller");
@@ -163,38 +177,38 @@ contract RateLimitsTest is UnitTestBase {
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 5_000_000e18);
     }
 
-    function test_triggerRateLimit_unauthorizedAccount() public {
+    function test_triggerRateLimitDecrease_unauthorizedAccount() public {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             CONTROLLER
         ));
-        rateLimits.triggerRateLimit(TEST_KEY1, 100);
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 100);
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             admin,
             CONTROLLER
         ));
-        rateLimits.triggerRateLimit(TEST_KEY1, 100);
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 100);
     }
 
-    function test_triggerRateLimit_emptyRateLimit() public {
+    function test_triggerRateLimitDecrease_emptyRateLimit() public {
         vm.startPrank(controller);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
-        rateLimits.triggerRateLimit(TEST_KEY1, 100);
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 100);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
-        rateLimits.triggerRateLimit(TEST_KEY1, 1);
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 1);
 
         vm.expectRevert("RateLimits/zero-maxAmount");
-        rateLimits.triggerRateLimit(TEST_KEY1, 0);
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 0);
         
         vm.stopPrank();
     }
 
-    function test_triggerRateLimit_unlimitedRateLimit() public {
+    function test_triggerRateLimitDecrease_unlimitedRateLimit() public {
         vm.prank(admin);
         rateLimits.setUnlimitedRateLimit(TEST_KEY1);
 
@@ -203,17 +217,17 @@ contract RateLimitsTest is UnitTestBase {
         // Unlimited does not update timestamp
         uint256 t = block.timestamp;
         assertEq(rateLimits.getData(TEST_KEY1).lastUpdated, block.timestamp);
-        assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 100), type(uint256).max);
+        assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, 100), type(uint256).max);
         skip(1 days);
         assertEq(rateLimits.getData(TEST_KEY1).lastUpdated, t);
-        assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 500_000_000e18), type(uint256).max);
+        assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, 500_000_000e18), type(uint256).max);
         skip(1 days);
         assertEq(rateLimits.getData(TEST_KEY1).lastUpdated, t);
         
         vm.stopPrank();
     }
 
-    function test_triggerRateLimit_emptyAmount() public {
+    function test_triggerRateLimitDecrease_emptyAmount() public {
         vm.prank(admin);
         rateLimits.setRateLimit(TEST_KEY1, 100, 10, 0, block.timestamp);
 
@@ -230,8 +244,10 @@ contract RateLimitsTest is UnitTestBase {
             lastUpdated: t1
         });
 
+        vm.expectEmit(address(rateLimits));
+        emit RateLimitDecreaseTriggered(TEST_KEY1, 0, 30, 30);
         vm.prank(controller);
-        rateLimits.triggerRateLimit(TEST_KEY1, 0);
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 0);
 
         _assertLimitData({
             key:         TEST_KEY1,
@@ -242,7 +258,7 @@ contract RateLimitsTest is UnitTestBase {
         });
     }
 
-    function test_triggerRateLimit() public {
+    function test_triggerRateLimitDecrease() public {
         uint256 rate = uint256(1_000_000e18) / 1 days;
 
         vm.prank(admin);
@@ -261,7 +277,9 @@ contract RateLimitsTest is UnitTestBase {
         // Use 250k and are left with ~750k left in the rate limit
         skip(1 days);
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 999_999.9999999999999936e18);
-        assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 250_000e18), 749_999.9999999999999936e18);
+        vm.expectEmit(address(rateLimits));
+        emit RateLimitDecreaseTriggered(TEST_KEY1, 250_000e18, 999_999.9999999999999936e18, 749_999.9999999999999936e18);
+        assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, 250_000e18), 749_999.9999999999999936e18);
         _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   5_000_000e18,
@@ -273,7 +291,7 @@ contract RateLimitsTest is UnitTestBase {
         // +2m in capacity for 2 days, but use another 1m means ~1.75m left
         skip(2 days);
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 2_749_999.9999999999999808e18);
-        assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 1_000_000e18), 1_749_999.9999999999999808e18);
+        assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, 1_000_000e18), 1_749_999.9999999999999808e18);
         _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   5_000_000e18,
@@ -284,7 +302,7 @@ contract RateLimitsTest is UnitTestBase {
 
         skip(365 days);
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 5_000_000e18);
-        assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 5_000_000e18), 0);
+        assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, 5_000_000e18), 0);
         _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   5_000_000e18,
@@ -296,15 +314,110 @@ contract RateLimitsTest is UnitTestBase {
         vm.stopPrank();
     }
 
-    function test_triggerRateLimit_amountToDecrease_upperBoundary() public {
+    function test_triggerRateLimitDecrease_amountToDecrease_upperBoundary() public {
         vm.prank(admin);
         rateLimits.setUnlimitedRateLimit(TEST_KEY1);
 
         vm.startPrank(controller);
 
         // This will short circuit due to the unlimited rate limit and never update any state or do calculations
-        assertEq(rateLimits.triggerRateLimit(TEST_KEY1, type(uint256).max), type(uint256).max);
-        assertEq(rateLimits.triggerRateLimit(TEST_KEY1, type(uint256).max - 1), type(uint256).max);
+        assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, type(uint256).max), type(uint256).max);
+        assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, type(uint256).max - 1), type(uint256).max);
+        
+        vm.stopPrank();
+    }
+
+    function test_triggerRateLimitIncrease_emptyRateLimit() public {
+        vm.startPrank(controller);
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 100);
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 1);
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 0);
+        
+        vm.stopPrank();
+    }
+
+    function test_triggerRateLimitIncrease() public {
+        vm.prank(admin);
+        rateLimits.setRateLimit(TEST_KEY1, 1000, 10);
+
+        vm.startPrank(controller);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   1000,
+            slope:       10,
+            lastAmount:  1000,
+            lastUpdated: block.timestamp
+        });
+
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 500);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   1000,
+            slope:       10,
+            lastAmount:  500,
+            lastUpdated: block.timestamp
+        });
+
+        // Over the limit
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 501);
+
+        // Free up some room
+        vm.expectEmit(address(rateLimits));
+        emit RateLimitIncreaseTriggered(TEST_KEY1, 1, 500, 501);
+        rateLimits.triggerRateLimitIncrease(TEST_KEY1, 1);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   1000,
+            slope:       10,
+            lastAmount:  501,
+            lastUpdated: block.timestamp
+        });
+
+        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 501);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   1000,
+            slope:       10,
+            lastAmount:  0,
+            lastUpdated: block.timestamp
+        });
+
+        // Release more than the maxAmount
+        vm.expectEmit(address(rateLimits));
+        emit RateLimitIncreaseTriggered(TEST_KEY1, 2000, 0, 1000);
+        rateLimits.triggerRateLimitIncrease(TEST_KEY1, 2000);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   1000,
+            slope:       10,
+            lastAmount:  1000,
+            lastUpdated: block.timestamp
+        });
+
+        vm.stopPrank();
+    }
+
+    function test_triggerRateLimitIncrease_amountToIncrease_upperBoundary() public {
+        vm.prank(admin);
+        rateLimits.setUnlimitedRateLimit(TEST_KEY1);
+
+        vm.startPrank(controller);
+
+        // This will short circuit due to the unlimited rate limit and never update any state or do calculations
+        assertEq(rateLimits.triggerRateLimitIncrease(TEST_KEY1, type(uint256).max), type(uint256).max);
+        assertEq(rateLimits.triggerRateLimitIncrease(TEST_KEY1, type(uint256).max - 1), type(uint256).max);
         
         vm.stopPrank();
     }

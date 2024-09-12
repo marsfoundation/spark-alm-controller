@@ -95,26 +95,40 @@ contract RateLimits is IRateLimits, AccessControl {
     /*** Controller functions                                                                   ***/
     /**********************************************************************************************/
 
-    function triggerRateLimit(bytes32 key, uint256 amountToDecrease)
+    function triggerRateLimitDecrease(bytes32 key, uint256 amountToDecrease)
         external override onlyRole(CONTROLLER) returns (uint256 newLimit)
     {
         RateLimitData storage d = _data[key];
+        uint256 maxAmount = d.maxAmount;
 
-        require(d.maxAmount > 0, "RateLimits/zero-maxAmount");
+        require(maxAmount > 0, "RateLimits/zero-maxAmount");
+        if (maxAmount == type(uint256).max) return type(uint256).max;  // Special case unlimited
 
         uint256 currentRateLimit = getCurrentRateLimit(key);
-
-        // Unlimited rate limit case
-        if (currentRateLimit == type(uint256).max) {
-            return type(uint256).max;
-        }
 
         require(amountToDecrease <= currentRateLimit, "RateLimits/rate-limit-exceeded");
 
         d.lastAmount = newLimit = currentRateLimit - amountToDecrease;
         d.lastUpdated = block.timestamp;
 
-        emit RateLimitTriggered(key, amountToDecrease, currentRateLimit, newLimit);
+        emit RateLimitDecreaseTriggered(key, amountToDecrease, currentRateLimit, newLimit);
+    }
+
+    function triggerRateLimitIncrease(bytes32 key, uint256 amountToIncrease)
+        external override onlyRole(CONTROLLER) returns (uint256 newLimit)
+    {
+        RateLimitData storage d = _data[key];
+        uint256 maxAmount = d.maxAmount;
+
+        require(maxAmount > 0, "RateLimits/zero-maxAmount");
+        if (maxAmount == type(uint256).max) return type(uint256).max;  // Special case unlimited
+
+        uint256 currentRateLimit = getCurrentRateLimit(key);
+
+        d.lastAmount = newLimit = _min(currentRateLimit + amountToIncrease, maxAmount);
+        d.lastUpdated = block.timestamp;
+
+        emit RateLimitIncreaseTriggered(key, amountToIncrease, currentRateLimit, newLimit);
     }
 
     /**********************************************************************************************/
