@@ -154,7 +154,7 @@ contract RateLimitsTest is UnitTestBase {
 
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 2_499_999.999999999999984e18);  // ~2.5m
 
-        skip(2.5 days);
+        skip(2.5 days + 1); // +1 for rounding
 
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 5_000_000e18);
 
