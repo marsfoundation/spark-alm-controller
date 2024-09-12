@@ -58,7 +58,7 @@ contract RateLimits is IRateLimits, AccessControl {
     )
         external override
     {
-        setRateLimit(key, maxAmount, slope, 0, block.timestamp);
+        setRateLimit(key, maxAmount, slope, maxAmount, block.timestamp);
     }
 
     function setUnlimitedRateLimit(
@@ -66,7 +66,7 @@ contract RateLimits is IRateLimits, AccessControl {
     )
         external override
     {
-        setRateLimit(key, type(uint256).max, 0, 0, block.timestamp);
+        setRateLimit(key, type(uint256).max, 0, type(uint256).max, block.timestamp);
     }
 
     /**********************************************************************************************/

@@ -90,13 +90,13 @@ contract RateLimitsTest is UnitTestBase {
 
         // Variant1
         vm.expectEmit(address(rateLimits));
-        emit RateLimitSet(TEST_KEY1, 1000, 10, 0, block.timestamp);
+        emit RateLimitSet(TEST_KEY1, 1000, 10, 1000, block.timestamp);
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10);
         _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   1000,
             slope:       10,
-            lastAmount:  0,
+            lastAmount:  1000,
             lastUpdated: block.timestamp
         });
         
@@ -114,13 +114,13 @@ contract RateLimitsTest is UnitTestBase {
 
         // Variant3
         vm.expectEmit(address(rateLimits));
-        emit RateLimitSet(TEST_KEY1, type(uint256).max, 0, 0, block.timestamp);
+        emit RateLimitSet(TEST_KEY1, type(uint256).max, 0, type(uint256).max, block.timestamp);
         rateLimits.setUnlimitedRateLimit(TEST_KEY1);
         _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   type(uint256).max,
             slope:       0,
-            lastAmount:  0,
+            lastAmount:  type(uint256).max,
             lastUpdated: block.timestamp
         });
 
@@ -142,7 +142,7 @@ contract RateLimitsTest is UnitTestBase {
 
     function test_getCurrentRateLimit() public {
         vm.prank(admin);
-        rateLimits.setRateLimit(TEST_KEY1, 5_000_000e18, uint256(1_000_000e18) / 1 days);
+        rateLimits.setRateLimit(TEST_KEY1, 5_000_000e18, uint256(1_000_000e18) / 1 days, 0, block.timestamp);
 
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 0);
 
@@ -215,7 +215,7 @@ contract RateLimitsTest is UnitTestBase {
 
     function test_triggerRateLimit_emptyAmount() public {
         vm.prank(admin);
-        rateLimits.setRateLimit(TEST_KEY1, 100, 10);
+        rateLimits.setRateLimit(TEST_KEY1, 100, 10, 0, block.timestamp);
 
         uint256 t1 = block.timestamp;
         uint256 t2 = block.timestamp + 3;
@@ -246,7 +246,7 @@ contract RateLimitsTest is UnitTestBase {
         uint256 rate = uint256(1_000_000e18) / 1 days;
 
         vm.prank(admin);
-        rateLimits.setRateLimit(TEST_KEY1, 5_000_000e18, rate);
+        rateLimits.setRateLimit(TEST_KEY1, 5_000_000e18, rate, 0, block.timestamp);
 
         vm.startPrank(controller);
 
