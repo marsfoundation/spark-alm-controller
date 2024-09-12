@@ -301,37 +301,30 @@ contract MainnetController is AccessControl {
         // If amount is larger than limit we must break it up
         uint256 burnLimit = cctp.localMinter().burnLimitsPerMessage(address(usdc));
         while (usdcAmount > burnLimit) {
-            proxy.doCall(
-                address(cctp),
-                abi.encodeCall(
-                    cctp.depositForBurn,
-                    (
-                        burnLimit,
-                        destinationDomain,
-                        mintRecipient,
-                        address(usdc)
-                    )
-                )
-            );
+            _initiateCCTPTransfer(burnLimit, destinationDomain, mintRecipient);
 
             usdcAmount -= burnLimit;
         }
 
         // Send remainder if any
         if (usdcAmount > 0) {
-            proxy.doCall(
-                address(cctp),
-                abi.encodeCall(
-                    cctp.depositForBurn,
-                    (
-                        usdcAmount,
-                        destinationDomain,
-                        mintRecipient,
-                        address(usdc)
-                    )
-                )
-            );
+            _initiateCCTPTransfer(usdcAmount, destinationDomain, mintRecipient);
         }
+    }
+
+    function _initiateCCTPTransfer(uint256 usdcAmount, uint32 destinationDomain, bytes32 mintRecipient) internal {
+        proxy.doCall(
+            address(cctp),
+            abi.encodeCall(
+                cctp.depositForBurn,
+                (
+                    usdcAmount,
+                    destinationDomain,
+                    mintRecipient,
+                    address(usdc)
+                )
+            )
+        );
     }
 
 }
