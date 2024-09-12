@@ -12,19 +12,7 @@ import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
 import { RateLimitHelpers } from "src/RateLimits.sol";
 
-interface ICCTPLike {
-    function depositForBurn(
-        uint256 amount,
-        uint32 destinationDomain,
-        bytes32 mintRecipient,
-        address burnToken
-    ) external returns (uint64 nonce);
-    function localMinter() external view returns (ICCTPTokenMinterLike);
-}
-
-interface ICCTPTokenMinterLike {
-    function burnLimitsPerMessage(address) external view returns (uint256);
-}
+import { ICCTPLike } from "src/interfaces/CCTPInterfaces.sol";
 
 contract ForeignController is AccessControl {
 

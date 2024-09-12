@@ -9,19 +9,7 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
-interface ICCTPLike {
-    function depositForBurn(
-        uint256 amount,
-        uint32 destinationDomain,
-        bytes32 mintRecipient,
-        address burnToken
-    ) external returns (uint64 nonce);
-    function localMinter() external view returns (ICCTPTokenMinterLike);
-}
-
-interface ICCTPTokenMinterLike {
-    function burnLimitsPerMessage(address) external view returns (uint256);
-}
+import { ICCTPLike } from "src/interfaces/CCTPInterfaces.sol";
 
 interface IDaiUsdsLike {
     function dai() external view returns(address);
