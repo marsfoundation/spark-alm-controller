@@ -296,6 +296,19 @@ contract RateLimitsTest is UnitTestBase {
         vm.stopPrank();
     }
 
+    function test_triggerRateLimit_amountToDecrease_upperBoundary() public {
+        vm.prank(admin);
+        rateLimits.setUnlimitedRateLimit(TEST_KEY1);
+
+        vm.startPrank(controller);
+
+        // This will short circuit due to the unlimited rate limit and never update any state or do calculations
+        assertEq(rateLimits.triggerRateLimit(TEST_KEY1, type(uint256).max), type(uint256).max);
+        assertEq(rateLimits.triggerRateLimit(TEST_KEY1, type(uint256).max - 1), type(uint256).max);
+        
+        vm.stopPrank();
+    }
+
     function _assertLimitData(bytes32 key, uint256 maxAmount, uint256 slope, uint256 lastAmount, uint256 lastUpdated) internal view {
         IRateLimits.RateLimitData memory d = rateLimits.getData(key);
         assertEq(d.maxAmount,   maxAmount);
