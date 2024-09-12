@@ -234,9 +234,7 @@ contract ForkTestBase is DssTest {
 
         // Setup unlimited rate limits
         rateLimits.setUnlimitedRateLimit(mainnetController.LIMIT_USDS_MINT());
-        rateLimits.setUnlimitedRateLimit(mainnetController.LIMIT_USDS_BURN());
         rateLimits.setUnlimitedRateLimit(mainnetController.LIMIT_USDS_TO_USDC());
-        rateLimits.setUnlimitedRateLimit(mainnetController.LIMIT_USDC_TO_USDS());
         rateLimits.setUnlimitedRateLimit(mainnetController.LIMIT_USDC_TO_CCTP());
 
         IBufferLike(ilkInst.buffer).approve(usdsInst.usds, address(almProxy), type(uint256).max);

@@ -50,9 +50,7 @@ contract MainnetController is AccessControl {
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
     bytes32 public constant LIMIT_USDS_MINT    = keccak256("LIMIT_USDS_MINT");
-    bytes32 public constant LIMIT_USDS_BURN    = keccak256("LIMIT_USDS_BURN");
     bytes32 public constant LIMIT_USDS_TO_USDC = keccak256("LIMIT_USDS_TO_USDC");
-    bytes32 public constant LIMIT_USDC_TO_USDS = keccak256("LIMIT_USDC_TO_USDS");
     bytes32 public constant LIMIT_USDC_TO_CCTP = keccak256("LIMIT_USDC_TO_CCTP");
 
     address public immutable buffer;
@@ -120,6 +118,11 @@ contract MainnetController is AccessControl {
         _;
     }
 
+    modifier cancelRateLimit(bytes32 key, uint256 amount) {
+        rateLimits.triggerRateLimitIncrease(key, amount);
+        _;
+    }
+
     /**********************************************************************************************/
     /*** Admin functions                                                                        ***/
     /**********************************************************************************************/
@@ -160,7 +163,7 @@ contract MainnetController is AccessControl {
         );
     }
 
-    function burnUSDS(uint256 usdsAmount) external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDS_BURN, usdsAmount) {
+    function burnUSDS(uint256 usdsAmount) external onlyRole(RELAYER) isActive cancelRateLimit(LIMIT_USDS_MINT, usdsAmount) {
         // Transfer USDS from the proxy to the buffer
         proxy.doCall(
             address(usds),
@@ -257,7 +260,7 @@ contract MainnetController is AccessControl {
         );
     }
 
-    function swapUSDCToUSDS(uint256 usdcAmount) external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDC_TO_USDS, usdcAmount) {
+    function swapUSDCToUSDS(uint256 usdcAmount) external onlyRole(RELAYER) isActive cancelRateLimit(LIMIT_USDS_TO_USDC, usdcAmount) {
         uint256 usdsAmount = usdcAmount * psm.to18ConversionFactor();
 
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
