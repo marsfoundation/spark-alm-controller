@@ -92,12 +92,12 @@ contract ForeignController is AccessControl {
     }
 
     modifier rateLimited(bytes32 key, uint256 amount) {
-        rateLimits.triggerRateLimit(key, amount);
+        rateLimits.triggerRateLimitDecrease(key, amount);
         _;
     }
 
     modifier rateLimitedAsset(bytes32 key, address asset, uint256 amount) {
-        rateLimits.triggerRateLimit(RateLimitHelpers.makeAssetKey(key, asset), amount);
+        rateLimits.triggerRateLimitDecrease(RateLimitHelpers.makeAssetKey(key, asset), amount);
         _;
     }
 
@@ -202,6 +202,7 @@ contract ForeignController is AccessControl {
         );
     }
 
+    // NOTE: !!! Rate limited at end of function !!!
     function withdrawPSM(address asset, uint256 maxAmount)
         external onlyRole(RELAYER) isActive returns (uint256 assetsWithdrawn)
     {
@@ -218,7 +219,7 @@ contract ForeignController is AccessControl {
             (uint256)
         );
 
-        rateLimits.triggerRateLimit(RateLimitHelpers.makeAssetKey(LIMIT_PSM_WITHDRAW, asset), assetsWithdrawn);
+        rateLimits.triggerRateLimitDecrease(RateLimitHelpers.makeAssetKey(LIMIT_PSM_WITHDRAW, asset), assetsWithdrawn);
     }
 
 }

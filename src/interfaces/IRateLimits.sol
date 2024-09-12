@@ -11,9 +11,9 @@ interface IRateLimits {
      * @dev Struct representing a rate limit.
      *      The current rate limit is calculated using the formula:
      *      `currentRateLimit = min(slope * (block.timestamp - lastUpdated) + lastAmount, maxAmount)`.
-     * @param maxAmount Maximum allowed amount.
-     * @param slope The slope of the rate limit, used to calculate the new limit based on time passed.
-     * @param lastAmount The amount available at the last update.
+     * @param maxAmount Maximum allowed amount at any time.
+     * @param slope The slope of the rate limit, used to calculate the new limit based on time passed. [tokens / second]
+     * @param lastAmount The amount left available at the last update.
      * @param lastUpdated The timestamp when the rate limit was last updated.
      */
     struct RateLimitData {
@@ -32,7 +32,7 @@ interface IRateLimits {
      * @param key The identifier for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
-     * @param lastAmount The amount available at the last update.
+     * @param lastAmount The amount left available at the last update.
      * @param lastUpdated The timestamp when the rate limit was last updated.
      */
     event RateLimitSet(
@@ -46,13 +46,27 @@ interface IRateLimits {
     /**
      * @dev Emitted when a rate limit is triggered.
      * @param key The identifier for the rate limit.
-     * @param amountToDecrease The amount to decrease from the rate limit.
+     * @param amountToDecrease The amount to decrease from the current rate limit.
      * @param oldLimit The previous rate limit value before triggering.
      * @param newLimit The new rate limit value after triggering.
      */
-    event RateLimitTriggered(
+    event RateLimitDecreaseTriggered(
         bytes32 indexed key,
         uint256 amountToDecrease,
+        uint256 oldLimit,
+        uint256 newLimit
+    );
+
+    /**
+     * @dev Emitted when a rate limit is triggered.
+     * @param key The identifier for the rate limit.
+     * @param amountToIncrease The amount to increase from the current rate limit.
+     * @param oldLimit The previous rate limit value before triggering.
+     * @param newLimit The new rate limit value after triggering.
+     */
+    event RateLimitIncreaseTriggered(
+        bytes32 indexed key,
+        uint256 amountToIncrease,
         uint256 oldLimit,
         uint256 newLimit
     );
@@ -76,7 +90,7 @@ interface IRateLimits {
      * @param key The identifier for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
-     * @param lastAmount The amount available at the last update.
+     * @param lastAmount The amount left available at the last update.
      * @param lastUpdated The timestamp when the rate limit was last updated.
      */
     function setRateLimit(
@@ -132,9 +146,17 @@ interface IRateLimits {
     /**
      * @dev Triggers the rate limit for a specific key and reduces the available amount by the provided value.
      * @param key The identifier for the rate limit.
-     * @param amountToDecrease The amount to decrease from the rate limit.
+     * @param amountToDecrease The amount to decrease from the current rate limit.
      * @return newLimit The updated rate limit after the deduction.
      */
-    function triggerRateLimit(bytes32 key, uint256 amountToDecrease) external returns (uint256 newLimit);
+    function triggerRateLimitDecrease(bytes32 key, uint256 amountToDecrease) external returns (uint256 newLimit);
+
+    /**
+     * @dev Increases the rate limit for a given key up to the maxAmount.
+     * @param key The identifier for the rate limit.
+     * @param amountToIncrease The amount to increase from the current rate limit.
+     * @return newLimit The updated rate limit after the addition.
+     */
+    function triggerRateLimitIncrease(bytes32 key, uint256 amountToIncrease) external returns (uint256 newLimit);
 
 }
