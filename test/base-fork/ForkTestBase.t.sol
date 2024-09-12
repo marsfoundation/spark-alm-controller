@@ -109,14 +109,13 @@ contract ForkTestBase is Test {
 
         rateLimits.grantRole(CONTROLLER, address(foreignController));
 
-        // Setup unlimited rate limits
-        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_USDC_TO_CCTP());
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase)));
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase)));
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase)));
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase)));
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase)));
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase)));
+        // Setup rate limits
+        rateLimits.setRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase)), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
+        rateLimits.setRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase)), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
+        rateLimits.setRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
 
         vm.stopPrank();
     }

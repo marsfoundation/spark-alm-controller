@@ -133,14 +133,8 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
         foreignRateLimits.grantRole(CONTROLLER, address(foreignController));
 
-        // Setup unlimited rate limits
+        // Setup rate limits
         foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_USDC_TO_CCTP());
-        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase)));
-        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase)));
-        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase)));
-        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase)));
-        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase)));
-        foreignRateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase)));
 
         vm.stopPrank();
 
