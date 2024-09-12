@@ -11,7 +11,7 @@ interface IRateLimits {
      * @dev Struct representing a rate limit.
      *      The current rate limit is calculated using the formula:
      *      `currentRateLimit = min(slope * (block.timestamp - lastUpdated) + lastAmount, maxAmount)`.
-     * @param maxAmount Maximum allowed amount.
+     * @param maxAmount Maximum allowed amount at any time.
      * @param slope The slope of the rate limit, used to calculate the new limit based on time passed.
      * @param lastAmount The amount available at the last update.
      * @param lastUpdated The timestamp when the rate limit was last updated.
