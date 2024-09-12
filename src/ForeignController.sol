@@ -176,6 +176,7 @@ contract ForeignController is AccessControl {
         );
     }
 
+    // NOTE: !!! Rate limited at end of function !!!
     function withdrawPSM(address asset, uint256 maxAmount)
         external onlyRole(RELAYER) isActive returns (uint256 assetsWithdrawn)
     {
