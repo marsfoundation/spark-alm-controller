@@ -72,6 +72,7 @@ contract RateLimitsTest is UnitTestBase {
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 100, block.timestamp + 1);  // Invalid as lastUpdated > block.timestamp
 
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 100, block.timestamp);
+        vm.stopPrank();
     }
 
     function test_setRateLimit_invalidAmount_boundary() public {
@@ -80,6 +81,7 @@ contract RateLimitsTest is UnitTestBase {
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 1001, block.timestamp);  // Invalid as amount > maxAmount
 
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 1000, block.timestamp);
+        vm.stopPrank();
     }
 
     // Test setting rate limits as the admin
@@ -121,6 +123,8 @@ contract RateLimitsTest is UnitTestBase {
             lastAmount:  0,
             lastUpdated: block.timestamp
         });
+
+        vm.stopPrank();
     }
 
     function test_getCurrentRateLimit_empty() public view {
@@ -149,6 +153,10 @@ contract RateLimitsTest is UnitTestBase {
         skip(36 hours);
 
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 2_499_999.999999999999984e18);  // ~2.5m
+
+        skip(2.5 days);
+
+        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 5_000_000e18);
 
         skip(365 days);
 
@@ -182,6 +190,8 @@ contract RateLimitsTest is UnitTestBase {
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         rateLimits.triggerRateLimit(TEST_KEY1, 0);
+        
+        vm.stopPrank();
     }
 
     function test_triggerRateLimit_unlimitedRateLimit() public {
@@ -199,6 +209,8 @@ contract RateLimitsTest is UnitTestBase {
         assertEq(rateLimits.triggerRateLimit(TEST_KEY1, 500_000_000e18), type(uint256).max);
         skip(1 days);
         assertEq(rateLimits.getData(TEST_KEY1).lastUpdated, t);
+        
+        vm.stopPrank();
     }
 
     function test_triggerRateLimit_emptyAmount() public {
@@ -280,6 +292,8 @@ contract RateLimitsTest is UnitTestBase {
             lastAmount:  0,
             lastUpdated: block.timestamp
         });
+        
+        vm.stopPrank();
     }
 
     function _assertLimitData(bytes32 key, uint256 maxAmount, uint256 slope, uint256 lastAmount, uint256 lastUpdated) internal view {
