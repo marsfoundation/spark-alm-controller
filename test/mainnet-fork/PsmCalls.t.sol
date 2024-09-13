@@ -68,13 +68,14 @@ contract MainnetControllerSwapUSDSToUSDCTests is ForkTestBase {
     }
 
     function test_swapUSDSToUSDC_rateLimited() external {
+        vm.startPrank(SPARK_PROXY);
+        rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDS_MINT());
+        vm.stopPrank();
+
         bytes32 key = mainnetController.LIMIT_USDS_TO_USDC();
         vm.startPrank(relayer);
 
-        // Rate limited so split this in two
-        mainnetController.mintUSDS(5_000_000e18);
-        skip(1 days);
-        mainnetController.mintUSDS(4_000_000e18);
+        mainnetController.mintUSDS(9_000_000e18);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
         assertEq(usds.balanceOf(address(almProxy)),   9_000_000e18);
