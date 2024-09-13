@@ -25,6 +25,7 @@ contract MainnetControllerAdminTests is UnitTestBase {
         mainnetController = new MainnetController(
             admin,
             makeAddr("almProxy"),
+            makeAddr("rateLimits"),
             makeAddr("vault"),
             makeAddr("buffer"),
             address(psm),
@@ -84,6 +85,7 @@ contract ForeignControllerAdminTests is UnitTestBase {
         foreignController = new ForeignController(
             admin,
             makeAddr("almProxy"),
+            makeAddr("rateLimits"),
             makeAddr("psm"),
             makeAddr("usds"),
             makeAddr("usdc"),
