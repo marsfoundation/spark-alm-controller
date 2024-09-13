@@ -12,14 +12,7 @@ import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
 import { RateLimitHelpers } from "src/RateLimits.sol";
 
-interface ICCTPLike {
-    function depositForBurn(
-        uint256 amount,
-        uint32 destinationDomain,
-        bytes32 mintRecipient,
-        address burnToken
-    ) external returns (uint64 nonce);
-}
+import { ICCTPLike } from "src/interfaces/CCTPInterfaces.sol";
 
 contract ForeignController is AccessControl {
 
@@ -135,7 +128,21 @@ contract ForeignController is AccessControl {
             abi.encodeCall(usdc.approve, (address(cctp), usdcAmount))
         );
 
-        // Send USDC to CCTP for bridging to destinationDomain
+        // If amount is larger than limit we must break it up
+        uint256 burnLimit = cctp.localMinter().burnLimitsPerMessage(address(usdc));
+        while (usdcAmount > burnLimit) {
+            _initiateCCTPTransfer(burnLimit, destinationDomain, mintRecipient);
+
+            usdcAmount -= burnLimit;
+        }
+
+        // Send remainder if any
+        if (usdcAmount > 0) {
+            _initiateCCTPTransfer(usdcAmount, destinationDomain, mintRecipient);
+        }
+    }
+
+    function _initiateCCTPTransfer(uint256 usdcAmount, uint32 destinationDomain, bytes32 mintRecipient) internal {
         proxy.doCall(
             address(cctp),
             abi.encodeCall(
