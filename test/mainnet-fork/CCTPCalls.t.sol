@@ -219,18 +219,9 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
 
         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
-        // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
-        //       for assertions
-        vm.expectEmit(CCTP_MESSENGER);
-        emit DepositForBurn(
+        _expectEthereumCCTPEmit(
             94773,
-            address(usdc),
-            1e6,
-            address(almProxy),
-            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            bytes32(0x0000000000000000000000001682ae6375c4e4a97e4b583bc394c861a46d8962),
-            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
+            1e6
         );
 
         vm.prank(relayer);
@@ -255,6 +246,51 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY + 1e6);
     }
 
+    function test_transferUSDCToCCTP_sourceToDestination_bigTransfer() external {
+        deal(address(usdc), address(almProxy), 2_900_000e6);
+
+        assertEq(usdc.balanceOf(address(almProxy)),          2_900_000e6);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
+
+        assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
+
+        // Will split into 3 separate transactions at max 1m each
+        _expectEthereumCCTPEmit(
+            94773,
+            1_000_000e6
+        );
+        _expectEthereumCCTPEmit(
+            94774,
+            1_000_000e6
+        );
+        _expectEthereumCCTPEmit(
+            94775,
+            900_000e6
+        );
+
+        vm.prank(relayer);
+        mainnetController.transferUSDCToCCTP(2_900_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+
+        assertEq(usdc.balanceOf(address(almProxy)),          0);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 2_900_000e6);
+
+        assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
+
+        destination.selectFork();
+
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   0);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY);
+
+        bridge.relayMessagesToDestination(true);
+
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   2_900_000e6);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY + 2_900_000e6);
+    }
+
     function test_transferUSDCToCCTP_destinationToSource() external {
         destination.selectFork();
 
@@ -266,18 +302,9 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
 
         assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
-        // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
-        //       for assertions
-        vm.expectEmit(CCTP_MESSENGER_BASE);
-        emit DepositForBurn(
+        _expectBaseCCTPEmit(
             255141,
-            address(usdcBase),
-            1e6,
-            address(foreignAlmProxy),
-            foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-            bytes32(0x000000000000000000000000bd3fa81b58ba92a82136038b25adec7066af3155),
-            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
+            1e6
         );
 
         vm.prank(relayer);
@@ -300,6 +327,85 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usdc.balanceOf(address(almProxy)),          1e6);
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
         assertEq(usdc.totalSupply(),                         USDC_SUPPLY + 1e6);
+    }
+
+    function test_transferUSDCToCCTP_destinationToSource_bigTransfer() external {
+        destination.selectFork();
+
+        deal(address(usdcBase), address(foreignAlmProxy), 2_600_000e6);
+
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   2_600_000e6);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY);
+
+        assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
+
+        // Will split into three separate transactions at max 1m each
+        _expectBaseCCTPEmit(
+            255141,
+            1_000_000e6
+        );
+        _expectBaseCCTPEmit(
+            255142,
+            1_000_000e6
+        );
+        _expectBaseCCTPEmit(
+            255143,
+            600_000e6
+        );
+
+        vm.prank(relayer);
+        foreignController.transferUSDCToCCTP(2_600_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   0);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY - 2_600_000e6);
+
+        assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
+
+        source.selectFork();
+
+        assertEq(usdc.balanceOf(address(almProxy)),          0);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
+
+        bridge.relayMessagesToSource(true);
+
+        assertEq(usdc.balanceOf(address(almProxy)),          2_600_000e6);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY + 2_600_000e6);
+    }
+
+    function _expectEthereumCCTPEmit(uint64 nonce, uint256 amount) internal {
+        // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
+        //       for assertions
+        vm.expectEmit(CCTP_MESSENGER);
+        emit DepositForBurn(
+            nonce,
+            address(usdc),
+            amount,
+            address(almProxy),
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(0x0000000000000000000000001682ae6375c4e4a97e4b583bc394c861a46d8962),
+            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
+        );
+    }
+
+    function _expectBaseCCTPEmit(uint64 nonce, uint256 amount) internal {
+        // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
+        //       for assertions
+        vm.expectEmit(CCTP_MESSENGER_BASE);
+        emit DepositForBurn(
+            nonce,
+            address(usdcBase),
+            amount,
+            address(foreignAlmProxy),
+            foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            bytes32(0x000000000000000000000000bd3fa81b58ba92a82136038b25adec7066af3155),
+            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
+        );
     }
 
 }
