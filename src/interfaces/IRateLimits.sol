@@ -28,14 +28,14 @@ interface IRateLimits {
     /**********************************************************************************************/
 
     /**
-     * @dev Emitted when a rate limit is set.
+     * @dev Emitted when the rate limit data is set.
      * @param key The identifier for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
      * @param lastAmount The amount left available at the last update.
      * @param lastUpdated The timestamp when the rate limit was last updated.
      */
-    event RateLimitSet(
+    event RateLimitDataSet(
         bytes32 indexed key,
         uint256 maxAmount,
         uint256 slope,

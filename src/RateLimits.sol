@@ -48,7 +48,7 @@ contract RateLimits is IRateLimits, AccessControl {
             lastUpdated: lastUpdated
         });
 
-        emit RateLimitSet(key, maxAmount, slope, lastAmount, lastUpdated);
+        emit RateLimitDataSet(key, maxAmount, slope, lastAmount, lastUpdated);
     }
 
     function setRateLimit(

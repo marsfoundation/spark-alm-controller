@@ -7,7 +7,7 @@ import { RateLimits, IRateLimits } from "src/RateLimits.sol";
 
 contract RateLimitsTest is UnitTestBase {
 
-    event RateLimitSet(
+    event RateLimitDataSet(
         bytes32 indexed key,
         uint256 maxAmount,
         uint256 slope,
@@ -104,7 +104,7 @@ contract RateLimitsTest is UnitTestBase {
 
         // Variant1
         vm.expectEmit(address(rateLimits));
-        emit RateLimitSet(TEST_KEY1, 1000, 10, 1000, block.timestamp);
+        emit RateLimitDataSet(TEST_KEY1, 1000, 10, 1000, block.timestamp);
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10);
         _assertLimitData({
             key:         TEST_KEY1,
@@ -116,7 +116,7 @@ contract RateLimitsTest is UnitTestBase {
         
         // Variant2
         vm.expectEmit(address(rateLimits));
-        emit RateLimitSet(TEST_KEY1, 1000, 10, 101, block.timestamp - 1);
+        emit RateLimitDataSet(TEST_KEY1, 1000, 10, 101, block.timestamp - 1);
         rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 101, block.timestamp - 1);
         _assertLimitData({
             key:         TEST_KEY1,
@@ -128,7 +128,7 @@ contract RateLimitsTest is UnitTestBase {
 
         // Variant3
         vm.expectEmit(address(rateLimits));
-        emit RateLimitSet(TEST_KEY1, type(uint256).max, 0, type(uint256).max, block.timestamp);
+        emit RateLimitDataSet(TEST_KEY1, type(uint256).max, 0, type(uint256).max, block.timestamp);
         rateLimits.setUnlimitedRateLimit(TEST_KEY1);
         _assertLimitData({
             key:         TEST_KEY1,
