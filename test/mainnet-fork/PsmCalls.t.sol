@@ -179,18 +179,27 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         mainnetController.swapUSDSToUSDC(1_000_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 4_000_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   4_000_000e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   1_000_000e6);
+
 
         mainnetController.swapUSDCToUSDS(400_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 4_400_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   4_400_000e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   600_000e6);
 
         skip(4 hours);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   4_400_000e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   600_000e6);
 
         mainnetController.swapUSDCToUSDS(600_000e6);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   5_000_000e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   0);
 
         vm.stopPrank();
     }

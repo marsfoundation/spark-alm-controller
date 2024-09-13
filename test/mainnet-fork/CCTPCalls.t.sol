@@ -134,7 +134,7 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
         foreignRateLimits.grantRole(CONTROLLER, address(foreignController));
 
         // Setup rate limits
-        foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
+        foreignRateLimits.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
 
         vm.stopPrank();
 
@@ -285,6 +285,41 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY + 2_900_000e6);
     }
 
+    function test_transferUSDCToCCTP_sourceToDestination_rateLimited() external {
+        bytes32 key = mainnetController.LIMIT_USDC_TO_CCTP();
+        deal(address(usdc), address(almProxy), 9_000_000e6);
+
+        vm.startPrank(relayer);
+
+        assertEq(usdc.balanceOf(address(almProxy)),   9_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
+
+        mainnetController.transferUSDCToCCTP(2_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+
+        assertEq(usdc.balanceOf(address(almProxy)),   7_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 3_000_000e6);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.transferUSDCToCCTP(3_000_001e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+
+        mainnetController.transferUSDCToCCTP(3_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+
+        assertEq(usdc.balanceOf(address(almProxy)),   4_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 0);
+
+        skip(4 hours);
+
+        assertEq(usdc.balanceOf(address(almProxy)),   4_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 999_999.9936e6);
+
+        mainnetController.transferUSDCToCCTP(999_999.9936e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+
+        assertEq(usdc.balanceOf(address(almProxy)),   3_000_000.0064e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 0);
+
+        vm.stopPrank();
+    }
+
     function test_transferUSDCToCCTP_destinationToSource() external {
         destination.selectFork();
 
@@ -368,6 +403,43 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usdc.balanceOf(address(almProxy)),          2_600_000e6);
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
         assertEq(usdc.totalSupply(),                         USDC_SUPPLY + 2_600_000e6);
+    }
+
+    function test_transferUSDCToCCTP_destinationToSource_rateLimited() external {
+        destination.selectFork();
+
+        bytes32 key = foreignController.LIMIT_USDC_TO_CCTP();
+        deal(address(usdcBase), address(foreignAlmProxy), 9_000_000e6);
+
+        vm.startPrank(relayer);
+
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 9_000_000e6);
+        assertEq(foreignRateLimits.getCurrentRateLimit(key),   5_000_000e6);
+
+        foreignController.transferUSDCToCCTP(2_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 7_000_000e6);
+        assertEq(foreignRateLimits.getCurrentRateLimit(key),   3_000_000e6);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        foreignController.transferUSDCToCCTP(3_000_001e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+
+        foreignController.transferUSDCToCCTP(3_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 4_000_000e6);
+        assertEq(foreignRateLimits.getCurrentRateLimit(key),   0);
+
+        skip(4 hours);
+
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 4_000_000e6);
+        assertEq(foreignRateLimits.getCurrentRateLimit(key),   999_999.9936e6);
+
+        foreignController.transferUSDCToCCTP(999_999.9936e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 3_000_000.0064e6);
+        assertEq(foreignRateLimits.getCurrentRateLimit(key),   0);
+
+        vm.stopPrank();
     }
 
     function _expectEthereumCCTPEmit(uint64 nonce, uint256 amount) internal {
