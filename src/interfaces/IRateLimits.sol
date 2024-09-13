@@ -28,14 +28,14 @@ interface IRateLimits {
     /**********************************************************************************************/
 
     /**
-     * @dev Emitted when a rate limit is set.
+     * @dev Emitted when the rate limit data is set.
      * @param key The identifier for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
      * @param lastAmount The amount left available at the last update.
      * @param lastUpdated The timestamp when the rate limit was last updated.
      */
-    event RateLimitSet(
+    event RateLimitDataSet(
         bytes32 indexed key,
         uint256 maxAmount,
         uint256 slope,
@@ -44,31 +44,31 @@ interface IRateLimits {
     );
 
     /**
-     * @dev Emitted when a rate limit is triggered.
+     * @dev Emitted when a rate limit decrease is triggered.
      * @param key The identifier for the rate limit.
      * @param amountToDecrease The amount to decrease from the current rate limit.
-     * @param oldLimit The previous rate limit value before triggering.
-     * @param newLimit The new rate limit value after triggering.
+     * @param oldRateLimit The previous rate limit value before triggering.
+     * @param newRateLimit The new rate limit value after triggering.
      */
     event RateLimitDecreaseTriggered(
         bytes32 indexed key,
         uint256 amountToDecrease,
-        uint256 oldLimit,
-        uint256 newLimit
+        uint256 oldRateLimit,
+        uint256 newRateLimit
     );
 
     /**
-     * @dev Emitted when a rate limit is triggered.
+     * @dev Emitted when a rate limit increase is triggered.
      * @param key The identifier for the rate limit.
      * @param amountToIncrease The amount to increase from the current rate limit.
-     * @param oldLimit The previous rate limit value before triggering.
-     * @param newLimit The new rate limit value after triggering.
+     * @param oldRateLimit The previous rate limit value before triggering.
+     * @param newRateLimit The new rate limit value after triggering.
      */
     event RateLimitIncreaseTriggered(
         bytes32 indexed key,
         uint256 amountToIncrease,
-        uint256 oldLimit,
-        uint256 newLimit
+        uint256 oldRateLimit,
+        uint256 newRateLimit
     );
 
     /**********************************************************************************************/
@@ -86,14 +86,14 @@ interface IRateLimits {
     /**********************************************************************************************/
 
     /**
-     * @dev Sets a rate limit for a specific key with the provided parameters, including the current amount and last update time.
+     * @dev Sets rate limit data for a specific key.
      * @param key The identifier for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
      * @param lastAmount The amount left available at the last update.
      * @param lastUpdated The timestamp when the rate limit was last updated.
      */
-    function setRateLimit(
+    function setRateLimitData(
         bytes32 key,
         uint256 maxAmount,
         uint256 slope,
@@ -102,12 +102,12 @@ interface IRateLimits {
     ) external;
 
     /**
-     * @dev Sets a rate limit for a specific key with the provided parameters.
+     * @dev Sets rate limit data for a specific key.
      * @param key The identifier for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
      */
-    function setRateLimit(
+    function setRateLimitData(
         bytes32 key,
         uint256 maxAmount,
         uint256 slope
@@ -117,7 +117,7 @@ interface IRateLimits {
      * @dev Sets an unlimited rate limit.
      * @param key The identifier for the rate limit.
      */
-    function setUnlimitedRateLimit(
+    function setUnlimitedRateLimitData(
         bytes32 key
     ) external;
 
@@ -126,16 +126,16 @@ interface IRateLimits {
     /**********************************************************************************************/
 
     /**
-     * @dev Retrieves the RateLimit struct associated with a specific key.
+     * @dev Retrieves the RateLimitData struct associated with a specific key.
      * @param key The identifier for the rate limit.
      * @return The data associated with the rate limit.
      */
-    function getData(bytes32 key) external view returns (RateLimitData memory);
+    function getRateLimitData(bytes32 key) external view returns (RateLimitData memory);
 
     /**
      * @dev Retrieves the current rate limit for a specific key.
      * @param key The identifier for the rate limit.
-     * @return uint256 The current rate limit value for the given key.
+     * @return The current rate limit value for the given key.
      */
     function getCurrentRateLimit(bytes32 key) external view returns (uint256);
 

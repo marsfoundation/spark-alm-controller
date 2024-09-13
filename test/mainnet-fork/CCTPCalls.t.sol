@@ -134,7 +134,7 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
         foreignRateLimits.grantRole(CONTROLLER, address(foreignController));
 
         // Setup rate limits
-        foreignRateLimits.setUnlimitedRateLimit(foreignController.LIMIT_USDC_TO_CCTP());
+        foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
 
         vm.stopPrank();
 
