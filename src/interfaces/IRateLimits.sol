@@ -130,7 +130,7 @@ interface IRateLimits {
      * @param key The identifier for the rate limit.
      * @return The data associated with the rate limit.
      */
-    function getData(bytes32 key) external view returns (RateLimitData memory);
+    function getRateLimitData(bytes32 key) external view returns (RateLimitData memory);
 
     /**
      * @dev Retrieves the current rate limit for a specific key.

@@ -216,13 +216,13 @@ contract RateLimitsTest is UnitTestBase {
 
         // Unlimited does not update timestamp
         uint256 t = block.timestamp;
-        assertEq(rateLimits.getData(TEST_KEY1).lastUpdated, block.timestamp);
+        assertEq(rateLimits.getRateLimitData(TEST_KEY1).lastUpdated, block.timestamp);
         assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, 100), type(uint256).max);
         skip(1 days);
-        assertEq(rateLimits.getData(TEST_KEY1).lastUpdated, t);
+        assertEq(rateLimits.getRateLimitData(TEST_KEY1).lastUpdated, t);
         assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, 500_000_000e18), type(uint256).max);
         skip(1 days);
-        assertEq(rateLimits.getData(TEST_KEY1).lastUpdated, t);
+        assertEq(rateLimits.getRateLimitData(TEST_KEY1).lastUpdated, t);
         
         vm.stopPrank();
     }
@@ -423,7 +423,7 @@ contract RateLimitsTest is UnitTestBase {
     }
 
     function _assertLimitData(bytes32 key, uint256 maxAmount, uint256 slope, uint256 lastAmount, uint256 lastUpdated) internal view {
-        IRateLimits.RateLimitData memory d = rateLimits.getData(key);
+        IRateLimits.RateLimitData memory d = rateLimits.getRateLimitData(key);
         assertEq(d.maxAmount,   maxAmount);
         assertEq(d.slope,       slope);
         assertEq(d.lastAmount,  lastAmount);

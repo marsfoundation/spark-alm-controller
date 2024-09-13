@@ -73,7 +73,7 @@ contract RateLimits is IRateLimits, AccessControl {
     /*** Getter Functions                                                                       ***/
     /**********************************************************************************************/
 
-    function getData(bytes32 key) external override view returns (RateLimitData memory) {
+    function getRateLimitData(bytes32 key) external override view returns (RateLimitData memory) {
         return _data[key];
     }
 
