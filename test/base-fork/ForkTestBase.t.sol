@@ -110,13 +110,13 @@ contract ForkTestBase is Test {
         rateLimits.grantRole(CONTROLLER, address(foreignController));
 
         // Setup unlimited rate limits
-        rateLimits.setUnlimitedRateLimit(foreignController.LIMIT_USDC_TO_CCTP());
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase)));
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase)));
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase)));
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase)));
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase)));
-        rateLimits.setUnlimitedRateLimit(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase)));
+        rateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
+        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase)));
+        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase)));
+        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase)));
+        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase)));
+        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase)));
+        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase)));
 
         vm.stopPrank();
     }

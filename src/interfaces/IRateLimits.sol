@@ -86,14 +86,14 @@ interface IRateLimits {
     /**********************************************************************************************/
 
     /**
-     * @dev Sets a rate limit for a specific key with the provided parameters, including the current amount and last update time.
+     * @dev Sets rate limit data for a specific key.
      * @param key The identifier for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
      * @param lastAmount The amount left available at the last update.
      * @param lastUpdated The timestamp when the rate limit was last updated.
      */
-    function setRateLimit(
+    function setRateLimitData(
         bytes32 key,
         uint256 maxAmount,
         uint256 slope,
@@ -102,12 +102,12 @@ interface IRateLimits {
     ) external;
 
     /**
-     * @dev Sets a rate limit for a specific key with the provided parameters.
+     * @dev Sets rate limit data for a specific key.
      * @param key The identifier for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope The slope value used in the rate limit calculation.
      */
-    function setRateLimit(
+    function setRateLimitData(
         bytes32 key,
         uint256 maxAmount,
         uint256 slope
@@ -117,7 +117,7 @@ interface IRateLimits {
      * @dev Sets an unlimited rate limit.
      * @param key The identifier for the rate limit.
      */
-    function setUnlimitedRateLimit(
+    function setUnlimitedRateLimitData(
         bytes32 key
     ) external;
 

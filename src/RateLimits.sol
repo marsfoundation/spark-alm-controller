@@ -29,7 +29,7 @@ contract RateLimits is IRateLimits, AccessControl {
     /*** Admin functions                                                                        ***/
     /**********************************************************************************************/
 
-    function setRateLimit(
+    function setRateLimitData(
         bytes32 key,
         uint256 maxAmount,
         uint256 slope,
@@ -51,22 +51,22 @@ contract RateLimits is IRateLimits, AccessControl {
         emit RateLimitDataSet(key, maxAmount, slope, lastAmount, lastUpdated);
     }
 
-    function setRateLimit(
+    function setRateLimitData(
         bytes32 key,
         uint256 maxAmount,
         uint256 slope
     )
         external override
     {
-        setRateLimit(key, maxAmount, slope, maxAmount, block.timestamp);
+        setRateLimitData(key, maxAmount, slope, maxAmount, block.timestamp);
     }
 
-    function setUnlimitedRateLimit(
+    function setUnlimitedRateLimitData(
         bytes32 key
     )
         external override
     {
-        setRateLimit(key, type(uint256).max, 0, type(uint256).max, block.timestamp);
+        setRateLimitData(key, type(uint256).max, 0, type(uint256).max, block.timestamp);
     }
 
     /**********************************************************************************************/

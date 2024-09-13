@@ -61,7 +61,7 @@ contract RateLimitsTest is UnitTestBase {
             address(this),
             DEFAULT_ADMIN_ROLE
         ));
-        rateLimits.setRateLimit(TEST_KEY1, 1000, 10);
+        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10);
 
         // Variant2
         vm.expectRevert(abi.encodeWithSignature(
@@ -69,7 +69,7 @@ contract RateLimitsTest is UnitTestBase {
             address(this),
             DEFAULT_ADMIN_ROLE
         ));
-        rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 100, block.timestamp);
+        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10, 100, block.timestamp);
 
         // Variant3
         vm.expectRevert(abi.encodeWithSignature(
@@ -77,24 +77,24 @@ contract RateLimitsTest is UnitTestBase {
             address(this),
             DEFAULT_ADMIN_ROLE
         ));
-        rateLimits.setUnlimitedRateLimit(TEST_KEY1);
+        rateLimits.setUnlimitedRateLimitData(TEST_KEY1);
     }
 
     function test_setRateLimit_invalidLastUpdated_boundary() public {
         vm.startPrank(admin);
         vm.expectRevert("RateLimits/invalid-lastUpdated");
-        rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 100, block.timestamp + 1);  // Invalid as lastUpdated > block.timestamp
+        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10, 100, block.timestamp + 1);  // Invalid as lastUpdated > block.timestamp
 
-        rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 100, block.timestamp);
+        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10, 100, block.timestamp);
         vm.stopPrank();
     }
 
     function test_setRateLimit_invalidAmount_boundary() public {
         vm.startPrank(admin);
         vm.expectRevert("RateLimits/invalid-lastAmount");
-        rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 1001, block.timestamp);  // Invalid as amount > maxAmount
+        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10, 1001, block.timestamp);  // Invalid as amount > maxAmount
 
-        rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 1000, block.timestamp);
+        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10, 1000, block.timestamp);
         vm.stopPrank();
     }
 
@@ -105,7 +105,7 @@ contract RateLimitsTest is UnitTestBase {
         // Variant1
         vm.expectEmit(address(rateLimits));
         emit RateLimitDataSet(TEST_KEY1, 1000, 10, 1000, block.timestamp);
-        rateLimits.setRateLimit(TEST_KEY1, 1000, 10);
+        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10);
         _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   1000,
@@ -117,7 +117,7 @@ contract RateLimitsTest is UnitTestBase {
         // Variant2
         vm.expectEmit(address(rateLimits));
         emit RateLimitDataSet(TEST_KEY1, 1000, 10, 101, block.timestamp - 1);
-        rateLimits.setRateLimit(TEST_KEY1, 1000, 10, 101, block.timestamp - 1);
+        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10, 101, block.timestamp - 1);
         _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   1000,
@@ -129,7 +129,7 @@ contract RateLimitsTest is UnitTestBase {
         // Variant3
         vm.expectEmit(address(rateLimits));
         emit RateLimitDataSet(TEST_KEY1, type(uint256).max, 0, type(uint256).max, block.timestamp);
-        rateLimits.setUnlimitedRateLimit(TEST_KEY1);
+        rateLimits.setUnlimitedRateLimitData(TEST_KEY1);
         _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   type(uint256).max,
@@ -148,7 +148,7 @@ contract RateLimitsTest is UnitTestBase {
 
     function test_getCurrentRateLimit_unlimited() public {
         vm.prank(admin);
-        rateLimits.setUnlimitedRateLimit(TEST_KEY1);
+        rateLimits.setUnlimitedRateLimitData(TEST_KEY1);
 
         uint256 amount = rateLimits.getCurrentRateLimit(TEST_KEY1);
         assertEq(amount, type(uint256).max);
@@ -156,7 +156,7 @@ contract RateLimitsTest is UnitTestBase {
 
     function test_getCurrentRateLimit() public {
         vm.prank(admin);
-        rateLimits.setRateLimit(TEST_KEY1, 5_000_000e18, uint256(1_000_000e18) / 1 days, 0, block.timestamp);
+        rateLimits.setRateLimitData(TEST_KEY1, 5_000_000e18, uint256(1_000_000e18) / 1 days, 0, block.timestamp);
 
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 0);
 
@@ -210,7 +210,7 @@ contract RateLimitsTest is UnitTestBase {
 
     function test_triggerRateLimitDecrease_unlimitedRateLimit() public {
         vm.prank(admin);
-        rateLimits.setUnlimitedRateLimit(TEST_KEY1);
+        rateLimits.setUnlimitedRateLimitData(TEST_KEY1);
 
         vm.startPrank(controller);
 
@@ -229,7 +229,7 @@ contract RateLimitsTest is UnitTestBase {
 
     function test_triggerRateLimitDecrease_emptyAmount() public {
         vm.prank(admin);
-        rateLimits.setRateLimit(TEST_KEY1, 100, 10, 0, block.timestamp);
+        rateLimits.setRateLimitData(TEST_KEY1, 100, 10, 0, block.timestamp);
 
         uint256 t1 = block.timestamp;
         uint256 t2 = block.timestamp + 3;
@@ -262,7 +262,7 @@ contract RateLimitsTest is UnitTestBase {
         uint256 rate = uint256(1_000_000e18) / 1 days;
 
         vm.prank(admin);
-        rateLimits.setRateLimit(TEST_KEY1, 5_000_000e18, rate, 0, block.timestamp);
+        rateLimits.setRateLimitData(TEST_KEY1, 5_000_000e18, rate, 0, block.timestamp);
 
         vm.startPrank(controller);
 
@@ -316,7 +316,7 @@ contract RateLimitsTest is UnitTestBase {
 
     function test_triggerRateLimitDecrease_amountToDecrease_upperBoundary() public {
         vm.prank(admin);
-        rateLimits.setUnlimitedRateLimit(TEST_KEY1);
+        rateLimits.setUnlimitedRateLimitData(TEST_KEY1);
 
         vm.startPrank(controller);
 
@@ -344,7 +344,7 @@ contract RateLimitsTest is UnitTestBase {
 
     function test_triggerRateLimitIncrease() public {
         vm.prank(admin);
-        rateLimits.setRateLimit(TEST_KEY1, 1000, 10);
+        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10);
 
         vm.startPrank(controller);
 
@@ -411,7 +411,7 @@ contract RateLimitsTest is UnitTestBase {
 
     function test_triggerRateLimitIncrease_amountToIncrease_upperBoundary() public {
         vm.prank(admin);
-        rateLimits.setUnlimitedRateLimit(TEST_KEY1);
+        rateLimits.setUnlimitedRateLimitData(TEST_KEY1);
 
         vm.startPrank(controller);
 
