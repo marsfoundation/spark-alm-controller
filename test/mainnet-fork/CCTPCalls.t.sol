@@ -247,30 +247,34 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
     }
 
     function test_transferUSDCToCCTP_sourceToDestination_bigTransfer() external {
-        deal(address(usdc), address(almProxy), 1_900_000e6);
+        deal(address(usdc), address(almProxy), 2_900_000e6);
 
-        assertEq(usdc.balanceOf(address(almProxy)),          1_900_000e6);
+        assertEq(usdc.balanceOf(address(almProxy)),          2_900_000e6);
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
         assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
 
         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
-        // Will split into two separate transactions at max 1m each
+        // Will split into 3 separate transactions at max 1m each
         _expectEthereumCCTPEmit(
             94773,
             1_000_000e6
         );
         _expectEthereumCCTPEmit(
             94774,
+            1_000_000e6
+        );
+        _expectEthereumCCTPEmit(
+            94775,
             900_000e6
         );
 
         vm.prank(relayer);
-        mainnetController.transferUSDCToCCTP(1_900_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        mainnetController.transferUSDCToCCTP(2_900_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
         assertEq(usdc.balanceOf(address(almProxy)),          0);
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-        assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 1_900_000e6);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 2_900_000e6);
 
         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
@@ -282,9 +286,9 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
 
         bridge.relayMessagesToDestination(true);
 
-        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   1_900_000e6);
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   2_900_000e6);
         assertEq(usdcBase.balanceOf(address(foreignController)), 0);
-        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY + 1_900_000e6);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY + 2_900_000e6);
     }
 
     function test_transferUSDCToCCTP_destinationToSource() external {
