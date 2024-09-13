@@ -18,15 +18,15 @@ contract RateLimitsTest is UnitTestBase {
     event RateLimitDecreaseTriggered(
         bytes32 indexed key,
         uint256 amountToDecrease,
-        uint256 oldLimit,
-        uint256 newLimit
+        uint256 oldRateLimit,
+        uint256 newRateLimit
     );
 
     event RateLimitIncreaseTriggered(
         bytes32 indexed key,
         uint256 amountToIncrease,
-        uint256 oldLimit,
-        uint256 newLimit
+        uint256 oldRateLimit,
+        uint256 newRateLimit
     );
 
     bytes32 constant TEST_KEY1 = keccak256("TEST_KEY1");

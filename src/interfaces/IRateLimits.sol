@@ -44,31 +44,31 @@ interface IRateLimits {
     );
 
     /**
-     * @dev Emitted when a rate limit is triggered.
+     * @dev Emitted when a rate limit decrease is triggered.
      * @param key The identifier for the rate limit.
      * @param amountToDecrease The amount to decrease from the current rate limit.
-     * @param oldLimit The previous rate limit value before triggering.
-     * @param newLimit The new rate limit value after triggering.
+     * @param oldRateLimit The previous rate limit value before triggering.
+     * @param newRateLimit The new rate limit value after triggering.
      */
     event RateLimitDecreaseTriggered(
         bytes32 indexed key,
         uint256 amountToDecrease,
-        uint256 oldLimit,
-        uint256 newLimit
+        uint256 oldRateLimit,
+        uint256 newRateLimit
     );
 
     /**
-     * @dev Emitted when a rate limit is triggered.
+     * @dev Emitted when a rate limit increase is triggered.
      * @param key The identifier for the rate limit.
      * @param amountToIncrease The amount to increase from the current rate limit.
-     * @param oldLimit The previous rate limit value before triggering.
-     * @param newLimit The new rate limit value after triggering.
+     * @param oldRateLimit The previous rate limit value before triggering.
+     * @param newRateLimit The new rate limit value after triggering.
      */
     event RateLimitIncreaseTriggered(
         bytes32 indexed key,
         uint256 amountToIncrease,
-        uint256 oldLimit,
-        uint256 newLimit
+        uint256 oldRateLimit,
+        uint256 newRateLimit
     );
 
     /**********************************************************************************************/
