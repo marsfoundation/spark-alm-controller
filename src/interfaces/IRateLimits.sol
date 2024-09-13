@@ -135,7 +135,7 @@ interface IRateLimits {
     /**
      * @dev Retrieves the current rate limit for a specific key.
      * @param key The identifier for the rate limit.
-     * @return uint256 The current rate limit value for the given key.
+     * @return The current rate limit value for the given key.
      */
     function getCurrentRateLimit(bytes32 key) external view returns (uint256);
 
