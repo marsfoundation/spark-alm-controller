@@ -173,7 +173,6 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         bytes32 key = mainnetController.LIMIT_USDS_TO_USDC();
         vm.startPrank(relayer);
 
-        // Rate limited so split this in two
         mainnetController.mintUSDS(5_000_000e18);
 
         mainnetController.swapUSDSToUSDC(1_000_000e6);
