@@ -126,7 +126,7 @@ interface IRateLimits {
     /**********************************************************************************************/
 
     /**
-     * @dev Retrieves the RateLimit struct associated with a specific key.
+     * @dev Retrieves the RateLimitData struct associated with a specific key.
      * @param key The identifier for the rate limit.
      * @return The data associated with the rate limit.
      */
