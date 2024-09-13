@@ -67,6 +67,44 @@ contract MainnetControllerSwapUSDSToUSDCTests is ForkTestBase {
         assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
     }
 
+    function test_swapUSDSToUSDC_rateLimited() external {
+        vm.startPrank(SPARK_PROXY);
+        rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDS_MINT());
+        vm.stopPrank();
+
+        bytes32 key = mainnetController.LIMIT_USDS_TO_USDC();
+        vm.startPrank(relayer);
+
+        mainnetController.mintUSDS(9_000_000e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   9_000_000e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   0);
+
+        mainnetController.swapUSDSToUSDC(1_000_000e6);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 4_000_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   8_000_000e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   1_000_000e6);
+
+        skip(1 hours);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 4_249_999.9984e6);
+        assertEq(usds.balanceOf(address(almProxy)),   8_000_000e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   1_000_000e6);
+
+        mainnetController.swapUSDSToUSDC(4_249_999.9984e6);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 0);
+        assertEq(usds.balanceOf(address(almProxy)),   3_750_000.0016e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   5_249_999.9984e6);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.swapUSDSToUSDC(1);
+
+        vm.stopPrank();
+    }
+
 }
 
 contract MainnetControllerSwapUSDCToUSDSFailureTests is ForkTestBase {
@@ -130,6 +168,40 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         assertEq(usds.allowance(address(buffer),   address(vault)),   type(uint256).max);
         assertEq(usds.allowance(address(almProxy), address(daiUsds)), 0);
         assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
+    }
+
+    function test_swapUSDCToUSDS_rateLimited() external {
+        bytes32 key = mainnetController.LIMIT_USDS_TO_USDC();
+        vm.startPrank(relayer);
+
+        mainnetController.mintUSDS(5_000_000e18);
+
+        mainnetController.swapUSDSToUSDC(1_000_000e6);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 4_000_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   4_000_000e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   1_000_000e6);
+
+
+        mainnetController.swapUSDCToUSDS(400_000e6);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 4_400_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   4_400_000e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   600_000e6);
+
+        skip(4 hours);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   4_400_000e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   600_000e6);
+
+        mainnetController.swapUSDCToUSDS(600_000e6);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   5_000_000e18);
+        assertEq(usdc.balanceOf(address(almProxy)),   0);
+
+        vm.stopPrank();
     }
 
 }

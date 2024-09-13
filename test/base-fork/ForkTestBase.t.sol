@@ -109,14 +109,13 @@ contract ForkTestBase is Test {
 
         rateLimits.grantRole(CONTROLLER, address(foreignController));
 
-        // Setup unlimited rate limits
-        rateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
-        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase)));
-        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase)));
-        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase)));
-        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase)));
-        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase)));
-        rateLimits.setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase)));
+        // Setup rate limits
+        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase)), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
+        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase)), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
+        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
 
         vm.stopPrank();
     }

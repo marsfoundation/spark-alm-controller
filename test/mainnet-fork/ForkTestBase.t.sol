@@ -182,7 +182,7 @@ contract ForkTestBase is DssTest {
             ilk            : ilk,
             duty           : EIGHT_PCT_APY,
             maxLine        : 100_000_000 * RAD,
-            gap            : 5_000_000 * RAD,
+            gap            : 10_000_000 * RAD,
             ttl            : 6 hours,
             allocatorProxy : SPARK_PROXY,
             ilkRegistry    : ILK_REGISTRY
@@ -232,10 +232,10 @@ contract ForkTestBase is DssTest {
 
         rateLimits.grantRole(CONTROLLER, address(mainnetController));
 
-        // Setup unlimited rate limits
-        rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDS_MINT());
-        rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDS_TO_USDC());
-        rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP());
+        // Setup rate limits to be 1m / 4 hours recharge and 5m max
+        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_MINT(), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
+        rateLimits.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
 
         IBufferLike(ilkInst.buffer).approve(usdsInst.usds, address(almProxy), type(uint256).max);
 
