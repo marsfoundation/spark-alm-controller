@@ -200,7 +200,7 @@ contract ForeignController is AccessControl {
 
     function _initiateCCTPTransfer(
         uint256 usdcAmount,
-        uint32 destinationDomain,
+        uint32  destinationDomain,
         bytes32 mintRecipient
     )
         internal
