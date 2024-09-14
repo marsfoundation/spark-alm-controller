@@ -21,8 +21,8 @@ This repo contains the onchain components of the Spark Liquidity Layer. The foll
 The general structure of calls is shown below in the left diagram. The `controller` contract is the entry point for all calls. The `controller` contract first checks the rate limits if necessary and executes the relevant logic (NOTE: This is true for functions EXCEPT `foreignController.withdrawPSM` as the resulting value from the call is needed to update the rate limit data). The `controller` can perform multiple calls to the `ALMProxy` contract atomically with specified calldata. The right diagram provides and example of calling to mint USDS using the MakerDAO allocation system.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/832db958-14e6-482f-9dbc-b10e672029f7" alt="Image 1" height="1000px" style="margin-right:100px;"/>
-  <img src="https://github.com/user-attachments/assets/312634c3-0c3e-4f5a-b673-b44e07d3fb56" alt="Image 2" height="1000px"/>
+  <img src="https://github.com/user-attachments/assets/832db958-14e6-482f-9dbc-b10e672029f7" alt="Image 1" height="700px" style="margin-right:100px;"/>
+  <img src="https://github.com/user-attachments/assets/312634c3-0c3e-4f5a-b673-b44e07d3fb56" alt="Image 2" height="700px"/>
 </p>
 
 ## Permissions
@@ -55,9 +55,11 @@ The `RateLimits` contract is used to enforce rate limits on the `controller` con
 
 The rate limit is calculated as follows:
 
-$$
-\text{currentRateLimit} = \min(\text{slope} \times (\text{block.timestamp} - \text{lastUpdated}) + \text{lastAmount}, \text{maxAmount})
-$$
+<div align="center">
+
+`currentRateLimit = min(slope * (block.timestamp - lastUpdated) + lastAmount, maxAmount)`
+
+</div>
 
 This is a linear rate limit that increases over time with a maximum limit. This rate limit is derived from these values which can be set by and admin OR updated by the `CONTROLLER` role. The `CONTROLLER` updates these values to increase/decrease the rate limit based on the functionality within the contract (e.g., decrease the rate limit after minting USDS by the minted amount by decrementing `lastAmount` and setting `lastUpdated` to `block.timestamp`).
 
