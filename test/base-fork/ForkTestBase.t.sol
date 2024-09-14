@@ -110,14 +110,22 @@ contract ForkTestBase is Test {
         rateLimits.grantRole(CONTROLLER, address(foreignController));
 
         // Setup rate limits
-        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdcBase)), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
-        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(usdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(),  address(susdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdcBase)), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
-        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(usdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(susdsBase)), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(_makeDepositKey(usdcBase),   5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
+        rateLimits.setRateLimitData(_makeDepositKey(usdsBase),   5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(_makeDepositKey(susdsBase),  5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(_makeWithdrawKey(usdcBase),  5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
+        rateLimits.setRateLimitData(_makeWithdrawKey(usdsBase),  5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(_makeWithdrawKey(susdsBase), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
 
         vm.stopPrank();
+    }
+
+    function _makeDepositKey(IERC20 asset) internal view returns (bytes32) {
+        return RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_DEPOSIT(), address(asset));
+    }
+
+    function _makeWithdrawKey(IERC20 asset) internal view returns (bytes32) {
+        return RateLimitHelpers.makeAssetKey(foreignController.LIMIT_PSM_WITHDRAW(), address(asset));
     }
 
 }

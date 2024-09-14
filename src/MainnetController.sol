@@ -7,9 +7,8 @@ import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
 import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
+import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
-
-import { ICCTPLike } from "src/interfaces/CCTPInterfaces.sol";
 
 interface IDaiUsdsLike {
     function dai() external view returns(address);
@@ -42,9 +41,9 @@ contract MainnetController is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
+    bytes32 public constant LIMIT_USDC_TO_CCTP = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_USDS_MINT    = keccak256("LIMIT_USDS_MINT");
     bytes32 public constant LIMIT_USDS_TO_USDC = keccak256("LIMIT_USDS_TO_USDC");
-    bytes32 public constant LIMIT_USDC_TO_CCTP = keccak256("LIMIT_USDC_TO_CCTP");
 
     address public immutable buffer;
 
@@ -142,7 +141,9 @@ contract MainnetController is AccessControl {
     /*** Relayer vault functions                                                                ***/
     /**********************************************************************************************/
 
-    function mintUSDS(uint256 usdsAmount) external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDS_MINT, usdsAmount) {
+    function mintUSDS(uint256 usdsAmount)
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDS_MINT, usdsAmount)
+    {
         // Mint USDS into the buffer
         proxy.doCall(
             address(vault),
@@ -156,7 +157,9 @@ contract MainnetController is AccessControl {
         );
     }
 
-    function burnUSDS(uint256 usdsAmount) external onlyRole(RELAYER) isActive cancelRateLimit(LIMIT_USDS_MINT, usdsAmount) {
+    function burnUSDS(uint256 usdsAmount)
+        external onlyRole(RELAYER) isActive cancelRateLimit(LIMIT_USDS_MINT, usdsAmount)
+    {
         // Transfer USDS from the proxy to the buffer
         proxy.doCall(
             address(usds),
@@ -225,7 +228,9 @@ contract MainnetController is AccessControl {
     /*** Relayer PSM functions                                                                  ***/
     /**********************************************************************************************/
 
-    function swapUSDSToUSDC(uint256 usdcAmount) external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDS_TO_USDC, usdcAmount) {
+    function swapUSDSToUSDC(uint256 usdcAmount)
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDS_TO_USDC, usdcAmount)
+    {
         uint256 usdsAmount = usdcAmount * psm.to18ConversionFactor();
 
         // Approve USDS to DaiUsds migrator from the proxy (assumes the proxy has enough USDS)
@@ -253,7 +258,9 @@ contract MainnetController is AccessControl {
         );
     }
 
-    function swapUSDCToUSDS(uint256 usdcAmount) external onlyRole(RELAYER) isActive cancelRateLimit(LIMIT_USDS_TO_USDC, usdcAmount) {
+    function swapUSDCToUSDS(uint256 usdcAmount)
+        external onlyRole(RELAYER) isActive cancelRateLimit(LIMIT_USDS_TO_USDC, usdcAmount)
+    {
         uint256 usdsAmount = usdcAmount * psm.to18ConversionFactor();
 
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
@@ -298,21 +305,27 @@ contract MainnetController is AccessControl {
             abi.encodeCall(usdc.approve, (address(cctp), usdcAmount))
         );
 
-        // If amount is larger than limit we must break it up
+        // If amount is larger than limit it must be split into multiple calls
         uint256 burnLimit = cctp.localMinter().burnLimitsPerMessage(address(usdc));
+
         while (usdcAmount > burnLimit) {
             _initiateCCTPTransfer(burnLimit, destinationDomain, mintRecipient);
-
             usdcAmount -= burnLimit;
         }
 
-        // Send remainder if any
+        // Send remaining amount (if any)
         if (usdcAmount > 0) {
             _initiateCCTPTransfer(usdcAmount, destinationDomain, mintRecipient);
         }
     }
 
-    function _initiateCCTPTransfer(uint256 usdcAmount, uint32 destinationDomain, bytes32 mintRecipient) internal {
+    function _initiateCCTPTransfer(
+        uint256 usdcAmount,
+        uint32  destinationDomain,
+        bytes32 mintRecipient
+    )
+        internal
+    {
         proxy.doCall(
             address(cctp),
             abi.encodeCall(
