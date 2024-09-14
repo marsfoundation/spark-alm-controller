@@ -11,7 +11,7 @@ import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
-import { RateLimitHelpers } from "src/RateLimits.sol";
+import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
 
 contract ForeignController is AccessControl {
 
@@ -27,14 +27,13 @@ contract ForeignController is AccessControl {
     bytes32 public constant LIMIT_USDC_TO_CCTP = keccak256("LIMIT_USDC_TO_CCTP");
 
     IALMProxy   public immutable proxy;
-    IRateLimits public immutable rateLimits;
+    ICCTPLike   public immutable cctp;
     IPSM3       public immutable psm;
+    IRateLimits public immutable rateLimits;
 
     IERC20 public immutable usds;
     IERC20 public immutable usdc;
     IERC20 public immutable susds;
-
-    ICCTPLike public cctp;
 
     bool public active;
 

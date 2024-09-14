@@ -11,9 +11,10 @@ import { PSM3Deploy }       from "spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }            from "spark-psm/src/PSM3.sol";
 import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
 
-import { ALMProxy }                     from "src/ALMProxy.sol";
-import { RateLimits, RateLimitHelpers } from "src/RateLimits.sol";
-import { ForeignController }            from "src/ForeignController.sol";
+import { ALMProxy }          from "src/ALMProxy.sol";
+import { ForeignController } from "src/ForeignController.sol";
+import { RateLimitHelpers }  from "src/RateLimitHelpers.sol";
+import { RateLimits }        from "src/RateLimits.sol";
 
 contract ForkTestBase is Test {
 

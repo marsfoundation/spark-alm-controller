@@ -12,13 +12,13 @@
 This repo contains the onchain components of the Spark Liquidity Layer. The following contracts are contained in this repository:
 
 - `ALMProxy`: The proxy contract that holds custody of all funds. This contract routes calls to external contracts according to logic within a specified `controller` contract. This pattern was used to allow for future iterations in logic, as a new controller can be onboarded and can route calls through the proxy with new logic. This contract is stateless except for the ACL logic contained within the inherited OpenZeppelin `AccessControl` contract.
-- `ForeignController`: This controller contract is intended to be used on "foreign" domains. The term "foreign" is used to describe a domain that is not the Ethereum mainnet. This contract is stateless.
-- `MainnetController`: This controller contract is intended to be used on the Ethereum mainnet. This contract is stateless.
+- `ForeignController`: This controller contract is intended to be used on "foreign" domains. The term "foreign" is used to describe a domain that is not the Ethereum mainnet.
+- `MainnetController`: This controller contract is intended to be used on the Ethereum mainnet.
 - `RateLimits`: This contract is used to enforce and update rate limits on logic in the `ForeignController` and `MainnetController` contracts. This contract is stateful and is used to store the rate limit data.
 
 ## Architecture
 
-The general structure of calls is shown in the diagram below. The `controller` contract is the entry point for all calls. The `controller` contract first checks the rate limits if necessary and executes the relevant logic (NOTE: This is true for functions EXCEPT `foreignController.withdrawPSM` as the resulting value from the call is needed to update the rate limit data). The `controller` can perform multiple calls to the `ALMProxy` contract atomically with specified calldata. 
+The general structure of calls is shown in the diagram below. The `controller` contract is the entry point for all calls. The `controller` contract checks the rate limits if necessary and executes the relevant logic. The `controller` can perform multiple calls to the `ALMProxy` contract atomically with specified calldata.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/832db958-14e6-482f-9dbc-b10e672029f7" alt="Image 1" height="700px" style="margin-right:100px;"/>

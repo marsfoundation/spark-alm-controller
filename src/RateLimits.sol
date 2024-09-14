@@ -128,14 +128,3 @@ contract RateLimits is IRateLimits, AccessControl {
     }
 
 }
-
-// TODO: RateLimitHelpers.sol
-
-library RateLimitHelpers {
-
-    function makeAssetKey(bytes32 key, address asset) internal pure returns (bytes32) {
-        return keccak256(abi.encode(key, asset));
-    }
-
-}
-
