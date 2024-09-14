@@ -111,58 +111,6 @@ contract ForeignController is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Relayer bridging functions                                                             ***/
-    /**********************************************************************************************/
-
-    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
-        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
-    {
-        bytes32 mintRecipient = mintRecipients[destinationDomain];
-
-        require(mintRecipient != 0, "ForeignController/domain-not-configured");
-
-        // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC)
-        proxy.doCall(
-            address(usdc),
-            abi.encodeCall(usdc.approve, (address(cctp), usdcAmount))
-        );
-
-        // If amount is larger than limit it must be split into multiple calls
-        uint256 burnLimit = cctp.localMinter().burnLimitsPerMessage(address(usdc));
-
-        while (usdcAmount > burnLimit) {
-            _initiateCCTPTransfer(burnLimit, destinationDomain, mintRecipient);
-            usdcAmount -= burnLimit;
-        }
-
-        // Send remaining amount (if any)
-        if (usdcAmount > 0) {
-            _initiateCCTPTransfer(usdcAmount, destinationDomain, mintRecipient);
-        }
-    }
-
-    function _initiateCCTPTransfer(
-        uint256 usdcAmount,
-        uint32 destinationDomain,
-        bytes32 mintRecipient
-    )
-        internal
-    {
-        proxy.doCall(
-            address(cctp),
-            abi.encodeCall(
-                cctp.depositForBurn,
-                (
-                    usdcAmount,
-                    destinationDomain,
-                    mintRecipient,
-                    address(usdc)
-                )
-            )
-        );
-    }
-
-    /**********************************************************************************************/
     /*** Relayer PSM functions                                                                  ***/
     /**********************************************************************************************/
 
@@ -212,6 +160,62 @@ contract ForeignController is AccessControl {
         rateLimits.triggerRateLimitDecrease(
             RateLimitHelpers.makeAssetKey(LIMIT_PSM_WITHDRAW, asset),
             assetsWithdrawn
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer bridging functions                                                             ***/
+    /**********************************************************************************************/
+
+    function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
+    {
+        bytes32 mintRecipient = mintRecipients[destinationDomain];
+
+        require(mintRecipient != 0, "ForeignController/domain-not-configured");
+
+        // Approve USDC to CCTP from the proxy (assumes the proxy has enough USDC)
+        proxy.doCall(
+            address(usdc),
+            abi.encodeCall(usdc.approve, (address(cctp), usdcAmount))
+        );
+
+        // If amount is larger than limit it must be split into multiple calls
+        uint256 burnLimit = cctp.localMinter().burnLimitsPerMessage(address(usdc));
+
+        while (usdcAmount > burnLimit) {
+            _initiateCCTPTransfer(burnLimit, destinationDomain, mintRecipient);
+            usdcAmount -= burnLimit;
+        }
+
+        // Send remaining amount (if any)
+        if (usdcAmount > 0) {
+            _initiateCCTPTransfer(usdcAmount, destinationDomain, mintRecipient);
+        }
+    }
+
+    /**********************************************************************************************/
+    /*** Internal helper functions                                                              ***/
+    /**********************************************************************************************/
+
+    function _initiateCCTPTransfer(
+        uint256 usdcAmount,
+        uint32 destinationDomain,
+        bytes32 mintRecipient
+    )
+        internal
+    {
+        proxy.doCall(
+            address(cctp),
+            abi.encodeCall(
+                cctp.depositForBurn,
+                (
+                    usdcAmount,
+                    destinationDomain,
+                    mintRecipient,
+                    address(usdc)
+                )
+            )
         );
     }
 

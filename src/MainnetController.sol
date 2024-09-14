@@ -319,6 +319,10 @@ contract MainnetController is AccessControl {
         }
     }
 
+    /**********************************************************************************************/
+    /*** Internal helper functions                                                              ***/
+    /**********************************************************************************************/
+
     function _initiateCCTPTransfer(
         uint256 usdcAmount,
         uint32  destinationDomain,
