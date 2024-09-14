@@ -88,10 +88,10 @@ contract MainnetController is AccessControl {
         daiUsds    = IDaiUsdsLike(daiUsds_);
         cctp       = ICCTPLike(cctp_);
 
-       susds = ISUSDSLike(susds_ );
-       dai   = IERC20(daiUsds.dai());
-       usdc  = IERC20(psm.gem());
-       usds  = IERC20(susds.usds());
+        susds = ISUSDSLike(susds_ );
+        dai   = IERC20(daiUsds.dai());
+        usdc  = IERC20(psm.gem());
+        usds  = IERC20(susds.usds());
 
         active = true;
     }
