@@ -24,7 +24,7 @@ The general structure of calls is shown in the diagram below. The `controller` c
   <img src="https://github.com/user-attachments/assets/832db958-14e6-482f-9dbc-b10e672029f7" alt="Image 1" height="700px" style="margin-right:100px;"/>
 </p>
 
-The diagram below provides and example of calling to mint USDS using the MakerDAO allocation system. Note that the funds are always held custody in the `ALMProxy` as a result of the calls made.
+The diagram below provides and example of calling to mint USDS using the Sky allocation system. Note that the funds are always held custody in the `ALMProxy` as a result of the calls made.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/312634c3-0c3e-4f5a-b673-b44e07d3fb56" alt="Image 2" height="700px"/>
