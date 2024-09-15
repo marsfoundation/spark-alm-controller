@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import { IRateLimits } from "src/interfaces/IRateLimits.sol";
-
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
+
+import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
 contract RateLimits is IRateLimits, AccessControl {
 
@@ -19,9 +19,7 @@ contract RateLimits is IRateLimits, AccessControl {
     /*** Initialization                                                                         ***/
     /**********************************************************************************************/
 
-    constructor(
-        address admin_
-    ) {
+    constructor(address admin_) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
     }
 
@@ -38,7 +36,7 @@ contract RateLimits is IRateLimits, AccessControl {
     )
         public override onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(lastAmount <= maxAmount,        "RateLimits/invalid-lastAmount");
+        require(lastAmount  <= maxAmount,       "RateLimits/invalid-lastAmount");
         require(lastUpdated <= block.timestamp, "RateLimits/invalid-lastUpdated");
 
         _data[key] = RateLimitData({
@@ -51,21 +49,11 @@ contract RateLimits is IRateLimits, AccessControl {
         emit RateLimitDataSet(key, maxAmount, slope, lastAmount, lastUpdated);
     }
 
-    function setRateLimitData(
-        bytes32 key,
-        uint256 maxAmount,
-        uint256 slope
-    )
-        external override
-    {
+    function setRateLimitData(bytes32 key,uint256 maxAmount,uint256 slope) external override {
         setRateLimitData(key, maxAmount, slope, maxAmount, block.timestamp);
     }
 
-    function setUnlimitedRateLimitData(
-        bytes32 key
-    )
-        external override
-    {
+    function setUnlimitedRateLimitData(bytes32 key) external override {
         setRateLimitData(key, type(uint256).max, 0, type(uint256).max, block.timestamp);
     }
 
@@ -140,12 +128,3 @@ contract RateLimits is IRateLimits, AccessControl {
     }
 
 }
-
-library RateLimitHelpers {
-
-    function makeAssetKey(bytes32 key, address asset) internal pure returns (bytes32) {
-        return keccak256(abi.encode(key, asset));
-    }
-
-}
-

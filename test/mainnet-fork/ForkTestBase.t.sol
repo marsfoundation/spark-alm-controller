@@ -23,7 +23,6 @@ import { SUsdsDeploy }            from "sdai/deploy/SUsdsDeploy.sol";
 import { SUsdsInit, SUsdsConfig } from "sdai/deploy/SUsdsInit.sol";
 import { SUsdsInstance }          from "sdai/deploy/SUsdsInstance.sol";
 
-import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { Bridge }                from "xchain-helpers/src/testing/Bridge.sol";
 import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
 
@@ -233,9 +232,9 @@ contract ForkTestBase is DssTest {
         rateLimits.grantRole(CONTROLLER, address(mainnetController));
 
         // Setup rate limits to be 1m / 4 hours recharge and 5m max
-        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_MINT(), 5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
-        rateLimits.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
+        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_MINT(),    5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), 5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
+        rateLimits.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), 5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
 
         IBufferLike(ilkInst.buffer).approve(usdsInst.usds, address(almProxy), type(uint256).max);
 

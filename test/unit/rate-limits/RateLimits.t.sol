@@ -47,7 +47,7 @@ contract RateLimitsTest is UnitTestBase {
 
     function test_constructor() public {
         rateLimits = new RateLimits(admin);
-        
+
         assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, address(this)), false);
         assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),         true);
     }
@@ -113,7 +113,7 @@ contract RateLimitsTest is UnitTestBase {
             lastAmount:  1000,
             lastUpdated: block.timestamp
         });
-        
+
         // Variant2
         vm.expectEmit(address(rateLimits));
         emit RateLimitDataSet(TEST_KEY1, 1000, 10, 101, block.timestamp - 1);
@@ -204,7 +204,7 @@ contract RateLimitsTest is UnitTestBase {
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         rateLimits.triggerRateLimitDecrease(TEST_KEY1, 0);
-        
+
         vm.stopPrank();
     }
 
@@ -223,7 +223,7 @@ contract RateLimitsTest is UnitTestBase {
         assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, 500_000_000e18), type(uint256).max);
         skip(1 days);
         assertEq(rateLimits.getRateLimitData(TEST_KEY1).lastUpdated, t);
-        
+
         vm.stopPrank();
     }
 
@@ -310,7 +310,7 @@ contract RateLimitsTest is UnitTestBase {
             lastAmount:  0,
             lastUpdated: block.timestamp
         });
-        
+
         vm.stopPrank();
     }
 
@@ -323,7 +323,7 @@ contract RateLimitsTest is UnitTestBase {
         // This will short circuit due to the unlimited rate limit and never update any state or do calculations
         assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, type(uint256).max), type(uint256).max);
         assertEq(rateLimits.triggerRateLimitDecrease(TEST_KEY1, type(uint256).max - 1), type(uint256).max);
-        
+
         vm.stopPrank();
     }
 
@@ -338,7 +338,7 @@ contract RateLimitsTest is UnitTestBase {
 
         vm.expectRevert("RateLimits/zero-maxAmount");
         rateLimits.triggerRateLimitDecrease(TEST_KEY1, 0);
-        
+
         vm.stopPrank();
     }
 
@@ -418,7 +418,7 @@ contract RateLimitsTest is UnitTestBase {
         // This will short circuit due to the unlimited rate limit and never update any state or do calculations
         assertEq(rateLimits.triggerRateLimitIncrease(TEST_KEY1, type(uint256).max), type(uint256).max);
         assertEq(rateLimits.triggerRateLimitIncrease(TEST_KEY1, type(uint256).max - 1), type(uint256).max);
-        
+
         vm.stopPrank();
     }
 

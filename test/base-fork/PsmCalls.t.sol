@@ -25,7 +25,9 @@ contract ForeignControllerPSMSuccessTestBase is ForkTestBase {
         assertEq(psmBase.totalShares(),             totalShares);
         assertEq(psmBase.totalAssets(),             totalAssets);
 
-        assertEq(rateLimits.getCurrentRateLimit(RateLimitHelpers.makeAssetKey(rateLimitKey, address(token))), currentRateLimit);
+        bytes32 assetKey = RateLimitHelpers.makeAssetKey(rateLimitKey, address(token));
+
+        assertEq(rateLimits.getCurrentRateLimit(assetKey), currentRateLimit);
 
         // Should always be 0 before and after calls
         assertEq(usdsBase.allowance(address(almProxy), address(psmBase)), 0);
@@ -60,6 +62,7 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
 
     function test_deposit_usds() external {
         bytes32 key = foreignController.LIMIT_PSM_DEPOSIT();
+
         deal(address(usdsBase), address(almProxy), 100e18);
 
         _assertState({
@@ -92,6 +95,7 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
 
     function test_deposit_usdc() external {
         bytes32 key = foreignController.LIMIT_PSM_DEPOSIT();
+
         deal(address(usdcBase), address(almProxy), 100e6);
 
         _assertState({
@@ -124,6 +128,7 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
 
     function test_deposit_susds() external {
         bytes32 key = foreignController.LIMIT_PSM_DEPOSIT();
+
         deal(address(susdsBase), address(almProxy), 100e18);
 
         _assertState({
@@ -216,6 +221,7 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
 
     function test_withdraw_usdc() external {
         bytes32 key = foreignController.LIMIT_PSM_WITHDRAW();
+
         deal(address(usdcBase), address(almProxy), 100e6);
         vm.prank(relayer);
         foreignController.depositPSM(address(usdcBase), 100e6);
@@ -250,6 +256,7 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
 
     function test_withdraw_susds() external {
         bytes32 key = foreignController.LIMIT_PSM_WITHDRAW();
+
         deal(address(susdsBase), address(almProxy), 100e18);
         vm.prank(relayer);
         foreignController.depositPSM(address(susdsBase), 100e18);
