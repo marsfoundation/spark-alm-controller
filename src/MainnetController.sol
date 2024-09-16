@@ -38,6 +38,7 @@ contract MainnetController is AccessControl {
     /*** Events                                                                                 ***/
     /**********************************************************************************************/
 
+    // NOTE: This is used to track individual transfers for offchain processing of CCTP transactions
     event CCTPTransferInitiated(
         uint64  indexed nonce,
         uint32  indexed destinationDomain,
