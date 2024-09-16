@@ -555,27 +555,100 @@ contract RateLimitsTriggerRateLimitDecreaseTest is RateLimitsTestBase {
 
 contract RateLimitsTriggerRateLimitIncreaseTest is RateLimitsTestBase {
 
-    function test_triggerRateLimitIncrease_emptyRateLimit() public {
-        vm.startPrank(controller);
+    function test_triggerRateLimitIncrease_unauthorizedAccount() public {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            CONTROLLER
+        ));
+        rateLimits.triggerRateLimitIncrease(TEST_KEY1, 100);
 
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            admin,
+            CONTROLLER
+        ));
+        rateLimits.triggerRateLimitIncrease(TEST_KEY1, 100);
+    }
+
+    function test_triggerRateLimitIncrease_zeroMaxAmountBoundary() public {
         vm.expectRevert("RateLimits/zero-maxAmount");
-        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 100);
+        vm.prank(controller);
+        rateLimits.triggerRateLimitIncrease(TEST_KEY1, 100);
 
-        vm.expectRevert("RateLimits/zero-maxAmount");
-        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 1);
+        // Set maxAmount to be > 0
+        vm.prank(admin);
+        rateLimits.setRateLimitData(TEST_KEY1, 1, 10);
 
-        vm.expectRevert("RateLimits/zero-maxAmount");
-        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 0);
-
-        vm.stopPrank();
+        vm.prank(controller);
+        rateLimits.triggerRateLimitIncrease(TEST_KEY1, 1);
     }
 
     function test_triggerRateLimitIncrease() public {
+        uint256 start = block.timestamp;
+
         vm.prank(admin);
-        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10);
+        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10, 100, block.timestamp);
 
         vm.startPrank(controller);
 
+        skip(1 seconds);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   1000,
+            slope:       10,
+            lastAmount:  100,
+            lastUpdated: start
+        });
+
+        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 110);  // 100 + 10(1 second)
+
+        vm.expectEmit(address(rateLimits));
+        emit RateLimitIncreaseTriggered(TEST_KEY1, 500, 110, 610);
+        uint256 resultingLimit = rateLimits.triggerRateLimitIncrease(TEST_KEY1, 500);
+
+        assertEq(resultingLimit, 610);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   1000,
+            slope:       10,
+            lastAmount:  610,
+            lastUpdated: block.timestamp
+        });
+
+        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 610);
+    }
+
+    function test_triggerRateLimitIncrease_aboveMaxAmount() public {
+        uint256 start = block.timestamp;
+
+        vm.prank(admin);
+        rateLimits.setRateLimitData(TEST_KEY1, 1000, 10, 100, block.timestamp);
+
+        vm.startPrank(controller);
+
+        skip(1 seconds);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   1000,
+            slope:       10,
+            lastAmount:  100,
+            lastUpdated: start
+        });
+
+        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 110);  // 100 + 10(1 second)
+
+        vm.expectEmit(address(rateLimits));
+        emit RateLimitIncreaseTriggered(TEST_KEY1, 891, 110, 1000);
+        uint256 resultingLimit = rateLimits.triggerRateLimitIncrease(TEST_KEY1, 891);
+
+        // 891 + 110 = 1001, which is above the maxAmount of 1000, so result is 1000
+        assertEq(resultingLimit, 1000);
+
         _assertLimitData({
             key:         TEST_KEY1,
             maxAmount:   1000,
@@ -584,57 +657,7 @@ contract RateLimitsTriggerRateLimitIncreaseTest is RateLimitsTestBase {
             lastUpdated: block.timestamp
         });
 
-        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 500);
-
-        _assertLimitData({
-            key:         TEST_KEY1,
-            maxAmount:   1000,
-            slope:       10,
-            lastAmount:  500,
-            lastUpdated: block.timestamp
-        });
-
-        // Over the limit
-        vm.expectRevert("RateLimits/rate-limit-exceeded");
-        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 501);
-
-        // Free up some room
-        vm.expectEmit(address(rateLimits));
-        emit RateLimitIncreaseTriggered(TEST_KEY1, 1, 500, 501);
-        rateLimits.triggerRateLimitIncrease(TEST_KEY1, 1);
-
-        _assertLimitData({
-            key:         TEST_KEY1,
-            maxAmount:   1000,
-            slope:       10,
-            lastAmount:  501,
-            lastUpdated: block.timestamp
-        });
-
-        rateLimits.triggerRateLimitDecrease(TEST_KEY1, 501);
-
-        _assertLimitData({
-            key:         TEST_KEY1,
-            maxAmount:   1000,
-            slope:       10,
-            lastAmount:  0,
-            lastUpdated: block.timestamp
-        });
-
-        // Release more than the maxAmount
-        vm.expectEmit(address(rateLimits));
-        emit RateLimitIncreaseTriggered(TEST_KEY1, 2000, 0, 1000);
-        rateLimits.triggerRateLimitIncrease(TEST_KEY1, 2000);
-
-        _assertLimitData({
-            key:         TEST_KEY1,
-            maxAmount:   1000,
-            slope:       10,
-            lastAmount:  1000,
-            lastUpdated: block.timestamp
-        });
-
-        vm.stopPrank();
+        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 1000);
     }
 
     function test_triggerRateLimitIncrease_amountToIncrease_upperBoundary() public {
@@ -644,7 +667,7 @@ contract RateLimitsTriggerRateLimitIncreaseTest is RateLimitsTestBase {
         vm.startPrank(controller);
 
         // This will short circuit due to the unlimited rate limit and never update any state or do calculations
-        assertEq(rateLimits.triggerRateLimitIncrease(TEST_KEY1, type(uint256).max), type(uint256).max);
+        assertEq(rateLimits.triggerRateLimitIncrease(TEST_KEY1, type(uint256).max),     type(uint256).max);
         assertEq(rateLimits.triggerRateLimitIncrease(TEST_KEY1, type(uint256).max - 1), type(uint256).max);
 
         vm.stopPrank();
