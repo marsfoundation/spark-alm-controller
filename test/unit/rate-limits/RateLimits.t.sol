@@ -5,7 +5,7 @@ import "test/unit/UnitTestBase.t.sol";
 
 import { RateLimits, IRateLimits } from "src/RateLimits.sol";
 
-contract RateLimitsTest is UnitTestBase {
+contract RateLimitsTestBase is UnitTestBase {
 
     event RateLimitDataSet(
         bytes32 indexed key,
@@ -45,12 +45,37 @@ contract RateLimitsTest is UnitTestBase {
         rateLimits.grantRole(CONTROLLER, controller);
     }
 
+    function _assertLimitData(
+        bytes32 key,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated
+    )
+        internal view
+    {
+        IRateLimits.RateLimitData memory d = rateLimits.getRateLimitData(key);
+
+        assertEq(d.maxAmount,   maxAmount);
+        assertEq(d.slope,       slope);
+        assertEq(d.lastAmount,  lastAmount);
+        assertEq(d.lastUpdated, lastUpdated);
+    }
+
+}
+
+contract RateLimitsConstructorTest is RateLimitsTestBase {
+
     function test_constructor() public {
         rateLimits = new RateLimits(admin);
 
         assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, address(this)), false);
         assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),         true);
     }
+
+}
+
+contract RateLimitsSetRateLimitTest is RateLimitsTestBase {
 
     function test_setRateLimit_unauthorizedAccount() public {
         // Test all variants of setRateLimit with unauthorized account
@@ -141,6 +166,10 @@ contract RateLimitsTest is UnitTestBase {
         vm.stopPrank();
     }
 
+}
+
+contract RateLimitsGetCurrentRateLimitTest is RateLimitsTestBase {
+
     function test_getCurrentRateLimit_empty() public view {
         uint256 amount = rateLimits.getCurrentRateLimit(TEST_KEY1);
         assertEq(amount, 0);
@@ -176,6 +205,10 @@ contract RateLimitsTest is UnitTestBase {
 
         assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), 5_000_000e18);
     }
+
+}
+
+contract RateLimitsTriggerRateLimitDecreaseTest is RateLimitsTestBase {
 
     function test_triggerRateLimitDecrease_unauthorizedAccount() public {
         vm.expectRevert(abi.encodeWithSignature(
@@ -327,6 +360,10 @@ contract RateLimitsTest is UnitTestBase {
         vm.stopPrank();
     }
 
+}
+
+contract RateLimitsTriggerRateLimitIncreaseTest is RateLimitsTestBase {
+
     function test_triggerRateLimitIncrease_emptyRateLimit() public {
         vm.startPrank(controller);
 
@@ -420,14 +457,6 @@ contract RateLimitsTest is UnitTestBase {
         assertEq(rateLimits.triggerRateLimitIncrease(TEST_KEY1, type(uint256).max - 1), type(uint256).max);
 
         vm.stopPrank();
-    }
-
-    function _assertLimitData(bytes32 key, uint256 maxAmount, uint256 slope, uint256 lastAmount, uint256 lastUpdated) internal view {
-        IRateLimits.RateLimitData memory d = rateLimits.getRateLimitData(key);
-        assertEq(d.maxAmount,   maxAmount);
-        assertEq(d.slope,       slope);
-        assertEq(d.lastAmount,  lastAmount);
-        assertEq(d.lastUpdated, lastUpdated);
     }
 
 }
