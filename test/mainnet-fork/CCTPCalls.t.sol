@@ -195,6 +195,13 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
     using DomainHelpers     for *;
     using CCTPBridgeTesting for Bridge;
 
+    event CCTPTransferInitiated(
+        uint64  indexed nonce,
+        uint32  indexed destinationDomain,
+        bytes32 indexed mintRecipient,
+        uint256 usdcAmount
+    );
+
     event DepositForBurn(
         uint64  indexed nonce,
         address indexed burnToken,
@@ -434,6 +441,14 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
             bytes32(0x0000000000000000000000001682ae6375c4e4a97e4b583bc394c861a46d8962),
             bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
         );
+
+        vm.expectEmit(address(mainnetController));
+        emit CCTPTransferInitiated(
+            nonce,
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            amount
+        );
     }
 
     function _expectBaseCCTPEmit(uint64 nonce, uint256 amount) internal {
@@ -449,6 +464,14 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
             bytes32(0x000000000000000000000000bd3fa81b58ba92a82136038b25adec7066af3155),
             bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
+        );
+
+        vm.expectEmit(address(foreignController));
+        emit CCTPTransferInitiated(
+            nonce,
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
+            amount
         );
     }
 

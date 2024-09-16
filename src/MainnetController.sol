@@ -35,6 +35,18 @@ interface IPSMLike {
 contract MainnetController is AccessControl {
 
     /**********************************************************************************************/
+    /*** Events                                                                                 ***/
+    /**********************************************************************************************/
+
+    // NOTE: This is used to track individual transfers for offchain processing of CCTP transactions
+    event CCTPTransferInitiated(
+        uint64  indexed nonce,
+        uint32  indexed destinationDomain,
+        bytes32 indexed mintRecipient,
+        uint256 usdcAmount
+    );
+
+    /**********************************************************************************************/
     /*** State variables                                                                        ***/
     /**********************************************************************************************/
 
@@ -330,18 +342,23 @@ contract MainnetController is AccessControl {
     )
         internal
     {
-        proxy.doCall(
-            address(cctp),
-            abi.encodeCall(
-                cctp.depositForBurn,
-                (
-                    usdcAmount,
-                    destinationDomain,
-                    mintRecipient,
-                    address(usdc)
+        uint64 nonce = abi.decode(
+            proxy.doCall(
+                address(cctp),
+                abi.encodeCall(
+                    cctp.depositForBurn,
+                    (
+                        usdcAmount,
+                        destinationDomain,
+                        mintRecipient,
+                        address(usdc)
+                    )
                 )
-            )
+            ),
+            (uint64)
         );
+
+        emit CCTPTransferInitiated(nonce, destinationDomain, mintRecipient, usdcAmount);
     }
 
 }
