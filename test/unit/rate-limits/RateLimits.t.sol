@@ -551,6 +551,62 @@ contract RateLimitsTriggerRateLimitDecreaseTest is RateLimitsTestBase {
         vm.stopPrank();
     }
 
+    function testFuzz_triggerRateLimitDecrease_zeroAmount(
+        uint256 currentTimestamp,
+        uint256 maxAmount,
+        uint256 slope,
+        uint256 lastAmount,
+        uint256 lastUpdated,
+        uint256 skipAmount
+    ) public {
+        currentTimestamp = _bound(currentTimestamp, 1, 1000 * 365 days);
+        maxAmount        = _bound(maxAmount,        1, 1e12 * 1e18);
+        slope            = _bound(slope,            1, 1e12 * 1e18);
+        lastAmount       = _bound(lastAmount,       1, maxAmount);
+        lastUpdated      = _bound(lastUpdated,      1, currentTimestamp);
+        skipAmount       = _bound(skipAmount,       1, 365 days);
+
+        vm.warp(currentTimestamp);
+        vm.prank(admin);
+        rateLimits.setRateLimitData(TEST_KEY1, maxAmount, slope, lastAmount, lastUpdated);
+
+        uint256 slopeRateLimit    = slope * (currentTimestamp - lastUpdated) + lastAmount;
+        uint256 expectedRateLimit = slopeRateLimit > maxAmount ? maxAmount : slopeRateLimit;
+
+        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), expectedRateLimit);
+
+        skip(skipAmount);
+
+        // Calculate new expected rate limit at new timestamp
+        slopeRateLimit    = slope * (currentTimestamp + skipAmount - lastUpdated) + lastAmount;
+        expectedRateLimit = slopeRateLimit > maxAmount ? maxAmount : slopeRateLimit;
+
+        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), expectedRateLimit);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   maxAmount,
+            slope:       slope,
+            lastAmount:  lastAmount,
+            lastUpdated: lastUpdated
+        });
+
+        vm.prank(controller);
+        uint256 resultingLimit = rateLimits.triggerRateLimitDecrease(TEST_KEY1, 0);
+
+        // The amount does not decrease
+        assertEq(resultingLimit,                            expectedRateLimit);
+        assertEq(rateLimits.getCurrentRateLimit(TEST_KEY1), expectedRateLimit);
+
+        _assertLimitData({
+            key:         TEST_KEY1,
+            maxAmount:   maxAmount,
+            slope:       slope,
+            lastAmount:  expectedRateLimit,
+            lastUpdated: currentTimestamp + skipAmount
+        });
+    }
+
 }
 
 contract RateLimitsTriggerRateLimitIncreaseTest is RateLimitsTestBase {
