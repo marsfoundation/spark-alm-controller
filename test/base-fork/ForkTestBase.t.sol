@@ -91,9 +91,7 @@ contract ForkTestBase is Test {
             proxy_      : address(almProxy),
             rateLimits_ : address(rateLimits),
             psm_        : address(psmBase),
-            usds_       : address(usdsBase),
             usdc_       : USDC_BASE,
-            susds_      : address(susdsBase),
             cctp_       : CCTP_MESSENGER_BASE
         });
 

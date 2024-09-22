@@ -144,9 +144,7 @@ contract ForeignControllerFreezeTest is ControllerFreezeTests {
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
             address(psm3),
-            usds,
             usdc,
-            susds,
             makeAddr("cctp")
         )));
 
@@ -170,9 +168,7 @@ contract ForeignControllerReactivateTest is ControllerReactivateTests {
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
             address(psm3),
-            usds,
             usdc,
-            susds,
             makeAddr("cctp")
         )));
 

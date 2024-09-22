@@ -43,9 +43,7 @@ contract ForeignController is AccessControl {
     IPSM3       public immutable psm;
     IRateLimits public immutable rateLimits;
 
-    IERC20 public immutable usds;
     IERC20 public immutable usdc;
-    IERC20 public immutable susds;
 
     bool public active;
 
@@ -60,9 +58,7 @@ contract ForeignController is AccessControl {
         address proxy_,
         address rateLimits_,
         address psm_,
-        address usds_,
         address usdc_,
-        address susds_,
         address cctp_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
@@ -70,12 +66,8 @@ contract ForeignController is AccessControl {
         proxy      = IALMProxy(proxy_);
         rateLimits = IRateLimits(rateLimits_);
         psm        = IPSM3(psm_);
-
-        usds  = IERC20(usds_);
-        usdc  = IERC20(usdc_);
-        susds = IERC20(susds_);
-
-        cctp = ICCTPLike(cctp_);
+        usdc       = IERC20(usdc_);
+        cctp       = ICCTPLike(cctp_);
 
         active = true;
     }

@@ -109,9 +109,7 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
             proxy_      : address(foreignAlmProxy),
             rateLimits_ : address(foreignRateLimits),
             psm_        : address(psmBase),
-            usds_       : address(usdsBase),
             usdc_       : USDC_BASE,
-            susds_      : address(susdsBase),
             cctp_       : CCTP_MESSENGER_BASE
         });
 
