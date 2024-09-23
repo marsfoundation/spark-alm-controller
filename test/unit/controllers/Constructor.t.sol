@@ -44,6 +44,9 @@ contract MainnetControllerConstructorTests is UnitTestBase {
         assertEq(address(mainnetController.usdc()),       makeAddr("usdc"));  // Gem param in MockPSM
         assertEq(address(mainnetController.usds()),       makeAddr("usds"));  // Usds param in MockSUsds
 
+        assertEq(mainnetController.psmTo18ConversionFactor(), psm.to18ConversionFactor());
+        assertEq(mainnetController.psmTo18ConversionFactor(), 1e12);
+
         assertEq(mainnetController.active(), true);
     }
 

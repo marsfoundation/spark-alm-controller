@@ -74,6 +74,8 @@ contract MainnetController is AccessControl {
     IERC20     public immutable usdc;
     ISUSDSLike public immutable susds;
 
+    uint256 public immutable psmTo18ConversionFactor;
+
     bool public active;
 
     mapping(uint32 destinationDomain => bytes32 mintRecipient) public mintRecipients;
@@ -107,6 +109,8 @@ contract MainnetController is AccessControl {
         dai   = IERC20(daiUsds.dai());
         usdc  = IERC20(psm.gem());
         usds  = IERC20(susds.usds());
+
+        psmTo18ConversionFactor = psm.to18ConversionFactor();
 
         active = true;
     }
@@ -248,7 +252,7 @@ contract MainnetController is AccessControl {
     function swapUSDSToUSDC(uint256 usdcAmount)
         external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDS_TO_USDC, usdcAmount)
     {
-        uint256 usdsAmount = usdcAmount * psm.to18ConversionFactor();
+        uint256 usdsAmount = usdcAmount * psmTo18ConversionFactor;
 
         // Approve USDS to DaiUsds migrator from the proxy (assumes the proxy has enough USDS)
         proxy.doCall(
@@ -262,7 +266,7 @@ contract MainnetController is AccessControl {
             abi.encodeCall(daiUsds.usdsToDai, (address(proxy), usdsAmount))
         );
 
-        // Approve DAI to PSM from the proxy
+        // Approve DAI to PSM from the proxy because conversion from USDS to DAI was 1:1
         proxy.doCall(
             address(dai),
             abi.encodeCall(dai.approve, (address(psm), usdsAmount))
@@ -278,7 +282,7 @@ contract MainnetController is AccessControl {
     function swapUSDCToUSDS(uint256 usdcAmount)
         external onlyRole(RELAYER) isActive cancelRateLimit(LIMIT_USDS_TO_USDC, usdcAmount)
     {
-        uint256 usdsAmount = usdcAmount * psm.to18ConversionFactor();
+        uint256 usdsAmount = usdcAmount * psmTo18ConversionFactor;
 
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
         proxy.doCall(

@@ -5,6 +5,8 @@ contract MockPSM {
 
     address public gem;
 
+    uint256 public to18ConversionFactor = 1e12;
+
     constructor(address _gem) {
         gem = _gem;
     }
