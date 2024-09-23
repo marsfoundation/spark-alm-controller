@@ -17,7 +17,7 @@ interface IALMProxy {
      * @return result The returned data from the call.
      */
     function doCall(address target, bytes calldata data)
-        external payable returns (bytes memory result);
+        external returns (bytes memory result);
 
     /**
      * @dev    This function allows for transferring `value` (ether) along with the call to the target contract.
@@ -38,6 +38,6 @@ interface IALMProxy {
      * @return result The returned data from the delegate call.
      */
     function doDelegateCall(address target, bytes calldata data)
-        external payable returns (bytes memory result);
+        external returns (bytes memory result);
 
 }

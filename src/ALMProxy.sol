@@ -30,9 +30,9 @@ contract ALMProxy is IALMProxy, AccessControl {
     /**********************************************************************************************/
 
     function doCall(address target, bytes memory data)
-        external payable override onlyRole(CONTROLLER) returns (bytes memory result)
+        external override onlyRole(CONTROLLER) returns (bytes memory result)
     {
-        result = target.functionCallWithValue(data, msg.value);
+        result = target.functionCall(data);
     }
 
     function doCallWithValue(address target, bytes memory data, uint256 value)
@@ -42,7 +42,7 @@ contract ALMProxy is IALMProxy, AccessControl {
     }
 
     function doDelegateCall(address target, bytes memory data)
-        external payable override onlyRole(CONTROLLER) returns (bytes memory result)
+        external override onlyRole(CONTROLLER) returns (bytes memory result)
     {
         result = target.functionDelegateCall(data);
     }
