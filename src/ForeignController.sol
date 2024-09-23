@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import { console } from "forge-std/console.sol";
-
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
@@ -85,7 +83,6 @@ contract ForeignController is AccessControl {
     }
 
     modifier rateLimited(bytes32 key, uint256 amount) {
-        console.log("Domain key 1: %s", uint256(key));
         rateLimits.triggerRateLimitDecrease(key, amount);
         _;
     }

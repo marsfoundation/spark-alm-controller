@@ -214,8 +214,6 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
         );
 
-        console.log("Domain key 2: %s", uint256(domainKeyEthereum));
-
         // Set up rate limits
         foreignRateLimits.setRateLimitData(domainKeyEthereum,                      5_000_000e6, uint256(1_000_000e6) / 4 hours);
         foreignRateLimits.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
