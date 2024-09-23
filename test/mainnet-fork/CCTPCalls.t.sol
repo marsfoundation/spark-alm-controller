@@ -104,6 +104,20 @@ contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
     }
 
     function test_transferUSDCToCCTP_invalidMintRecipient() external {
+        // Configure to pass modifiers
+        vm.startPrank(SPARK_PROXY);
+
+        rateLimits.setUnlimitedRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                mainnetController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE
+            )
+        );
+
+        rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP());
+
+        vm.stopPrank();
+
         vm.prank(relayer);
         vm.expectRevert("MainnetController/domain-not-configured");
         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE);
@@ -250,7 +264,85 @@ contract ForeignControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPT
         foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
     }
 
+    function test_transferUSDCToCCTP_cctpRateLimitedBoundary() external {
+        vm.startPrank(admin);
+
+        // Set this so second modifier will be passed in success case
+        foreignRateLimits.setUnlimitedRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                foreignController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+            )
+        );
+
+        // Rate limit will be constant 10m (higher than setup)
+        foreignRateLimits.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), 10_000_000e6, 0);
+
+        // Set this for success case
+        foreignController.setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            bytes32(uint256(uint160(makeAddr("mintRecipient"))))
+        );
+
+        vm.stopPrank();
+
+        deal(address(usdcBase), address(foreignAlmProxy), 10_000_000e6 + 1);
+
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        foreignController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+
+        foreignController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    }
+
+    function test_transferUSDCToCCTP_domainRateLimitedBoundary() external {
+        vm.startPrank(admin);
+
+        // Set this so first modifier will be passed in success case
+        foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
+
+        // Rate limit will be constant 10m (higher than setup)
+        foreignRateLimits.setRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                foreignController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+            ),
+            10_000_000e6,
+            0
+        );
+
+        // Set this for success case
+        foreignController.setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            bytes32(uint256(uint160(makeAddr("mintRecipient"))))
+        );
+
+        vm.stopPrank();
+
+        deal(address(usdcBase), address(foreignAlmProxy), 10_000_000e6 + 1);
+
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        foreignController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+
+        foreignController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    }
+
     function test_transferUSDCToCCTP_invalidMintRecipient() external {
+        // Configure to pass modifiers
+        vm.startPrank(admin);
+
+        foreignRateLimits.setUnlimitedRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                foreignController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE
+            )
+        );
+
+        foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
+
+        vm.stopPrank();
+
         vm.prank(relayer);
         vm.expectRevert("ForeignController/domain-not-configured");
         foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE);
