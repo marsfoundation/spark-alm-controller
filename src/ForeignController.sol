@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
+import { console } from "forge-std/console.sol";
+
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
@@ -34,9 +36,10 @@ contract ForeignController is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    bytes32 public constant LIMIT_PSM_DEPOSIT  = keccak256("LIMIT_PSM_DEPOSIT");
-    bytes32 public constant LIMIT_PSM_WITHDRAW = keccak256("LIMIT_PSM_WITHDRAW");
-    bytes32 public constant LIMIT_USDC_TO_CCTP = keccak256("LIMIT_USDC_TO_CCTP");
+    bytes32 public constant LIMIT_PSM_DEPOSIT    = keccak256("LIMIT_PSM_DEPOSIT");
+    bytes32 public constant LIMIT_PSM_WITHDRAW   = keccak256("LIMIT_PSM_WITHDRAW");
+    bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
+    bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
 
     IALMProxy   public immutable proxy;
     ICCTPLike   public immutable cctp;
@@ -82,6 +85,7 @@ contract ForeignController is AccessControl {
     }
 
     modifier rateLimited(bytes32 key, uint256 amount) {
+        console.log("Domain key 1: %s", uint256(key));
         rateLimits.triggerRateLimitDecrease(key, amount);
         _;
     }
@@ -171,7 +175,14 @@ contract ForeignController is AccessControl {
     /**********************************************************************************************/
 
     function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
-        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
+        rateLimited(
+            RateLimitHelpers.makeDomainKey(LIMIT_USDC_TO_DOMAIN, destinationDomain),
+            usdcAmount
+        )
     {
         bytes32 mintRecipient = mintRecipients[destinationDomain];
 

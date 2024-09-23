@@ -49,7 +49,7 @@ contract RateLimits is IRateLimits, AccessControl {
         emit RateLimitDataSet(key, maxAmount, slope, lastAmount, lastUpdated);
     }
 
-    function setRateLimitData(bytes32 key,uint256 maxAmount,uint256 slope) external override {
+    function setRateLimitData(bytes32 key, uint256 maxAmount, uint256 slope) external override {
         setRateLimitData(key, maxAmount, slope, maxAmount, block.timestamp);
     }
 

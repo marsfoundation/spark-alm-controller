@@ -10,6 +10,8 @@ import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
+import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
+
 interface IDaiUsdsLike {
     function dai() external view returns(address);
     function daiToUsds(address usr, uint256 wad) external;
@@ -53,9 +55,10 @@ contract MainnetController is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    bytes32 public constant LIMIT_USDC_TO_CCTP = keccak256("LIMIT_USDC_TO_CCTP");
-    bytes32 public constant LIMIT_USDS_MINT    = keccak256("LIMIT_USDS_MINT");
-    bytes32 public constant LIMIT_USDS_TO_USDC = keccak256("LIMIT_USDS_TO_USDC");
+    bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
+    bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
+    bytes32 public constant LIMIT_USDS_MINT      = keccak256("LIMIT_USDS_MINT");
+    bytes32 public constant LIMIT_USDS_TO_USDC   = keccak256("LIMIT_USDS_TO_USDC");
 
     address public immutable buffer;
 
@@ -257,7 +260,7 @@ contract MainnetController is AccessControl {
             abi.encodeCall(daiUsds.usdsToDai, (address(proxy), usdsAmount))
         );
 
-        // Approve DAI to PSM from the proxy (assumes the proxy has enough DAI)
+        // Approve DAI to PSM from the proxy
         proxy.doCall(
             address(dai),
             abi.encodeCall(dai.approve, (address(psm), usdsAmount))
@@ -281,7 +284,7 @@ contract MainnetController is AccessControl {
             abi.encodeCall(usdc.approve, (address(psm), usdcAmount))
         );
 
-        // Swap USDC to DAI through the PSM
+        // Swap USDC to DAI through the PSM (1:1 since sellGemNoFee is used)
         proxy.doCall(
             address(psm),
             abi.encodeCall(psm.sellGemNoFee, (address(proxy), usdcAmount))
@@ -305,7 +308,14 @@ contract MainnetController is AccessControl {
     /**********************************************************************************************/
 
     function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
-        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
+        rateLimited(
+            RateLimitHelpers.makeDomainKey(LIMIT_USDC_TO_DOMAIN, destinationDomain),
+            usdcAmount
+        )
     {
         bytes32 mintRecipient = mintRecipients[destinationDomain];
 

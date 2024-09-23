@@ -16,6 +16,8 @@ import { CCTPForwarder }     from "xchain-helpers/src/forwarders/CCTPForwarder.s
 
 import { ALMProxy }          from "src/ALMProxy.sol";
 import { ForeignController } from "src/ForeignController.sol";
+import { RateLimits }        from "src/RateLimits.sol";
+import { RateLimitHelpers }  from "src/RateLimitHelpers.sol";
 
 contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
 
@@ -35,6 +37,70 @@ contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+    }
+
+    function test_transferUSDCToCCTP_cctpRateLimitedBoundary() external {
+        vm.startPrank(SPARK_PROXY);
+
+        // Set this so second modifier will be passed in success case
+        rateLimits.setUnlimitedRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                mainnetController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
+            )
+        );
+
+        // Rate limit will be constant 10m (higher than setup)
+        rateLimits.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), 10_000_000e6, 0);
+
+        // Set this for success case
+        mainnetController.setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(uint256(uint160(makeAddr("mintRecipient"))))
+        );
+
+        vm.stopPrank();
+
+        deal(address(usdc), address(almProxy), 10_000_000e6 + 1);
+
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+
+        mainnetController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+    }
+
+    function test_transferUSDCToCCTP_domainRateLimitedBoundary() external {
+        vm.startPrank(SPARK_PROXY);
+
+        // Set this so first modifier will be passed in success case
+        rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP());
+
+        // Rate limit will be constant 10m (higher than setup)
+        rateLimits.setRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                mainnetController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
+            ),
+            10_000_000e6,
+            0
+        );
+
+        // Set this for success case
+        mainnetController.setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(uint256(uint160(makeAddr("mintRecipient"))))
+        );
+
+        vm.stopPrank();
+
+        deal(address(usdc), address(almProxy), 10_000_000e6 + 1);
+
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+
+        mainnetController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
     }
 
     function test_transferUSDCToCCTP_invalidMintRecipient() external {
@@ -129,12 +195,16 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
         foreignRateLimits.grantRole(CONTROLLER, address(foreignController));
 
-        // Setup rate limits
-        foreignRateLimits.setRateLimitData(
-            foreignController.LIMIT_USDC_TO_CCTP(),
-            5_000_000e6,
-            uint256(1_000_000e6) / 4 hours
+        bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
+            foreignController.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
         );
+
+        console.log("Domain key 2: %s", uint256(domainKeyEthereum));
+
+        // Set up rate limits
+        foreignRateLimits.setRateLimitData(domainKeyEthereum,                      5_000_000e6, uint256(1_000_000e6) / 4 hours);
+        foreignRateLimits.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
 
         vm.stopPrank();
 
