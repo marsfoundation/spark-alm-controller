@@ -243,6 +243,8 @@ contract MainnetController is AccessControl {
     /*** Relayer PSM functions                                                                  ***/
     /**********************************************************************************************/
 
+    // NOTE: The param `usdcAmount` is denominated in 1e6 precision to match how PSM uses
+    //       USDC precision for both `buyGemNoFee` and `sellGemNoFee`
     function swapUSDSToUSDC(uint256 usdcAmount)
         external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDS_TO_USDC, usdcAmount)
     {
