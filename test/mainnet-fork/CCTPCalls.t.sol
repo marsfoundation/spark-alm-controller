@@ -165,7 +165,7 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
     function setUp() public override virtual {
         super.setUp();
 
-        destination = getChain("base").createSelectFork(18181500);  // August 8, 2024
+        destination = getChain("base").createSelectFork(20187000);  // September 24, 2024
 
         usdsBase  = IERC20(address(new ERC20Mock()));
         susdsBase = IERC20(address(new ERC20Mock()));
@@ -380,7 +380,7 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
 
         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
-        _expectEthereumCCTPEmit(94_773, 1e6);
+        _expectEthereumCCTPEmit(110_048, 1e6);
 
         vm.prank(relayer);
         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
@@ -414,9 +414,9 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
         // Will split into 3 separate transactions at max 1m each
-        _expectEthereumCCTPEmit(94_773, 1_000_000e6);
-        _expectEthereumCCTPEmit(94_774, 1_000_000e6);
-        _expectEthereumCCTPEmit(94_775, 900_000e6);
+        _expectEthereumCCTPEmit(110_048, 1_000_000e6);
+        _expectEthereumCCTPEmit(110_049, 1_000_000e6);
+        _expectEthereumCCTPEmit(110_050, 900_000e6);
 
         vm.prank(relayer);
         mainnetController.transferUSDCToCCTP(2_900_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
@@ -486,7 +486,7 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
 
         assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
-        _expectBaseCCTPEmit(255_141, 1e6);
+        _expectBaseCCTPEmit(287_622, 1e6);
 
         vm.prank(relayer);
         foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
@@ -522,9 +522,9 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
         // Will split into three separate transactions at max 1m each
-        _expectBaseCCTPEmit(255_141, 1_000_000e6);
-        _expectBaseCCTPEmit(255_142, 1_000_000e6);
-        _expectBaseCCTPEmit(255_143, 600_000e6);
+        _expectBaseCCTPEmit(287_622, 1_000_000e6);
+        _expectBaseCCTPEmit(287_623, 1_000_000e6);
+        _expectBaseCCTPEmit(287_624, 600_000e6);
 
         vm.prank(relayer);
         foreignController.transferUSDCToCCTP(2_600_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);

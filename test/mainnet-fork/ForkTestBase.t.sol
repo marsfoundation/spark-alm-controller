@@ -12,6 +12,8 @@ import {
 
 import { AllocatorDeploy } from "dss-allocator/deploy/AllocatorDeploy.sol";
 
+import { DssLitePsm } from "lib/dss-lite-psm/src/DssLitePsm.sol";
+
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { UsdsDeploy }   from "usds/deploy/UsdsDeploy.sol";
@@ -120,6 +122,8 @@ contract ForkTestBase is DssTest {
     IERC20 usdc;
     ISUsds susds;
 
+    DssLitePsm psm;
+
     address buffer;
     address daiUsds;
     address usdsJoin;
@@ -139,7 +143,7 @@ contract ForkTestBase is DssTest {
     /**********************************************************************************************/
 
     function setUp() public virtual {
-        source = getChain("mainnet").createSelectFork(20484600);  // August 8, 2024
+        source = getChain("mainnet").createSelectFork(20819000);  //  September 24, 2024
 
         dss          = MCD.loadFromChainlog(LOG);
         DAI          = IChainlogLike(LOG).getAddress("MCD_DAI");
@@ -259,6 +263,7 @@ contract ForkTestBase is DssTest {
         usds     = IERC20(address(usdsInst.usds));
         usdsJoin = usdsInst.usdsJoin;
         pocket   = IPSMLike(PSM).pocket();
+        psm      = DssLitePsm(PSM);
         susds    = ISUsds(address(susdsInst.sUsds));
         usdc     = IERC20(USDC);
         vault    = ilkInst.vault;
