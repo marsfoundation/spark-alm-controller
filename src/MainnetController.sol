@@ -284,7 +284,7 @@ contract MainnetController is AccessControl {
     function swapUSDCToUSDS(uint256 usdcAmount)
         external onlyRole(RELAYER) isActive cancelRateLimit(LIMIT_USDS_TO_USDC, usdcAmount)
     {
-        uint256 usdsAmount = usdcAmount * psmTo18ConversionFactor;
+        uint256 daiAmount = usdcAmount * psmTo18ConversionFactor;
 
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
         proxy.doCall(
@@ -292,41 +292,43 @@ contract MainnetController is AccessControl {
             abi.encodeCall(usdc.approve, (address(psm), usdcAmount))
         );
 
-        uint256 psmBalance = usds.balanceOf(psm.pocket());
+        uint256 psmDaiBalance = dai.balanceOf(address(psm));
 
-        if (usdsAmount < psmBalance) {
-            _swapUSDCToDAI(usdsAmount);
+        if (daiAmount < psmDaiBalance) {
+            _swapUSDCToDAI(usdcAmount);
         } else {
-            uint256 remainingUsds = usdsAmount;
+            uint256 remainingPsmDai = daiAmount;
 
-            // Refill the PSM with DAI as many times as needed to get to the full `usdsAmount`.
+            // Refill the PSM with DAI as many times as needed to get to the full `usdcAmount`.
             // If the PSM cannot be filled with the full amount, psm.fill() will revert
             // with `DssLitePsm/nothing-to-fill` since rush() will return 0.
             // This is desired behavior because this function should only succeed if the full
             // `usdcAmount` can be swapped.
-            while (remainingUsds > 0) {
+            while (remainingPsmDai > 0) {
                 psm.fill();
 
-                psmBalance = usds.balanceOf(psm.pocket());
+                psmDaiBalance = dai.balanceOf(address(psm));
 
-                uint256 swapAmount = remainingUsds < psmBalance ? remainingUsds : psmBalance;
+                uint256 swapAmount = remainingPsmDai < psmDaiBalance
+                    ? remainingPsmDai
+                    : psmDaiBalance;
 
-                _swapUSDCToDAI(swapAmount);
+                _swapUSDCToDAI(swapAmount / psmTo18ConversionFactor);
 
-                remainingUsds -= swapAmount;
+                remainingPsmDai -= swapAmount;
             }
         }
 
         // Approve DAI to DaiUsds migrator from the proxy (assumes the proxy has enough DAI)
         proxy.doCall(
             address(dai),
-            abi.encodeCall(dai.approve, (address(daiUsds), usdsAmount))
+            abi.encodeCall(dai.approve, (address(daiUsds), daiAmount))
         );
 
         // Swap DAI to USDS 1:1
         proxy.doCall(
             address(daiUsds),
-            abi.encodeCall(daiUsds.daiToUsds, (address(proxy), usdsAmount))
+            abi.encodeCall(daiUsds.daiToUsds, (address(proxy), daiAmount))
         );
     }
 

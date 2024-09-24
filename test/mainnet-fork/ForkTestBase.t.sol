@@ -81,13 +81,15 @@ contract ForkTestBase is DssTest {
     uint256 USDC_SUPPLY;
 
     /**********************************************************************************************/
-    /*** Mainnet addresses                                                                      ***/
+    /*** Mainnet addresses/constants                                                            ***/
     /**********************************************************************************************/
 
     address constant CCTP_MESSENGER = 0xBd3fa81B58Ba92a82136038B25aDec7066af3155;
     address constant LOG            = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
     address constant PSM            = 0xf6e72Db5454dd049d0788e411b06CfAF16853042;  // Lite PSM
     address constant SPARK_PROXY    = 0x3300f198988e4C9C63F75dF86De36421f06af8c4;
+
+    bytes32 constant PSM_ILK = 0x4c4954452d50534d2d555344432d410000000000000000000000000000000000;
 
     DssInstance dss;  // Mainnet DSS
 

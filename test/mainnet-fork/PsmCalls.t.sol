@@ -133,6 +133,8 @@ contract MainnetControllerSwapUSDCToUSDSFailureTests is ForkTestBase {
 
 contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
 
+    event Fill(uint256 wad);
+
     function test_swapUSDCToUSDS() external {
         deal(address(usdc), address(almProxy), 1e6);
 
@@ -172,7 +174,79 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
     }
 
-    function test_swapUSDCToUSDS_partialRefill() external {}
+    function test_swapUSDCToUSDS_partialSingleRefill() external {
+        assertEq(DAI_BAL_PSM, 204_506_488.11013e18);
+
+        DssLitePsm psmCode = new DssLitePsm(psm.ilk(), address(psm.gem()), address(psm.daiJoin()), psm.pocket());
+
+        vm.etch(PSM, address(psmCode).code);
+
+        uint256 fillAmount = psm.rush();
+
+        assertEq(fillAmount, 0);
+
+        // The line is just over 2.1 billion, this condition will allow DAI to get minted to get to
+        // 2 billion in Art, so it will mint the difference between current Art and 2 billion.
+        deal(address(usdc), address(pocket), 1_800_000_000e6);
+
+        fillAmount = psm.rush();
+
+        assertEq(fillAmount, 121_680_037.47418e18);
+
+        deal(address(usdc), address(almProxy), 300_000_000e6);  // Higher than balance of DAI
+
+        assertEq(usds.balanceOf(address(almProxy)),          0);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.totalSupply(),                         0);
+
+        assertEq(dai.balanceOf(address(almProxy)), 0);
+        assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM);
+        assertEq(dai.totalSupply(),                DAI_SUPPLY);
+
+        assertEq(usdc.balanceOf(address(almProxy)),          300_000_000e6);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.balanceOf(address(pocket)),            1_800_000_000e6);
+
+        assertEq(usds.allowance(address(buffer),   address(vault)),   type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(daiUsds)), 0);
+        assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
+
+        // NOTE: Art == dai here because rate is 1 for PSM ilk
+        ( uint256 Art,,,, ) = dss.vat.ilks(PSM_ILK);
+
+        assertEq(Art, 1_878_319_962.52582e18);
+        assertEq(Art, 2_000_000_000e18 - fillAmount);
+
+        vm.prank(relayer);
+        vm.expectEmit(PSM);
+        emit Fill(fillAmount);
+        mainnetController.swapUSDCToUSDS(300_000_000e6);
+
+        ( Art,,,, ) = dss.vat.ilks(PSM_ILK);
+
+        // 2 billion because the USDC balance of the PSM was 1.8 billion, plus 200m buffer allowed
+        // it to mint the amount of DAI to get to this 2 billion value, which was difference between
+        // original Art and 2 billion.
+        assertEq(Art, 2_000_000_000e18);
+
+        assertEq(usds.balanceOf(address(almProxy)),          300_000_000e18);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.totalSupply(),                         300_000_000e18);
+
+        assertEq(dai.balanceOf(address(almProxy)), 0);
+        assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM + fillAmount - 300_000_000e18);
+        assertEq(dai.balanceOf(address(PSM)),      26_186_525.58431e18);
+        assertEq(dai.totalSupply(),                DAI_SUPPLY + fillAmount - 300_000_000e18);
+
+        assertEq(usdc.balanceOf(address(almProxy)),          0);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.balanceOf(address(pocket)),            2_100_000_000e6);  // 1.8 billion + 300 million
+
+        assertEq(usds.allowance(address(buffer),   address(vault)),   type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(daiUsds)), 0);
+        assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
+    }
+
     function test_swapUSDCToUSDS_exactRefill() external {}
     function test_swapUSDCToUSDS_multipleRefill() external {}
 
