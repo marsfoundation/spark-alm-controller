@@ -127,6 +127,8 @@ contract MainnetControllerSwapUSDCToUSDSFailureTests is ForkTestBase {
         mainnetController.swapUSDCToUSDS(1e6);
     }
 
+    function test_swapUSDCToUSDS_firstRefillIncomplete() external {}
+    function test_swapUSDCToUSDS_secondfRefillIncomplete() external {}
 }
 
 contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
@@ -169,6 +171,10 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         assertEq(usds.allowance(address(almProxy), address(daiUsds)), 0);
         assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
     }
+
+    function test_swapUSDCToUSDS_partialRefill() external {}
+    function test_swapUSDCToUSDS_exactRefill() external {}
+    function test_swapUSDCToUSDS_multipleRefill() external {}
 
     function test_swapUSDCToUSDS_rateLimited() external {
         bytes32 key = mainnetController.LIMIT_USDS_TO_USDC();

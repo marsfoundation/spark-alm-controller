@@ -29,7 +29,9 @@ interface IVaultLike {
 
 interface IPSMLike {
     function buyGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 usdsAmount);
+    function fill() external returns (uint256 wad);
     function gem() external view returns(address);
+    function pocket() external view returns(address);
     function sellGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 usdsAmount);
     function to18ConversionFactor() external view returns (uint256);
 }
@@ -290,11 +292,30 @@ contract MainnetController is AccessControl {
             abi.encodeCall(usdc.approve, (address(psm), usdcAmount))
         );
 
-        // Swap USDC to DAI through the PSM (1:1 since sellGemNoFee is used)
-        proxy.doCall(
-            address(psm),
-            abi.encodeCall(psm.sellGemNoFee, (address(proxy), usdcAmount))
-        );
+        uint256 psmBalance = usds.balanceOf(psm.pocket());
+
+        if (usdsAmount < psmBalance) {
+            _swapUSDCToDAI(usdsAmount);
+        } else {
+            uint256 remainingUsds = usdsAmount;
+
+            // Refill the PSM with DAI as many times as needed to get to the full `usdsAmount`.
+            // If the PSM cannot be filled with the full amount, psm.fill() will revert
+            // with `DssLitePsm/nothing-to-fill` since rush() will return 0.
+            // This is desired behavior because this function should only succeed if the full
+            // `usdcAmount` can be swapped.
+            while (remainingUsds > 0) {
+                psm.fill();
+
+                psmBalance = usds.balanceOf(psm.pocket());
+
+                uint256 swapAmount = remainingUsds < psmBalance ? remainingUsds : psmBalance;
+
+                _swapUSDCToDAI(swapAmount);
+
+                remainingUsds -= swapAmount;
+            }
+        }
 
         // Approve DAI to DaiUsds migrator from the proxy (assumes the proxy has enough DAI)
         proxy.doCall(
@@ -375,6 +396,14 @@ contract MainnetController is AccessControl {
         );
 
         emit CCTPTransferInitiated(nonce, destinationDomain, mintRecipient, usdcAmount);
+    }
+
+    function _swapUSDCToDAI(uint256 usdcAmount) internal {
+        // Swap USDC to DAI through the PSM (1:1 since sellGemNoFee is used)
+        proxy.doCall(
+            address(psm),
+            abi.encodeCall(psm.sellGemNoFee, (address(proxy), usdcAmount))
+        );
     }
 
 }
