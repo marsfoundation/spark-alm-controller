@@ -44,6 +44,9 @@ contract MainnetControllerConstructorTests is UnitTestBase {
         assertEq(address(mainnetController.usdc()),       makeAddr("usdc"));  // Gem param in MockPSM
         assertEq(address(mainnetController.usds()),       makeAddr("usds"));  // Usds param in MockSUsds
 
+        assertEq(mainnetController.psmTo18ConversionFactor(), psm.to18ConversionFactor());
+        assertEq(mainnetController.psmTo18ConversionFactor(), 1e12);
+
         assertEq(mainnetController.active(), true);
     }
 
@@ -54,9 +57,7 @@ contract ForeignControllerConstructorTests is UnitTestBase {
     address almProxy   = makeAddr("almProxy");
     address rateLimits = makeAddr("rateLimits");
     address cctp       = makeAddr("cctp");
-    address usds       = makeAddr("usds");
     address psm        = makeAddr("psm");
-    address susds      = makeAddr("susds");
     address usdc       = makeAddr("usdc");
 
     function test_constructor() public {
@@ -65,9 +66,7 @@ contract ForeignControllerConstructorTests is UnitTestBase {
             almProxy,
             rateLimits,
             psm,
-            usds,
             usdc,
-            susds,
             cctp
         );
 
@@ -76,9 +75,7 @@ contract ForeignControllerConstructorTests is UnitTestBase {
         assertEq(address(foreignController.proxy()),      almProxy);
         assertEq(address(foreignController.rateLimits()), rateLimits);
         assertEq(address(foreignController.psm()),        psm);
-        assertEq(address(foreignController.usds()),       usds);   // asset0 param in MockPSM3
         assertEq(address(foreignController.usdc()),       usdc);   // asset1 param in MockPSM3
-        assertEq(address(foreignController.susds()),      susds);  // asset2 param in MockPSM3
         assertEq(address(foreignController.cctp()),       cctp);
 
         assertEq(foreignController.active(), true);

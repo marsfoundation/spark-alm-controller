@@ -10,6 +10,8 @@ import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
+import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
+
 interface IDaiUsdsLike {
     function dai() external view returns(address);
     function daiToUsds(address usr, uint256 wad) external;
@@ -53,9 +55,10 @@ contract MainnetController is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    bytes32 public constant LIMIT_USDC_TO_CCTP = keccak256("LIMIT_USDC_TO_CCTP");
-    bytes32 public constant LIMIT_USDS_MINT    = keccak256("LIMIT_USDS_MINT");
-    bytes32 public constant LIMIT_USDS_TO_USDC = keccak256("LIMIT_USDS_TO_USDC");
+    bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
+    bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
+    bytes32 public constant LIMIT_USDS_MINT      = keccak256("LIMIT_USDS_MINT");
+    bytes32 public constant LIMIT_USDS_TO_USDC   = keccak256("LIMIT_USDS_TO_USDC");
 
     address public immutable buffer;
 
@@ -70,6 +73,8 @@ contract MainnetController is AccessControl {
     IERC20     public immutable usds;
     IERC20     public immutable usdc;
     ISUSDSLike public immutable susds;
+
+    uint256 public immutable psmTo18ConversionFactor;
 
     bool public active;
 
@@ -104,6 +109,8 @@ contract MainnetController is AccessControl {
         dai   = IERC20(daiUsds.dai());
         usdc  = IERC20(psm.gem());
         usds  = IERC20(susds.usds());
+
+        psmTo18ConversionFactor = psm.to18ConversionFactor();
 
         active = true;
     }
@@ -240,10 +247,12 @@ contract MainnetController is AccessControl {
     /*** Relayer PSM functions                                                                  ***/
     /**********************************************************************************************/
 
+    // NOTE: The param `usdcAmount` is denominated in 1e6 precision to match how PSM uses
+    //       USDC precision for both `buyGemNoFee` and `sellGemNoFee`
     function swapUSDSToUSDC(uint256 usdcAmount)
         external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDS_TO_USDC, usdcAmount)
     {
-        uint256 usdsAmount = usdcAmount * psm.to18ConversionFactor();
+        uint256 usdsAmount = usdcAmount * psmTo18ConversionFactor;
 
         // Approve USDS to DaiUsds migrator from the proxy (assumes the proxy has enough USDS)
         proxy.doCall(
@@ -257,7 +266,7 @@ contract MainnetController is AccessControl {
             abi.encodeCall(daiUsds.usdsToDai, (address(proxy), usdsAmount))
         );
 
-        // Approve DAI to PSM from the proxy (assumes the proxy has enough DAI)
+        // Approve DAI to PSM from the proxy because conversion from USDS to DAI was 1:1
         proxy.doCall(
             address(dai),
             abi.encodeCall(dai.approve, (address(psm), usdsAmount))
@@ -273,7 +282,7 @@ contract MainnetController is AccessControl {
     function swapUSDCToUSDS(uint256 usdcAmount)
         external onlyRole(RELAYER) isActive cancelRateLimit(LIMIT_USDS_TO_USDC, usdcAmount)
     {
-        uint256 usdsAmount = usdcAmount * psm.to18ConversionFactor();
+        uint256 usdsAmount = usdcAmount * psmTo18ConversionFactor;
 
         // Approve USDC to PSM from the proxy (assumes the proxy has enough USDC)
         proxy.doCall(
@@ -281,7 +290,7 @@ contract MainnetController is AccessControl {
             abi.encodeCall(usdc.approve, (address(psm), usdcAmount))
         );
 
-        // Swap USDC to DAI through the PSM
+        // Swap USDC to DAI through the PSM (1:1 since sellGemNoFee is used)
         proxy.doCall(
             address(psm),
             abi.encodeCall(psm.sellGemNoFee, (address(proxy), usdcAmount))
@@ -305,7 +314,14 @@ contract MainnetController is AccessControl {
     /**********************************************************************************************/
 
     function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
-        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
+        rateLimited(
+            RateLimitHelpers.makeDomainKey(LIMIT_USDC_TO_DOMAIN, destinationDomain),
+            usdcAmount
+        )
     {
         bytes32 mintRecipient = mintRecipients[destinationDomain];
 
