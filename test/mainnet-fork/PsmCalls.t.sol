@@ -128,16 +128,6 @@ contract MainnetControllerSwapUSDCToUSDSFailureTests is ForkTestBase {
     }
 
     function test_swapUSDCToUSDS_incompleteFillBoundary() external {
-        assertEq(DAI_BAL_PSM, 204_506_488.11013e18);
-
-        DssLitePsm psmCode = new DssLitePsm(psm.ilk(), address(psm.gem()), address(psm.daiJoin()), psm.pocket());
-
-        vm.etch(PSM, address(psmCode).code);
-
-        uint256 fillAmount = psm.rush();
-
-        assertEq(fillAmount, 0);
-
         // The line is just over 2.1 billion, this condition will allow DAI to get minted to get to
         // 2 billion in Art, and then another fill to get to the `line`.
         deal(address(usdc), address(pocket), 1_800_000_000e6);
@@ -165,9 +155,7 @@ contract MainnetControllerSwapUSDCToUSDSFailureTests is ForkTestBase {
 
         assertEq(maxSwapAmount, 450_281_089.262716e6);
 
-        deal(address(usdc), address(almProxy), maxSwapAmount + 1);  // Higher than balance of DAI + fillAmount
-
-        // assertEq(Art + fillAmount + expectedFillAmount2, line / 1e27);  // Two fills will increase Art to the debt ceiling
+        deal(address(usdc), address(almProxy), maxSwapAmount + 1);
 
         vm.startPrank(relayer);
         vm.expectRevert("DssLitePsm/nothing-to-fill");
@@ -232,10 +220,7 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
     function test_swapUSDCToUSDS_partialRefill() external {
         assertEq(DAI_BAL_PSM, 204_506_488.11013e18);
 
-        DssLitePsm psmCode = new DssLitePsm(psm.ilk(), address(psm.gem()), address(psm.daiJoin()), psm.pocket());
-
-        vm.etch(PSM, address(psmCode).code);
-
+        // PSM is not fillable at current fork so need to deal USDC
         uint256 fillAmount = psm.rush();
 
         assertEq(fillAmount, 0);
@@ -305,10 +290,7 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
     function test_swapUSDCToUSDS_multipleRefills() external {
         assertEq(DAI_BAL_PSM, 204_506_488.11013e18);
 
-        DssLitePsm psmCode = new DssLitePsm(psm.ilk(), address(psm.gem()), address(psm.daiJoin()), psm.pocket());
-
-        vm.etch(PSM, address(psmCode).code);
-
+        // PSM is not fillable at current fork so need to deal USDC
         uint256 fillAmount = psm.rush();
 
         assertEq(fillAmount, 0);
