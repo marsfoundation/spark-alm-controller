@@ -132,7 +132,7 @@ contract MainnetControllerSwapUSDCToUSDSFailureTests is ForkTestBase {
         // 2 billion in Art, and then another fill to get to the `line`.
         deal(address(usdc), address(pocket), 1_800_000_000e6);
 
-        fillAmount = psm.rush();
+        uint256 fillAmount = psm.rush();
 
         assertEq(fillAmount, 121_680_037.47418e18);  // Only first fill amount
 
