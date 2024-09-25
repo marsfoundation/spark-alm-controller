@@ -103,7 +103,8 @@ interface IRateLimits {
     ) external;
 
     /**
-     * @dev   Sets rate limit data for a specific key.
+     * @dev   Sets rate limit data for a specific key with
+     *        `lastAmount == maxAmount` and `lastUpdated == block.timestamp`.
      * @param key       The identifier for the rate limit.
      * @param maxAmount The maximum allowed amount for the rate limit.
      * @param slope     The slope value used in the rate limit calculation.
@@ -149,7 +150,8 @@ interface IRateLimits {
         external returns (uint256 newLimit);
 
     /**
-     * @dev    Increases the rate limit for a given key up to the maxAmount.
+     * @dev    Increases the rate limit for a given key up to the maxAmount. Does not revert if
+     *         the new rate limit exceeds the maxAmount.
      * @param  key              The identifier for the rate limit.
      * @param  amountToIncrease The amount to increase from the current rate limit.
      * @return newLimit         The updated rate limit after the addition.

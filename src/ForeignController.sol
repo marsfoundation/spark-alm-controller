@@ -34,18 +34,17 @@ contract ForeignController is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    bytes32 public constant LIMIT_PSM_DEPOSIT  = keccak256("LIMIT_PSM_DEPOSIT");
-    bytes32 public constant LIMIT_PSM_WITHDRAW = keccak256("LIMIT_PSM_WITHDRAW");
-    bytes32 public constant LIMIT_USDC_TO_CCTP = keccak256("LIMIT_USDC_TO_CCTP");
+    bytes32 public constant LIMIT_PSM_DEPOSIT    = keccak256("LIMIT_PSM_DEPOSIT");
+    bytes32 public constant LIMIT_PSM_WITHDRAW   = keccak256("LIMIT_PSM_WITHDRAW");
+    bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
+    bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
 
     IALMProxy   public immutable proxy;
     ICCTPLike   public immutable cctp;
     IPSM3       public immutable psm;
     IRateLimits public immutable rateLimits;
 
-    IERC20 public immutable usds;
     IERC20 public immutable usdc;
-    IERC20 public immutable susds;
 
     bool public active;
 
@@ -60,9 +59,7 @@ contract ForeignController is AccessControl {
         address proxy_,
         address rateLimits_,
         address psm_,
-        address usds_,
         address usdc_,
-        address susds_,
         address cctp_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
@@ -70,12 +67,8 @@ contract ForeignController is AccessControl {
         proxy      = IALMProxy(proxy_);
         rateLimits = IRateLimits(rateLimits_);
         psm        = IPSM3(psm_);
-
-        usds  = IERC20(usds_);
-        usdc  = IERC20(usdc_);
-        susds = IERC20(susds_);
-
-        cctp = ICCTPLike(cctp_);
+        usdc       = IERC20(usdc_);
+        cctp       = ICCTPLike(cctp_);
 
         active = true;
     }
@@ -179,7 +172,14 @@ contract ForeignController is AccessControl {
     /**********************************************************************************************/
 
     function transferUSDCToCCTP(uint256 usdcAmount, uint32 destinationDomain)
-        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(LIMIT_USDC_TO_CCTP, usdcAmount)
+        rateLimited(
+            RateLimitHelpers.makeDomainKey(LIMIT_USDC_TO_DOMAIN, destinationDomain),
+            usdcAmount
+        )
     {
         bytes32 mintRecipient = mintRecipients[destinationDomain];
 

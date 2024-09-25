@@ -87,9 +87,7 @@ contract ForeignControllerAdminTests is UnitTestBase {
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
             makeAddr("psm"),
-            makeAddr("usds"),
             makeAddr("usdc"),
-            makeAddr("susds"),
             makeAddr("cctp")
         );
     }
