@@ -297,25 +297,25 @@ contract MainnetController is AccessControl {
         if (daiAmount < psmDaiBalance) {
             _swapUSDCToDAI(usdcAmount);
         } else {
-            uint256 remainingPsmDai = daiAmount;
+            uint256 remainingDaiToSwap = daiAmount;
 
             // Refill the PSM with DAI as many times as needed to get to the full `usdcAmount`.
             // If the PSM cannot be filled with the full amount, psm.fill() will revert
             // with `DssLitePsm/nothing-to-fill` since rush() will return 0.
             // This is desired behavior because this function should only succeed if the full
             // `usdcAmount` can be swapped.
-            while (remainingPsmDai > 0) {
+            while (remainingDaiToSwap > 0) {
                 psm.fill();
 
                 psmDaiBalance = dai.balanceOf(address(psm));
 
-                uint256 swapAmount = remainingPsmDai < psmDaiBalance
-                    ? remainingPsmDai
+                uint256 swapAmount = remainingDaiToSwap < psmDaiBalance
+                    ? remainingDaiToSwap
                     : psmDaiBalance;
 
                 _swapUSDCToDAI(swapAmount / psmTo18ConversionFactor);
 
-                remainingPsmDai -= swapAmount;
+                remainingDaiToSwap -= swapAmount;
             }
         }
 
