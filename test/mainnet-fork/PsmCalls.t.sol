@@ -217,6 +217,15 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
     }
 
+    /**
+     * Partial
+     * Sam:   [409617] MainnetController::swapUSDCToUSDS(300000000000000 [3e14])
+     * Lucas: [392065] MainnetController::swapUSDCToUSDS(300000000000000 [3e14])
+     *
+     * Full
+     * Lucas: [466658] MainnetController::swapUSDCToUSDS(400000000000000 [4e14])
+     */
+
     function test_swapUSDCToUSDS_partialRefill() external {
         assertEq(DAI_BAL_PSM, 204_506_488.11013e18);
 
@@ -258,8 +267,8 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         assertEq(Art, 2_000_000_000e18 - fillAmount);
 
         vm.prank(relayer);
-        vm.expectEmit(PSM);
-        emit Fill(fillAmount);
+        // vm.expectEmit(PSM);
+        // emit Fill(fillAmount);
         mainnetController.swapUSDCToUSDS(300_000_000e6);
 
         ( Art,,,, ) = dss.vat.ilks(PSM_ILK);

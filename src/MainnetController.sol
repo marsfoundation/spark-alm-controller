@@ -292,31 +292,52 @@ contract MainnetController is AccessControl {
             abi.encodeCall(usdc.approve, (address(psm), usdcAmount))
         );
 
-        uint256 psmDaiBalance = dai.balanceOf(address(psm));
+        // uint256 psmDaiBalance = dai.balanceOf(address(psm));
 
-        if (daiAmount < psmDaiBalance) {
+        // if (daiAmount < psmDaiBalance) {
+        //     _swapUSDCToDAI(usdcAmount);
+        // } else {
+        //     uint256 remainingDaiToSwap = daiAmount;
+
+        //     // Refill the PSM with DAI as many times as needed to get to the full `usdcAmount`.
+        //     // If the PSM cannot be filled with the full amount, psm.fill() will revert
+        //     // with `DssLitePsm/nothing-to-fill` since rush() will return 0.
+        //     // This is desired behavior because this function should only succeed if the full
+        //     // `usdcAmount` can be swapped.
+        //     while (remainingDaiToSwap > 0) {
+        //         psm.fill();
+
+        //         psmDaiBalance = dai.balanceOf(address(psm));
+
+        //         uint256 swapAmount = remainingDaiToSwap < psmDaiBalance
+        //             ? remainingDaiToSwap
+        //             : psmDaiBalance;
+
+        //         _swapUSDCToDAI(swapAmount / psmTo18ConversionFactor);
+
+        //         remainingDaiToSwap -= swapAmount;
+        //     }
+        // }
+
+        // If amount is larger than limit it must be split into multiple calls
+        uint256 limit = dai.balanceOf(address(psm)) / psmTo18ConversionFactor;
+
+        // Edge case where PSM is empty
+        if (limit == 0) {
+        	psm.fill();
+        	limit = dai.balanceOf(address(psm)) / psmTo18ConversionFactor;
+        }
+
+        while (usdcAmount > limit) {
+            _swapUSDCToDAI(limit);
+            usdcAmount -= limit;
+            psm.fill();
+            limit = dai.balanceOf(address(psm)) / psmTo18ConversionFactor;
+        }
+
+        // Swap remaining amount (if any)
+        if (usdcAmount > 0) {
             _swapUSDCToDAI(usdcAmount);
-        } else {
-            uint256 remainingDaiToSwap = daiAmount;
-
-            // Refill the PSM with DAI as many times as needed to get to the full `usdcAmount`.
-            // If the PSM cannot be filled with the full amount, psm.fill() will revert
-            // with `DssLitePsm/nothing-to-fill` since rush() will return 0.
-            // This is desired behavior because this function should only succeed if the full
-            // `usdcAmount` can be swapped.
-            while (remainingDaiToSwap > 0) {
-                psm.fill();
-
-                psmDaiBalance = dai.balanceOf(address(psm));
-
-                uint256 swapAmount = remainingDaiToSwap < psmDaiBalance
-                    ? remainingDaiToSwap
-                    : psmDaiBalance;
-
-                _swapUSDCToDAI(swapAmount / psmTo18ConversionFactor);
-
-                remainingDaiToSwap -= swapAmount;
-            }
         }
 
         // Approve DAI to DaiUsds migrator from the proxy (assumes the proxy has enough DAI)
