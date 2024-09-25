@@ -12,8 +12,6 @@ import {
 
 import { AllocatorDeploy } from "dss-allocator/deploy/AllocatorDeploy.sol";
 
-import { DssLitePsm } from "lib/dss-lite-psm/src/DssLitePsm.sol";
-
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { UsdsDeploy }   from "usds/deploy/UsdsDeploy.sol";
@@ -45,6 +43,7 @@ interface IBufferLike {
 interface IPSMLike {
     function pocket() external view returns (address);
     function kiss(address) external;
+    function rush() external view returns (uint256);
 }
 
 interface IVaultLike {
@@ -124,7 +123,7 @@ contract ForkTestBase is DssTest {
     IERC20 usdc;
     ISUsds susds;
 
-    DssLitePsm psm;
+    IPSMLike psm;
 
     address buffer;
     address daiUsds;
@@ -265,7 +264,7 @@ contract ForkTestBase is DssTest {
         usds     = IERC20(address(usdsInst.usds));
         usdsJoin = usdsInst.usdsJoin;
         pocket   = IPSMLike(PSM).pocket();
-        psm      = DssLitePsm(PSM);
+        psm      = IPSMLike(PSM);
         susds    = ISUsds(address(susdsInst.sUsds));
         usdc     = IERC20(USDC);
         vault    = ilkInst.vault;
