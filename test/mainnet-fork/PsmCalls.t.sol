@@ -414,8 +414,16 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
 
         deal(address(usdc), address(almProxy), swapAmount);
 
+        uint256 usdsBalanceBefore = usds.balanceOf(address(almProxy));
+
         // NOTE: Doing a low-level call here because if the full amount can't be swapped, it should revert
-        address(mainnetController).call(abi.encodeWithSignature("swapUSDCToUSDS(uint256)", swapAmount));
+        ( bool success, ) = address(mainnetController).call(
+            abi.encodeWithSignature("swapUSDCToUSDS(uint256)", swapAmount)
+        );
+
+        if (success) {
+            assertEq(usds.balanceOf(address(almProxy)), usdsBalanceBefore + swapAmount * 1e12);
+        }
     }
 
 }
