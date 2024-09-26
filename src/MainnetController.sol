@@ -293,7 +293,7 @@ contract MainnetController is AccessControl {
         // Max USDC that can be swapped to DAI in one call
         uint256 limit = dai.balanceOf(address(psm)) / psmTo18ConversionFactor;
 
-        if (usdcAmount < limit) {
+        if (usdcAmount <= limit) {
             _swapUSDCToDAI(usdcAmount);
         } else {
             uint256 remainingUsdcToSwap = usdcAmount;

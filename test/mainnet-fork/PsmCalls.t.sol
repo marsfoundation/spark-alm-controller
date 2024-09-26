@@ -163,6 +163,8 @@ contract MainnetControllerSwapUSDCToUSDSFailureTests is ForkTestBase {
 
         mainnetController.swapUSDCToUSDS(maxSwapAmount);
 
+        assertEq(usds.balanceOf(address(almProxy)), maxSwapAmount * 1e12);
+
         ( Art,,,, ) = dss.vat.ilks(PSM_ILK);
 
         // Art has now been filled to the debt ceiling and there is no DAI left in the PSM.
@@ -217,14 +219,52 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
     }
 
-    /**
-     * Partial
-     * Sam:   [409617] MainnetController::swapUSDCToUSDS(300000000000000 [3e14])
-     * Lucas: [392065] MainnetController::swapUSDCToUSDS(300000000000000 [3e14])
-     *
-     * Full
-     * Lucas: [466658] MainnetController::swapUSDCToUSDS(400000000000000 [4e14])
-     */
+    function test_swapUSDCToUSDS_exactBalanceNoRefill() external {
+        uint256 swapAmount = DAI_BAL_PSM / 1e12;
+
+        deal(address(usdc), address(almProxy), swapAmount);
+
+        assertEq(usds.balanceOf(address(almProxy)),          0);
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.totalSupply(),                         0);
+
+        assertEq(dai.balanceOf(address(almProxy)), 0);
+        assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM);
+        assertEq(dai.totalSupply(),                DAI_SUPPLY);
+
+        assertEq(usdc.balanceOf(address(almProxy)),          swapAmount);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.balanceOf(address(pocket)),            USDC_BAL_PSM);
+
+        assertEq(usds.allowance(address(buffer),   address(vault)),   type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(daiUsds)), 0);
+        assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
+
+        ( uint256 Art1,,,, ) = dss.vat.ilks(PSM_ILK);
+
+        vm.prank(relayer);
+        mainnetController.swapUSDCToUSDS(swapAmount);
+
+        ( uint256 Art2,,,, ) = dss.vat.ilks(PSM_ILK);
+
+        assertEq(Art1, Art2);  // Fill was not called on exact amount
+
+        assertEq(usds.balanceOf(address(almProxy)),          DAI_BAL_PSM);  // Drain PSM
+        assertEq(usds.balanceOf(address(mainnetController)), 0);
+        assertEq(usds.totalSupply(),                         DAI_BAL_PSM);
+
+        assertEq(dai.balanceOf(address(almProxy)), 0);
+        assertEq(dai.balanceOf(address(PSM)),      0);
+        assertEq(dai.totalSupply(),                DAI_SUPPLY - DAI_BAL_PSM);
+
+        assertEq(usdc.balanceOf(address(almProxy)),          0);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.balanceOf(address(pocket)),            USDC_BAL_PSM + swapAmount);
+
+        assertEq(usds.allowance(address(buffer),   address(vault)),   type(uint256).max);
+        assertEq(usds.allowance(address(almProxy), address(daiUsds)), 0);
+        assertEq(dai.allowance(address(almProxy),  address(PSM)),     0);
+    }
 
     function test_swapUSDCToUSDS_partialRefill() external {
         assertEq(DAI_BAL_PSM, 204_506_488.11013e18);
@@ -267,8 +307,8 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         assertEq(Art, 2_000_000_000e18 - fillAmount);
 
         vm.prank(relayer);
-        // vm.expectEmit(PSM);
-        // emit Fill(fillAmount);
+        vm.expectEmit(PSM);
+        emit Fill(fillAmount);
         mainnetController.swapUSDCToUSDS(300_000_000e6);
 
         ( Art,,,, ) = dss.vat.ilks(PSM_ILK);
