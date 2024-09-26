@@ -100,4 +100,5 @@ contract DeployTests is Test {
 
         assertEq(RateLimits(rateLimits).hasRole(DEFAULT_ADMIN_ROLE, admin), true);
     }
+
 }
