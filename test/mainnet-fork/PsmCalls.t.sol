@@ -409,5 +409,14 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         vm.stopPrank();
     }
 
+    function testFuzz_swapUSDCToUSDS(uint256 swapAmount) external {
+        swapAmount = _bound(swapAmount, 1e6, 1_000_000_000e6);
+
+        deal(address(usdc), address(almProxy), swapAmount);
+
+        // NOTE: Doing a low-level call here because if the full amount can't be swapped, it should revert
+        address(mainnetController).call(abi.encodeWithSignature("swapUSDCToUSDS(uint256)", swapAmount));
+    }
+
 }
 
