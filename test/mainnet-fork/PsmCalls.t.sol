@@ -422,6 +422,7 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         );
 
         if (success) {
+            assertTrue(false);
             assertEq(usds.balanceOf(address(almProxy)), usdsBalanceBefore + swapAmount * 1e12);
         }
     }
