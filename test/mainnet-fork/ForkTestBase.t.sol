@@ -41,6 +41,7 @@ interface IBufferLike {
 }
 
 interface IPSMLike {
+    function bud(address) external view returns (uint256);
     function pocket() external view returns (address);
     function kiss(address) external;
     function rush() external view returns (uint256);

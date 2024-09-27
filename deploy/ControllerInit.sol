@@ -22,6 +22,10 @@ interface IBufferLike {
     function approve(address, address, uint256) external;
 }
 
+interface IPSMLike {
+    function kiss(address) external;
+}
+
 interface IVaultLike {
     function rely(address) external;
 }
@@ -76,4 +80,9 @@ library MainnetControllerInit {
         IVaultLike(ilkInst.vault).rely(controllerInst.almProxy);
         IBufferLike(ilkInst.buffer).approve(usdsInst.usds, controllerInst.almProxy, type(uint256).max);
     }
+
+    function makerInit(address psm, address almProxy) internal {
+        IPSMLike(psm).kiss(almProxy);  // To allow using no fee functionality
+    }
+
 }
