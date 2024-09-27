@@ -1,24 +1,39 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-// TODO: Add interfaces for controllers
-
 import { AllocatorIlkInstance } from "lib/dss-allocator/deploy/AllocatorInstances.sol";
+
+import { IAccessControl } from "lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
 import { UsdsInstance } from "lib/usds/deploy/UsdsInstance.sol";
 
 import { CCTPForwarder } from "lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
-import { ALMProxy }          from "src/ALMProxy.sol";
-import { ForeignController } from "src/ForeignController.sol";
-import { MainnetController } from "src/MainnetController.sol";
-import { RateLimitHelpers }  from "src/RateLimitHelpers.sol";
-import { RateLimits }        from "src/RateLimits.sol";
+import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
+
+import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
+import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
 import { ControllerInstance } from "./ControllerInstance.sol";
 
 interface IBufferLike {
     function approve(address, address, uint256) external;
+}
+
+interface IMainnetControllerLike is IAccessControl {
+    function FREEZER() external view returns (bytes32);
+    function LIMIT_USDC_TO_CCTP() external view returns (bytes32);
+    function LIMIT_USDC_TO_DOMAIN() external view returns (bytes32);
+    function LIMIT_USDS_MINT() external view returns (bytes32);
+    function LIMIT_USDS_TO_USDC() external view returns (bytes32);
+    function RELAYER() external view returns (bytes32);
+}
+
+interface IForeignControllerLike is IAccessControl {
+    function FREEZER() external view returns (bytes32);
+    function LIMIT_PSM_DEPOSIT() external view returns (bytes32);
+    function LIMIT_PSM_WITHDRAW() external view returns (bytes32);
+    function RELAYER() external view returns (bytes32);
 }
 
 interface IPSMLike {
@@ -49,9 +64,10 @@ library MainnetControllerInit {
     )
         internal
     {
-        ALMProxy          almProxy   = ALMProxy(controllerInst.almProxy);
-        MainnetController controller = MainnetController(controllerInst.controller);
-        RateLimits        rateLimits = RateLimits(controllerInst.rateLimits);
+        IALMProxy   almProxy   = IALMProxy(controllerInst.almProxy);
+        IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
+
+        IMainnetControllerLike controller = IMainnetControllerLike(controllerInst.controller);
 
         // Step 1: Configure ACL permissions for controller and almProxy
 
@@ -118,9 +134,10 @@ library ForeignControllerInit {
     )
         internal
     {
-        ALMProxy          almProxy   = ALMProxy(controllerInst.almProxy);
-        ForeignController controller = ForeignController(controllerInst.controller);
-        RateLimits        rateLimits = RateLimits(controllerInst.rateLimits);
+        IALMProxy   almProxy   = IALMProxy(controllerInst.almProxy);
+        IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
+
+        IForeignControllerLike controller = IForeignControllerLike(controllerInst.controller);
 
         // Step 1: Configure ACL permissions for controller and almProxy
 
