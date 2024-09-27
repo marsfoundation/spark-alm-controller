@@ -48,6 +48,7 @@ interface IPSMLike {
 
 interface IVaultLike {
     function rely(address) external;
+    function wards(address) external returns (uint256);
 }
 
 contract ForkTestBase is DssTest {

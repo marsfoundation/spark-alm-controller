@@ -33,7 +33,7 @@ library MainnetControllerInit {
         uint256 slope;
     }
 
-    function init(
+    function subDaoInit(
         address              freezer,
         address              relayer,
         ControllerInstance   memory controllerInst,

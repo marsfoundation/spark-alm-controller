@@ -3,6 +3,8 @@ pragma solidity >=0.8.0;
 
 import "test/mainnet-fork/ForkTestBase.t.sol";
 
+import { IRateLimits } from "src/interfaces/IRateLimits.sol";
+
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 import { MainnetControllerInit }   from "../../deploy/ControllerInit.sol";
@@ -74,7 +76,7 @@ contract MainnetControllerDeployAndInit is ForkTestBase {
         });
 
         vm.startPrank(SPARK_PROXY);
-        MainnetControllerInit.init(
+        MainnetControllerInit.subDaoInit(
             freezer,
             relayer,
             controllerInst,
@@ -85,6 +87,40 @@ contract MainnetControllerDeployAndInit is ForkTestBase {
             usdcToCctpData,
             cctpToBaseDomainData
         );
+
+        // Assert initialization
+
+        assertEq(controller.hasRole(controller.FREEZER(), freezer), true);
+        assertEq(controller.hasRole(controller.RELAYER(), relayer), true);
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(controller)), true);
+
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(controller)), true);
+
+        bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
+            controller.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
+        );
+
+        _assertRateLimitData(controller.LIMIT_USDS_MINT(),    usdsMintData.maxAmount,         usdsMintData.slope);
+        _assertRateLimitData(controller.LIMIT_USDS_TO_USDC(), usdcToUsdsData.maxAmount,       usdcToUsdsData.slope);
+        _assertRateLimitData(controller.LIMIT_USDC_TO_CCTP(), usdcToCctpData.maxAmount,       usdcToCctpData.slope);
+        _assertRateLimitData(domainKeyBase,                   cctpToBaseDomainData.maxAmount, cctpToBaseDomainData.slope);
+
+        assertEq(IVaultLike(ilkInst.vault).wards(address(controller)), 1);
+
+        assertEq(usds.allowance(ilkInst.buffer, controllerInst.almProxy), type(uint256).max);
+    }
+
+    function _assertRateLimitData(bytes32 domainKey, uint256 maxAmount, uint256 slope) internal {
+        IRateLimits.RateLimitData memory data = rateLimits.getRateLimitData(domainKey);
+
+        assertEq(data.maxAmount,   maxAmount);
+        assertEq(data.slope,       slope);
+        assertEq(data.lastAmount,  maxAmount);
+        assertEq(data.lastUpdated, block.timestamp);
+
+        assertEq(rateLimits.getCurrentRateLimit(domainKey), maxAmount);
     }
 
 }
