@@ -68,6 +68,87 @@ contract ForeignControllerDeployTests is UnitTestBase {
         assertEq(controller.active(), true);
     }
 
+}
+
+contract MainnetControllerDeployTests is UnitTestBase {
+
+    function test_deployController() public {
+        address admin = makeAddr("admin");
+        address psm   = makeAddr("psm");
+        address usdc  = makeAddr("usdc");
+        address cctp  = makeAddr("cctp");
+
+        ALMProxy   almProxy   = new ALMProxy(admin);
+        RateLimits rateLimits = new RateLimits(admin);
+
+        ForeignController controller = ForeignController(
+            ForeignControllerDeploy.deployController(
+                admin,
+                address(almProxy),
+                address(rateLimits),
+                psm,
+                usdc,
+                cctp
+            )
+        );
+
+        assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+
+        assertEq(address(controller.proxy()),      address(almProxy));
+        assertEq(address(controller.rateLimits()), address(rateLimits));
+        assertEq(address(controller.psm()),        psm);
+        assertEq(address(controller.usdc()),       usdc);
+        assertEq(address(controller.cctp()),       cctp);
+
+        assertEq(controller.active(), true);
+    }
+
+    function test_deployFull() public {
+        MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
+        MockPSM     psm     = new MockPSM(makeAddr("usdc"));
+        MockSUsds   susds   = new MockSUsds(makeAddr("usds"));
+
+        address admin   = makeAddr("admin");
+        address vault   = makeAddr("vault");
+        address buffer  = makeAddr("buffer");
+        address cctp    = makeAddr("cctp");
+
+        ControllerInstance memory instance = MainnetControllerDeploy.deployFull(
+            admin,
+            vault,
+            buffer,
+            address(psm),
+            address(daiUsds),
+            cctp,
+            address(susds)
+        );
+
+        ALMProxy          almProxy   = ALMProxy(instance.almProxy);
+        MainnetController controller = MainnetController(instance.controller);
+        RateLimits        rateLimits = RateLimits(instance.rateLimits);
+
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),   true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+
+        assertEq(address(controller.proxy()),      almProxy);
+        assertEq(address(controller.rateLimits()), rateLimits);
+        assertEq(address(controller.vault()),      vault);
+        assertEq(address(controller.buffer()),     buffer);
+        assertEq(address(controller.psm()),        address(psm));
+        assertEq(address(controller.daiUsds()),    address(daiUsds));
+        assertEq(address(controller.cctp()),       cctp);
+        assertEq(address(controller.susds()),      address(susds));
+        assertEq(address(controller.dai()),        makeAddr("dai"));   // Dai param in MockDaiUsds
+        assertEq(address(controller.usdc()),       makeAddr("usdc"));  // Gem param in MockPSM
+        assertEq(address(controller.usds()),       makeAddr("usds"));  // Usds param in MockSUsds
+
+        assertEq(controller.psmTo18ConversionFactor(), 1e12);
+        assertEq(controller.active(),                  true);
+    }
+
+}
+
 
 
     // function test_MainnetControllerDeploy() public {
@@ -122,5 +203,4 @@ contract ForeignControllerDeployTests is UnitTestBase {
 
     //     assertEq(RateLimits(rateLimits).hasRole(DEFAULT_ADMIN_ROLE, admin), true);
     // }
-
-}
+// }

@@ -81,7 +81,7 @@ library MainnetControllerDeploy {
         }));
     }
 
-    function deploy(
+    function deployFull(
         address admin,
         address vault,
         address buffer,
