@@ -86,3 +86,70 @@ library MainnetControllerInit {
     }
 
 }
+
+library ForeignControllerInit {
+
+    // Avoid stack too deep
+    struct AddressParams {
+        address freezer;
+        address relayer;
+        address usdc;
+        address usds;
+        address susds;
+    }
+
+    struct RateLimitData {
+        uint256 maxAmount;
+        uint256 slope;
+    }
+
+    struct InitRateLimitData {
+        RateLimitData usdcDepositData;
+        RateLimitData usdsDepositData;
+        RateLimitData susdsDepositData;
+        RateLimitData usdcWithdrawData;
+        RateLimitData usdsWithdrawData;
+        RateLimitData susdsWithdrawData;
+    }
+
+    function init(
+        AddressParams      memory params,
+        ControllerInstance memory controllerInst,
+        InitRateLimitData  memory data
+    )
+        internal
+    {
+        ALMProxy          almProxy   = ALMProxy(controllerInst.almProxy);
+        ForeignController controller = ForeignController(controllerInst.controller);
+        RateLimits        rateLimits = RateLimits(controllerInst.rateLimits);
+
+        // Step 1: Configure ACL permissions for controller and almProxy
+
+        controller.grantRole(controller.FREEZER(), params.freezer);
+        controller.grantRole(controller.RELAYER(), params.relayer);
+
+        almProxy.grantRole(almProxy.CONTROLLER(), address(controller));
+
+        rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
+
+        // Step 2: Configure all rate limits for controller
+
+        bytes32 depositKey  = controller.LIMIT_PSM_DEPOSIT();
+        bytes32 withdrawKey = controller.LIMIT_PSM_WITHDRAW();
+
+        rateLimits.setRateLimitData(_makeKey(depositKey, params.usdc),  data.usdcDepositData.maxAmount,  data.usdcDepositData.slope);
+        rateLimits.setRateLimitData(_makeKey(depositKey, params.usds),  data.usdsDepositData.maxAmount,  data.usdsDepositData.slope);
+        rateLimits.setRateLimitData(_makeKey(depositKey, params.susds), data.susdsDepositData.maxAmount, data.susdsDepositData.slope);
+
+        rateLimits.setRateLimitData(_makeKey(withdrawKey, params.usdc),  data.usdcWithdrawData.maxAmount,  data.usdcWithdrawData.slope);
+        rateLimits.setRateLimitData(_makeKey(withdrawKey, params.usds),  data.usdsWithdrawData.maxAmount,  data.usdsWithdrawData.slope);
+        rateLimits.setRateLimitData(_makeKey(withdrawKey, params.susds), data.susdsWithdrawData.maxAmount, data.susdsWithdrawData.slope);
+    }
+
+    function _makeKey(bytes32 actionKey, address asset)
+        internal pure returns (bytes32)
+    {
+        return RateLimitHelpers.makeAssetKey(actionKey, asset);
+    }
+
+}
