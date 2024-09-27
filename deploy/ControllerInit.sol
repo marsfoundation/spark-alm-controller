@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-// Multiple inits, all config is done, one for pause proxy one for spark proxy
 // TODO: Add interfaces for controllers
 
 import { AllocatorIlkInstance } from "lib/dss-allocator/deploy/AllocatorInstances.sol";
