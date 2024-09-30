@@ -105,6 +105,12 @@ library MainnetControllerInit {
 
         // Step 3: Configure all rate limits for controller, using Base as only domain
 
+        // Sanity check all rate limit data
+        _checkUnlimitedData(usdsMintData,         "usdsMintData");
+        _checkUnlimitedData(usdcToUsdsData,       "usdcToUsdsData");
+        _checkUnlimitedData(usdcToCctpData,       "usdcToCctpData");
+        _checkUnlimitedData(cctpToBaseDomainData, "cctpToBaseDomainData");
+
         bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
             controller.LIMIT_USDC_TO_DOMAIN(),
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
@@ -147,6 +153,15 @@ library MainnetControllerInit {
 
     function pauseProxyInit(address psm, address almProxy) internal {
         IPSMLike(psm).kiss(almProxy);  // To allow using no fee functionality
+    }
+
+    function _checkUnlimitedData(RateLimitData memory data, string memory name) internal pure {
+        if (data.maxAmount == type(uint256).max) {
+            require(
+                data.slope == 0,
+                string(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-", name))
+            );
+        }
     }
 
 }
@@ -208,6 +223,15 @@ library ForeignControllerInit {
 
         // Step 2: Configure all rate limits for controller
 
+        // Sanity check all rate limit data
+        _checkUnlimitedData(data.usdcDepositData,  "usdcDepositData");
+        _checkUnlimitedData(data.usdsDepositData,  "usdsDepositData");
+        _checkUnlimitedData(data.susdsDepositData, "susdsDepositData");
+
+        _checkUnlimitedData(data.usdcWithdrawData,  "usdcWithdrawData");
+        _checkUnlimitedData(data.usdsWithdrawData,  "usdsWithdrawData");
+        _checkUnlimitedData(data.susdsWithdrawData, "susdsWithdrawData");
+
         bytes32 depositKey  = controller.LIMIT_PSM_DEPOSIT();
         bytes32 withdrawKey = controller.LIMIT_PSM_WITHDRAW();
 
@@ -224,6 +248,15 @@ library ForeignControllerInit {
         internal pure returns (bytes32)
     {
         return RateLimitHelpers.makeAssetKey(actionKey, asset);
+    }
+
+    function _checkUnlimitedData(RateLimitData memory data, string memory name) internal pure {
+        if (data.maxAmount == type(uint256).max) {
+            require(
+                data.slope == 0,
+                string(abi.encodePacked("ForeignControllerInit/invalid-rate-limit-", name))
+            );
+        }
     }
 
 }
