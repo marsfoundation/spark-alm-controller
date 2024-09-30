@@ -102,7 +102,12 @@ contract ForeignControllerDeployAndInitFailureTests is ForkTestBase {
         foreignController = ForeignController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
-        wrapper = new LibraryWrapper();
+        // LibraryWrapper deployedWrapper = new LibraryWrapper();
+
+        // Admin will be calling the library from its own address
+        vm.etch(admin, address(new LibraryWrapper()).code);
+
+        wrapper = LibraryWrapper(admin);
     }
 
     function test_init_incorrectAdminAlmProxy() external {
@@ -172,6 +177,72 @@ contract ForeignControllerDeployAndInitFailureTests is ForkTestBase {
         addresses.cctpMessenger = mismatchAddress;
 
         vm.expectRevert("ForeignControllerInit/incorrect-cctp");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_unlimitedData_incorrectUsdcDepositDataBoundary() external {
+        rateLimitData.usdcDepositData.maxAmount = type(uint256).max;
+
+        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdcDepositData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.usdcDepositData.slope = 0;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_unlimitedData_incorrectUsdsDepositDataBoundary() external {
+        rateLimitData.usdsDepositData.maxAmount = type(uint256).max;
+
+        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdsDepositData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.usdsDepositData.slope = 0;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_unlimitedData_incorrectSUsdsDepositDataBoundary() external {
+        rateLimitData.susdsDepositData.maxAmount = type(uint256).max;
+
+        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-susdsDepositData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.susdsDepositData.slope = 0;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_unlimitedData_incorrectUsdcWithdrawDataBoundary() external {
+        rateLimitData.usdcWithdrawData.maxAmount = type(uint256).max;
+
+        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdcWithdrawData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.usdcWithdrawData.slope = 0;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_unlimitedData_incorrectUsdsWithdrawDataBoundary() external {
+        rateLimitData.usdsWithdrawData.maxAmount = type(uint256).max;
+
+        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdsWithdrawData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.usdsWithdrawData.slope = 0;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_unlimitedData_incorrectSUsdsWithdrawDataBoundary() external {
+        rateLimitData.susdsWithdrawData.maxAmount = type(uint256).max;
+
+        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-susdsWithdrawData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.susdsWithdrawData.slope = 0;
+
         wrapper.init(addresses, controllerInst, rateLimitData);
     }
 
