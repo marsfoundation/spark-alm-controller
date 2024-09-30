@@ -244,9 +244,7 @@ library ForeignControllerInit {
         rateLimits.setRateLimitData(_makeKey(withdrawKey, params.susds), data.susdsWithdrawData.maxAmount, data.susdsWithdrawData.slope);
     }
 
-    function _makeKey(bytes32 actionKey, address asset)
-        internal pure returns (bytes32)
-    {
+    function _makeKey(bytes32 actionKey, address asset) internal pure returns (bytes32) {
         return RateLimitHelpers.makeAssetKey(actionKey, asset);
     }
 
