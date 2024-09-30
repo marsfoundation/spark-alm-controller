@@ -220,6 +220,40 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-usds"));
     }
 
+    // TODO: Skipping conversion factor test and active test, can add later if needed
+
+    function test_init_unlimitedData_incorrectUsdsMintDataBoundary() external {
+        usdsMintData.maxAmount = type(uint256).max;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdsMintData"));
+
+        usdsMintData.slope = 0;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_unlimitedData_incorrectUsdcToUsdsDataBoundary() external {
+        usdcToUsdsData.maxAmount = type(uint256).max;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdcToUsdsData"));
+
+        usdcToUsdsData.slope = 0;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_unlimitedData_incorrectUsdcToCctpDataBoundary() external {
+        usdcToCctpData.maxAmount = type(uint256).max;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdcToCctpData"));
+
+        usdcToCctpData.slope = 0;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_unlimitedData_incorrectCctpToBaseDomainBoundary() external {
+        cctpToBaseDomainData.maxAmount = type(uint256).max;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-cctpToBaseDomainData"));
+
+        cctpToBaseDomainData.slope = 0;
+        _checkBothInitsSucceed();
+    }
+
     // Added this function to ensure that all the failure modes from `subDaoInitController`
     // are also covered by `subDaoInitFull` calls
     function _checkBothInitsFail(bytes memory expectedError) internal {
@@ -235,6 +269,28 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
         );
 
         vm.expectRevert(expectedError);
+        wrapper.subDaoInitFull(
+            addresses,
+            controllerInst,
+            ilkInst,
+            usdsMintData,
+            usdcToUsdsData,
+            usdcToCctpData,
+            cctpToBaseDomainData
+        );
+    }
+
+    function _checkBothInitsSucceed() internal {
+        wrapper.subDaoInitController(
+            addresses,
+            controllerInst,
+            ilkInst,
+            usdsMintData,
+            usdcToUsdsData,
+            usdcToCctpData,
+            cctpToBaseDomainData
+        );
+
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
