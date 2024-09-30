@@ -5,9 +5,9 @@ import "test/mainnet-fork/ForkTestBase.t.sol";
 
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
-import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
-import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
-import { MainnetControllerInit }   from "../../deploy/ControllerInit.sol";
+import { ControllerInstance }                  from "../../deploy/ControllerInstance.sol";
+import { MainnetControllerDeploy }             from "../../deploy/ControllerDeploy.sol";
+import { MainnetControllerInit, RateLimitData} from "../../deploy/ControllerInit.sol";
 
 // TODO: Refactor to use live contracts
 // TODO: Declare Inst structs to emulate mainnet
@@ -56,22 +56,22 @@ contract MainnetControllerDeployAndInit is ForkTestBase {
         // Perform SubDAO initialization (from SPARK_PROXY during spell)
         // Setting rate limits to different values from setUp to make assertions more robust
 
-        MainnetControllerInit.RateLimitData memory usdsMintData = MainnetControllerInit.RateLimitData({
+        RateLimitData memory usdsMintData = RateLimitData({
             maxAmount : 1_000_000e18,
             slope     : uint256(1_000_000e18) / 4 hours
         });
 
-        MainnetControllerInit.RateLimitData memory usdcToUsdsData = MainnetControllerInit.RateLimitData({
+        RateLimitData memory usdcToUsdsData = RateLimitData({
             maxAmount : 2_000_000e6,
             slope     : uint256(2_000_000e6) / 4 hours
         });
 
-        MainnetControllerInit.RateLimitData memory usdcToCctpData = MainnetControllerInit.RateLimitData({
+        RateLimitData memory usdcToCctpData = RateLimitData({
             maxAmount : 3_000_000e6,
             slope     : uint256(3_000_000e6) / 4 hours
         });
 
-        MainnetControllerInit.RateLimitData memory cctpToBaseDomainData = MainnetControllerInit.RateLimitData({
+        RateLimitData memory cctpToBaseDomainData = RateLimitData({
             maxAmount : 4_000_000e6,
             slope     : uint256(4_000_000e6) / 4 hours
         });

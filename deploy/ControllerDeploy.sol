@@ -77,7 +77,7 @@ library MainnetControllerDeploy {
             psm_        : psm,
             daiUsds_    : daiUsds,
             cctp_       : cctp,
-            susds_       : susds
+            susds_      : susds
         }));
     }
 
@@ -104,7 +104,7 @@ library MainnetControllerDeploy {
             psm_        : psm,
             daiUsds_    : daiUsds,
             cctp_       : cctp,
-            susds_       : susds
+            susds_      : susds
         }));
     }
 

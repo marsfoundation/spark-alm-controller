@@ -44,12 +44,12 @@ interface IVaultLike {
     function rely(address) external;
 }
 
-library MainnetControllerInit {
+struct RateLimitData {
+    uint256 maxAmount;
+    uint256 slope;
+}
 
-    struct RateLimitData {
-        uint256 maxAmount;
-        uint256 slope;
-    }
+library MainnetControllerInit {
 
     function subDaoInit(
         address              freezer,
@@ -111,11 +111,6 @@ library ForeignControllerInit {
         address usdc;
         address usds;
         address susds;
-    }
-
-    struct RateLimitData {
-        uint256 maxAmount;
-        uint256 slope;
     }
 
     struct InitRateLimitData {

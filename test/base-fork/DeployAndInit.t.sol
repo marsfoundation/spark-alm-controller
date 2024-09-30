@@ -5,9 +5,9 @@ import "test/base-fork/ForkTestBase.t.sol";
 
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
-import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
-import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
-import { ForeignControllerInit }   from "../../deploy/ControllerInit.sol";
+import { ControllerInstance }                   from "../../deploy/ControllerInstance.sol";
+import { ForeignControllerDeploy }              from "../../deploy/ControllerDeploy.sol";
+import { ForeignControllerInit, RateLimitData } from "../../deploy/ControllerInit.sol";
 
 contract ForeignControllerDeployAndInit is ForkTestBase {
 
@@ -42,7 +42,7 @@ contract ForeignControllerDeployAndInit is ForkTestBase {
         // Perform SubDAO initialization (from governance relay during spell)
         // Setting rate limits to different values from setUp to make assertions more robust
 
-        ForeignControllerInit.AddressParams memory addresses = ForeignControllerInit.AddressParams ({
+        ForeignControllerInit.AddressParams memory addresses = ForeignControllerInit.AddressParams({
             freezer : freezer,
             relayer : relayer,
             usdc    : USDC_BASE,
@@ -50,32 +50,32 @@ contract ForeignControllerDeployAndInit is ForkTestBase {
             susds   : address(susdsBase)
         });
 
-        ForeignControllerInit.RateLimitData memory usdcDepositData = ForeignControllerInit.RateLimitData({
+        RateLimitData memory usdcDepositData = RateLimitData({
             maxAmount : 1_000_000e18,
             slope     : uint256(1_000_000e18) / 4 hours
         });
 
-        ForeignControllerInit.RateLimitData memory usdsDepositData = ForeignControllerInit.RateLimitData({
+        RateLimitData memory usdsDepositData = RateLimitData({
             maxAmount : 2_000_000e18,
             slope     : uint256(2_000_000e18) / 4 hours
         });
 
-        ForeignControllerInit.RateLimitData memory susdsDepositData = ForeignControllerInit.RateLimitData({
+        RateLimitData memory susdsDepositData = RateLimitData({
             maxAmount : 3_000_000e18,
             slope     : uint256(3_000_000e18) / 4 hours
         });
 
-        ForeignControllerInit.RateLimitData memory usdcWithdrawData = ForeignControllerInit.RateLimitData({
+        RateLimitData memory usdcWithdrawData = RateLimitData({
             maxAmount : 4_000_000e18,
             slope     : uint256(4_000_000e18) / 4 hours
         });
 
-        ForeignControllerInit.RateLimitData memory usdsWithdrawData = ForeignControllerInit.RateLimitData({
+        RateLimitData memory usdsWithdrawData = RateLimitData({
             maxAmount : 5_000_000e18,
             slope     : uint256(5_000_000e18) / 4 hours
         });
 
-        ForeignControllerInit.RateLimitData memory susdsWithdrawData = ForeignControllerInit.RateLimitData({
+        RateLimitData memory susdsWithdrawData = RateLimitData({
             maxAmount : 6_000_000e18,
             slope     : uint256(6_000_000e18) / 4 hours
         });
