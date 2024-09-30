@@ -51,16 +51,14 @@ struct RateLimitData {
 
 library MainnetControllerInit {
 
-    function subDaoInit(
-        address              freezer,
-        address              relayer,
-        ControllerInstance   memory controllerInst,
-        AllocatorIlkInstance memory ilkInst,
-        UsdsInstance         memory usdsInst,
-        RateLimitData        memory usdsMintData,
-        RateLimitData        memory usdcToUsdsData,
-        RateLimitData        memory usdcToCctpData,
-        RateLimitData        memory cctpToBaseDomainData
+    function subDaoInitController(
+        address             freezer,
+        address             relayer,
+        ControllerInstance  memory controllerInst,
+        RateLimitData       memory usdsMintData,
+        RateLimitData       memory usdcToUsdsData,
+        RateLimitData       memory usdcToCctpData,
+        RateLimitData       memory cctpToBaseDomainData
     )
         internal
     {
@@ -89,14 +87,39 @@ library MainnetControllerInit {
         rateLimits.setRateLimitData(controller.LIMIT_USDS_TO_USDC(), usdcToUsdsData.maxAmount,       usdcToUsdsData.slope);
         rateLimits.setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), usdcToCctpData.maxAmount,       usdcToCctpData.slope);
         rateLimits.setRateLimitData(domainKeyBase,                   cctpToBaseDomainData.maxAmount, cctpToBaseDomainData.slope);
-
-        // Step 3: Configure almProxy within the allocation system
-
-        IVaultLike(ilkInst.vault).rely(controllerInst.almProxy);
-        IBufferLike(ilkInst.buffer).approve(usdsInst.usds, controllerInst.almProxy, type(uint256).max);
     }
 
-    function makerInit(address psm, address almProxy) internal {
+    function subDaoInitFull(
+        address              freezer,
+        address              relayer,
+        address              usds,
+        ControllerInstance   memory controllerInst,
+        AllocatorIlkInstance memory ilkInst,
+        RateLimitData        memory usdsMintData,
+        RateLimitData        memory usdcToUsdsData,
+        RateLimitData        memory usdcToCctpData,
+        RateLimitData        memory cctpToBaseDomainData
+    )
+        internal
+    {
+        // Step 1: Configure ACL permissions for controller and almProxy and rate limits
+        subDaoInitController(
+            freezer,
+            relayer,
+            controllerInst,
+            usdsMintData,
+            usdcToUsdsData,
+            usdcToCctpData,
+            cctpToBaseDomainData
+        );
+
+        // Step 2: Configure almProxy within the allocation system
+
+        IVaultLike(ilkInst.vault).rely(controllerInst.almProxy);
+        IBufferLike(ilkInst.buffer).approve(usds, controllerInst.almProxy, type(uint256).max);
+    }
+
+    function pauseProxyInit(address psm, address almProxy) internal {
         IPSMLike(psm).kiss(almProxy);  // To allow using no fee functionality
     }
 

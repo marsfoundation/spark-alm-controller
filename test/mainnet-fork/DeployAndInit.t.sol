@@ -15,7 +15,7 @@ import { MainnetControllerInit, RateLimitData} from "../../deploy/ControllerInit
 
 contract MainnetControllerDeployAndInit is ForkTestBase {
 
-    function test_deployAllAndInit() external {
+    function test_deployAllAndInitFull() external {
         // Perform new deployments against existing fork environment
 
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
@@ -77,12 +77,12 @@ contract MainnetControllerDeployAndInit is ForkTestBase {
         });
 
         vm.startPrank(SPARK_PROXY);
-        MainnetControllerInit.subDaoInit(
+        MainnetControllerInit.subDaoInitFull(
             freezer,
             relayer,
+            address(usds),
             controllerInst,
             ilkInst,
-            usdsInst,
             usdsMintData,
             usdcToUsdsData,
             usdcToCctpData,
@@ -116,12 +116,84 @@ contract MainnetControllerDeployAndInit is ForkTestBase {
         // Perform Maker initialization (from PAUSE_PROXY during spell)
 
         vm.startPrank(PAUSE_PROXY);
-        MainnetControllerInit.makerInit(PSM, controllerInst.almProxy);
+        MainnetControllerInit.pauseProxyInit(PSM, controllerInst.almProxy);
         vm.stopPrank();
 
         // Assert Maker initialization
 
         assertEq(IPSMLike(PSM).bud(controllerInst.almProxy), 1);
+    }
+
+    function test_deployAllAndInitController() external {
+        // Perform new deployments against existing fork environment
+
+        ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
+            SPARK_PROXY,
+            ilkInst.vault,
+            ilkInst.buffer,
+            PSM,
+            usdsInst.daiUsds,
+            CCTP_MESSENGER,
+            susdsInst.sUsds
+        );
+
+        // Overwrite storage for all previous deployments in setUp and assert deployment
+
+        almProxy          = ALMProxy(controllerInst.almProxy);
+        mainnetController = MainnetController(controllerInst.controller);
+        rateLimits        = RateLimits(controllerInst.rateLimits);
+
+        // Perform ONLY controller initialization, setting rate limits and updating ACL
+        // Setting rate limits to different values from setUp to make assertions more robust
+
+        RateLimitData memory usdsMintData = RateLimitData({
+            maxAmount : 1_000_000e18,
+            slope     : uint256(1_000_000e18) / 4 hours
+        });
+
+        RateLimitData memory usdcToUsdsData = RateLimitData({
+            maxAmount : 2_000_000e6,
+            slope     : uint256(2_000_000e6) / 4 hours
+        });
+
+        RateLimitData memory usdcToCctpData = RateLimitData({
+            maxAmount : 3_000_000e6,
+            slope     : uint256(3_000_000e6) / 4 hours
+        });
+
+        RateLimitData memory cctpToBaseDomainData = RateLimitData({
+            maxAmount : 4_000_000e6,
+            slope     : uint256(4_000_000e6) / 4 hours
+        });
+
+        vm.startPrank(SPARK_PROXY);
+        MainnetControllerInit.subDaoInitController(
+            freezer,
+            relayer,
+            controllerInst,
+            usdsMintData,
+            usdcToUsdsData,
+            usdcToCctpData,
+            cctpToBaseDomainData
+        );
+        vm.stopPrank();
+
+        assertEq(mainnetController.hasRole(mainnetController.FREEZER(), freezer), true);
+        assertEq(mainnetController.hasRole(mainnetController.RELAYER(), relayer), true);
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)), true);
+
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), true);
+
+        bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
+            mainnetController.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
+        );
+
+        _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    usdsMintData.maxAmount,         usdsMintData.slope);
+        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), usdcToUsdsData.maxAmount,       usdcToUsdsData.slope);
+        _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), usdcToCctpData.maxAmount,       usdcToCctpData.slope);
+        _assertRateLimitData(domainKeyBase,                          cctpToBaseDomainData.maxAmount, cctpToBaseDomainData.slope);
     }
 
     function _assertRateLimitData(bytes32 domainKey, uint256 maxAmount, uint256 slope) internal {
