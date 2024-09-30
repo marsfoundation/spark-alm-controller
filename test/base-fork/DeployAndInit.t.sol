@@ -102,8 +102,6 @@ contract ForeignControllerDeployAndInitFailureTests is ForkTestBase {
         foreignController = ForeignController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
-        // LibraryWrapper deployedWrapper = new LibraryWrapper();
-
         // Admin will be calling the library from its own address
         vm.etch(admin, address(new LibraryWrapper()).code);
 
