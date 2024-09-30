@@ -5,9 +5,10 @@ import "test/mainnet-fork/ForkTestBase.t.sol";
 
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
-import { ControllerInstance }                  from "../../deploy/ControllerInstance.sol";
-import { MainnetControllerDeploy }             from "../../deploy/ControllerDeploy.sol";
-import { MainnetControllerInit, RateLimitData} from "../../deploy/ControllerInit.sol";
+import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
+import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
+
+import { MainnetControllerInit, RateLimitData } from "../../deploy/ControllerInit.sol";
 
 // TODO: Refactor to use live contracts
 // TODO: Declare Inst structs to emulate mainnet
@@ -56,6 +57,19 @@ contract MainnetControllerDeployAndInit is ForkTestBase {
         // Perform SubDAO initialization (from SPARK_PROXY during spell)
         // Setting rate limits to different values from setUp to make assertions more robust
 
+        MainnetControllerInit.AddressParams memory addresses = MainnetControllerInit.AddressParams({
+            admin         : SPARK_PROXY,
+            freezer       : freezer,
+            relayer       : relayer,
+            psm           : PSM,
+            cctpMessenger : CCTP_MESSENGER,
+            dai           : address(dai),
+            daiUsds       : address(daiUsds),
+            usdc          : USDC,
+            usds          : address(usds),
+            susds         : address(susds)
+        });
+
         RateLimitData memory usdsMintData = RateLimitData({
             maxAmount : 1_000_000e18,
             slope     : uint256(1_000_000e18) / 4 hours
@@ -78,9 +92,7 @@ contract MainnetControllerDeployAndInit is ForkTestBase {
 
         vm.startPrank(SPARK_PROXY);
         MainnetControllerInit.subDaoInitFull(
-            freezer,
-            relayer,
-            address(usds),
+            addresses,
             controllerInst,
             ilkInst,
             usdsMintData,
@@ -146,6 +158,19 @@ contract MainnetControllerDeployAndInit is ForkTestBase {
         // Perform ONLY controller initialization, setting rate limits and updating ACL
         // Setting rate limits to different values from setUp to make assertions more robust
 
+        MainnetControllerInit.AddressParams memory addresses = MainnetControllerInit.AddressParams({
+            admin         : SPARK_PROXY,
+            freezer       : freezer,
+            relayer       : relayer,
+            psm           : PSM,
+            cctpMessenger : CCTP_MESSENGER,
+            dai           : address(dai),
+            daiUsds       : address(daiUsds),
+            usdc          : USDC,
+            usds          : address(usds),
+            susds         : address(susds)
+        });
+
         RateLimitData memory usdsMintData = RateLimitData({
             maxAmount : 1_000_000e18,
             slope     : uint256(1_000_000e18) / 4 hours
@@ -168,9 +193,9 @@ contract MainnetControllerDeployAndInit is ForkTestBase {
 
         vm.startPrank(SPARK_PROXY);
         MainnetControllerInit.subDaoInitController(
-            freezer,
-            relayer,
+            addresses,
             controllerInst,
+            ilkInst,
             usdsMintData,
             usdcToUsdsData,
             usdcToCctpData,

@@ -5,8 +5,9 @@ import "test/base-fork/ForkTestBase.t.sol";
 
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
-import { ControllerInstance }                   from "../../deploy/ControllerInstance.sol";
-import { ForeignControllerDeploy }              from "../../deploy/ControllerDeploy.sol";
+import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
+import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
+
 import { ForeignControllerInit, RateLimitData } from "../../deploy/ControllerInit.sol";
 
 contract ForeignControllerDeployAndInit is ForkTestBase {
@@ -43,11 +44,14 @@ contract ForeignControllerDeployAndInit is ForkTestBase {
         // Setting rate limits to different values from setUp to make assertions more robust
 
         ForeignControllerInit.AddressParams memory addresses = ForeignControllerInit.AddressParams({
-            freezer : freezer,
-            relayer : relayer,
-            usdc    : USDC_BASE,
-            usds    : address(usdsBase),
-            susds   : address(susdsBase)
+            admin         : admin,
+            freezer       : freezer,
+            relayer       : relayer,
+            psm           : address(psmBase),
+            cctpMessenger : CCTP_MESSENGER_BASE,
+            usdc          : USDC_BASE,
+            usds          : address(usdsBase),
+            susds         : address(susdsBase)
         });
 
         RateLimitData memory usdcDepositData = RateLimitData({
