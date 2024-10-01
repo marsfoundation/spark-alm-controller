@@ -75,9 +75,7 @@ library MainnetControllerInit {
 
         // Step 1: Perform sanity checks
 
-        require(almProxy.hasRole(DEFAULT_ADMIN_ROLE, params.admin)   == true, "MainnetControllerInit/incorrect-admin-almProxy");
         require(controller.hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true, "MainnetControllerInit/incorrect-admin-controller");
-        require(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true, "MainnetControllerInit/incorrect-admin-rateLimits");
 
         require(address(controller.proxy())      == controllerInst.almProxy,   "MainnetControllerInit/incorrect-almProxy");
         require(address(controller.rateLimits()) == controllerInst.rateLimits, "MainnetControllerInit/incorrect-rateLimits");
@@ -133,8 +131,21 @@ library MainnetControllerInit {
     )
         internal
     {
-        // Step 1: Perform sanity checks, configure ACL permissions for controller
+        // Step 1: Perform initial sanity checks
+
+        require(
+            IALMProxy(controllerInst.almProxy).hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true,
+            "MainnetControllerInit/incorrect-admin-almProxy"
+        );
+
+        require(
+            IRateLimits(controllerInst.rateLimits).hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true,
+            "MainnetControllerInit/incorrect-admin-rateLimits"
+        );
+
+        // Step 2: Perform controller sanity checks, configure ACL permissions for controller
         //         and almProxy and rate limits.
+
         subDaoInitController(
             params,
             controllerInst,
@@ -145,7 +156,7 @@ library MainnetControllerInit {
             cctpToBaseDomainData
         );
 
-        // Step 2: Configure almProxy within the allocation system
+        // Step 3: Configure almProxy within the allocation system
 
         IVaultLike(ilkInst.vault).rely(controllerInst.almProxy);
         IBufferLike(ilkInst.buffer).approve(params.usds, controllerInst.almProxy, type(uint256).max);

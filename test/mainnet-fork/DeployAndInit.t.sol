@@ -138,7 +138,17 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
         almProxy.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
         vm.stopPrank();
 
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-almProxy"));
+        // Check is not in both functions
+        vm.expectRevert("MainnetControllerInit/incorrect-admin-almProxy");
+        wrapper.subDaoInitFull(
+            addresses,
+            controllerInst,
+            ilkInst,
+            usdsMintData,
+            usdcToUsdsData,
+            usdcToCctpData,
+            cctpToBaseDomainData
+        );
     }
 
     function test_init_incorrectAdminRateLimits() external {
@@ -148,7 +158,16 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
         rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
         vm.stopPrank();
 
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-rateLimits"));
+        vm.expectRevert("MainnetControllerInit/incorrect-admin-rateLimits");
+        wrapper.subDaoInitFull(
+            addresses,
+            controllerInst,
+            ilkInst,
+            usdsMintData,
+            usdcToUsdsData,
+            usdcToCctpData,
+            cctpToBaseDomainData
+        );
     }
 
     function test_init_incorrectAdminController() external {
