@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
+import { CCTPForwarder } from "lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
+
 import "test/base-fork/ForkTestBase.t.sol";
 
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
@@ -41,38 +43,26 @@ contract ForeignControllerDeployAndInitFailureTests is ForkTestBase {
         slope     : uint256(1_000_000e18) / 4 hours
     });
 
-    RateLimitData usdsDepositData = RateLimitData({
+    RateLimitData usdcWithdrawData = RateLimitData({
         maxAmount : 2_000_000e18,
         slope     : uint256(2_000_000e18) / 4 hours
     });
 
-    RateLimitData susdsDepositData = RateLimitData({
-        maxAmount : 3_000_000e18,
-        slope     : uint256(3_000_000e18) / 4 hours
+    RateLimitData usdcToCctpData = RateLimitData({
+        maxAmount : 1_000_000e18,
+        slope     : uint256(1_000_000e18) / 4 hours
     });
 
-    RateLimitData usdcWithdrawData = RateLimitData({
+    RateLimitData cctpToEthereumDomainData = RateLimitData({
         maxAmount : 4_000_000e18,
         slope     : uint256(4_000_000e18) / 4 hours
     });
 
-    RateLimitData usdsWithdrawData = RateLimitData({
-        maxAmount : 5_000_000e18,
-        slope     : uint256(5_000_000e18) / 4 hours
-    });
-
-    RateLimitData susdsWithdrawData = RateLimitData({
-        maxAmount : 6_000_000e18,
-        slope     : uint256(6_000_000e18) / 4 hours
-    });
-
     ForeignControllerInit.InitRateLimitData rateLimitData = ForeignControllerInit.InitRateLimitData({
-        usdcDepositData   : usdcDepositData,
-        usdsDepositData   : usdsDepositData,
-        susdsDepositData  : susdsDepositData,
-        usdcWithdrawData  : usdcWithdrawData,
-        usdsWithdrawData  : usdsWithdrawData,
-        susdsWithdrawData : susdsWithdrawData
+        usdcDepositData          : usdcDepositData,
+        usdcWithdrawData         : usdcWithdrawData,
+        usdcToCctpData           : usdcToCctpData,
+        cctpToEthereumDomainData : cctpToEthereumDomainData
     });
 
     function setUp() public override {
@@ -189,28 +179,6 @@ contract ForeignControllerDeployAndInitFailureTests is ForkTestBase {
         wrapper.init(addresses, controllerInst, rateLimitData);
     }
 
-    function test_init_unlimitedData_incorrectUsdsDepositDataBoundary() external {
-        rateLimitData.usdsDepositData.maxAmount = type(uint256).max;
-
-        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdsDepositData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
-
-        rateLimitData.usdsDepositData.slope = 0;
-
-        wrapper.init(addresses, controllerInst, rateLimitData);
-    }
-
-    function test_init_unlimitedData_incorrectSUsdsDepositDataBoundary() external {
-        rateLimitData.susdsDepositData.maxAmount = type(uint256).max;
-
-        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-susdsDepositData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
-
-        rateLimitData.susdsDepositData.slope = 0;
-
-        wrapper.init(addresses, controllerInst, rateLimitData);
-    }
-
     function test_init_unlimitedData_incorrectUsdcWithdrawDataBoundary() external {
         rateLimitData.usdcWithdrawData.maxAmount = type(uint256).max;
 
@@ -222,24 +190,24 @@ contract ForeignControllerDeployAndInitFailureTests is ForkTestBase {
         wrapper.init(addresses, controllerInst, rateLimitData);
     }
 
-    function test_init_unlimitedData_incorrectUsdsWithdrawDataBoundary() external {
-        rateLimitData.usdsWithdrawData.maxAmount = type(uint256).max;
+    function test_init_unlimitedData_incorrectUsdcToCctpDataBoundary() external {
+        rateLimitData.usdcToCctpData.maxAmount = type(uint256).max;
 
-        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdsWithdrawData");
+        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdcToCctpData");
         wrapper.init(addresses, controllerInst, rateLimitData);
 
-        rateLimitData.usdsWithdrawData.slope = 0;
+        rateLimitData.usdcToCctpData.slope = 0;
 
         wrapper.init(addresses, controllerInst, rateLimitData);
     }
 
-    function test_init_unlimitedData_incorrectSUsdsWithdrawDataBoundary() external {
-        rateLimitData.susdsWithdrawData.maxAmount = type(uint256).max;
+    function test_init_unlimitedData_incorrectCctpToEthereumDomainDataBoundary() external {
+        rateLimitData.cctpToEthereumDomainData.maxAmount = type(uint256).max;
 
-        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-susdsWithdrawData");
+        vm.expectRevert("ForeignControllerInit/invalid-rate-limit-cctpToEthereumDomainData");
         wrapper.init(addresses, controllerInst, rateLimitData);
 
-        rateLimitData.susdsWithdrawData.slope = 0;
+        rateLimitData.cctpToEthereumDomainData.slope = 0;
 
         wrapper.init(addresses, controllerInst, rateLimitData);
     }
@@ -295,39 +263,28 @@ contract ForeignControllerDeployAndInitSuccessTests is ForkTestBase {
             slope     : uint256(1_000_000e18) / 4 hours
         });
 
-        RateLimitData memory usdsDepositData = RateLimitData({
+        RateLimitData memory usdcWithdrawData = RateLimitData({
             maxAmount : 2_000_000e18,
             slope     : uint256(2_000_000e18) / 4 hours
         });
 
-        RateLimitData memory susdsDepositData = RateLimitData({
-            maxAmount : 3_000_000e18,
-            slope     : uint256(3_000_000e18) / 4 hours
+        RateLimitData memory usdcToCctpData = RateLimitData({
+            maxAmount : 1_000_000e18,
+            slope     : uint256(1_000_000e18) / 4 hours
         });
 
-        RateLimitData memory usdcWithdrawData = RateLimitData({
+        RateLimitData memory cctpToEthereumDomainData = RateLimitData({
             maxAmount : 4_000_000e18,
             slope     : uint256(4_000_000e18) / 4 hours
         });
 
-        RateLimitData memory usdsWithdrawData = RateLimitData({
-            maxAmount : 5_000_000e18,
-            slope     : uint256(5_000_000e18) / 4 hours
-        });
-
-        RateLimitData memory susdsWithdrawData = RateLimitData({
-            maxAmount : 6_000_000e18,
-            slope     : uint256(6_000_000e18) / 4 hours
-        });
-
-        ForeignControllerInit.InitRateLimitData memory rateLimitData = ForeignControllerInit.InitRateLimitData({
-            usdcDepositData   : usdcDepositData,
-            usdsDepositData   : usdsDepositData,
-            susdsDepositData  : susdsDepositData,
-            usdcWithdrawData  : usdcWithdrawData,
-            usdsWithdrawData  : usdsWithdrawData,
-            susdsWithdrawData : susdsWithdrawData
-        });
+        ForeignControllerInit.InitRateLimitData memory rateLimitData
+            = ForeignControllerInit.InitRateLimitData({
+                usdcDepositData          : usdcDepositData,
+                usdcWithdrawData         : usdcWithdrawData,
+                usdcToCctpData           : usdcToCctpData,
+                cctpToEthereumDomainData : cctpToEthereumDomainData
+            });
 
         vm.startPrank(admin);
         ForeignControllerInit.init(
@@ -346,43 +303,47 @@ contract ForeignControllerDeployAndInitSuccessTests is ForkTestBase {
 
         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), true);
 
-        _assertDepositRateLimitData(usdcBase,  usdcDepositData.maxAmount,   usdcDepositData.slope);
-        _assertDepositRateLimitData(usdsBase,  usdsDepositData.maxAmount,   usdsDepositData.slope);
-        _assertDepositRateLimitData(susdsBase, susdsDepositData.maxAmount,  susdsDepositData.slope);
+        bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
+            foreignController.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+        );
 
-        _assertWithdrawRateLimitData(usdcBase,  usdcWithdrawData.maxAmount,  usdcWithdrawData.slope);
-        _assertWithdrawRateLimitData(usdsBase,  usdsWithdrawData.maxAmount,  usdsWithdrawData.slope);
-        _assertWithdrawRateLimitData(susdsBase, susdsWithdrawData.maxAmount, susdsWithdrawData.slope);
+        _assertDepositRateLimitData(usdcBase, usdcDepositData);
 
+        _assertWithdrawRateLimitData(usdcBase,  usdcWithdrawData);
+
+        _assertRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), usdcToCctpData);
+
+        _assertRateLimitData(domainKeyEthereum, cctpToEthereumDomainData);
     }
 
-    function _assertDepositRateLimitData(IERC20 asset, uint256 maxAmount, uint256 slope) internal {
-        bytes32 domainKey = RateLimitHelpers.makeAssetKey(
+    function _assertDepositRateLimitData(IERC20 asset, RateLimitData memory expectedData) internal {
+        bytes32 assetKey = RateLimitHelpers.makeAssetKey(
             foreignController.LIMIT_PSM_DEPOSIT(),
             address(asset)
         );
 
-        _assertRateLimitData(domainKey, maxAmount, slope);
+        _assertRateLimitData(assetKey, expectedData);
     }
 
-    function _assertWithdrawRateLimitData(IERC20 asset, uint256 maxAmount, uint256 slope) internal {
-        bytes32 domainKey = RateLimitHelpers.makeAssetKey(
+    function _assertWithdrawRateLimitData(IERC20 asset, RateLimitData memory expectedData) internal {
+        bytes32 assetKey = RateLimitHelpers.makeAssetKey(
             foreignController.LIMIT_PSM_WITHDRAW(),
             address(asset)
         );
 
-        _assertRateLimitData(domainKey, maxAmount, slope);
+        _assertRateLimitData(assetKey, expectedData);
     }
 
-    function _assertRateLimitData(bytes32 domainKey, uint256 maxAmount, uint256 slope) internal {
+    function _assertRateLimitData(bytes32 domainKey, RateLimitData memory expectedData) internal {
         IRateLimits.RateLimitData memory data = rateLimits.getRateLimitData(domainKey);
 
-        assertEq(data.maxAmount,   maxAmount);
-        assertEq(data.slope,       slope);
-        assertEq(data.lastAmount,  maxAmount);
+        assertEq(data.maxAmount,   expectedData.maxAmount);
+        assertEq(data.slope,       expectedData.slope);
+        assertEq(data.lastAmount,  expectedData.maxAmount);  // `lastAmount` should be `maxAmount`
         assertEq(data.lastUpdated, block.timestamp);
 
-        assertEq(rateLimits.getCurrentRateLimit(domainKey), maxAmount);
+        assertEq(rateLimits.getCurrentRateLimit(domainKey), expectedData.maxAmount);
     }
 
 }

@@ -55,16 +55,20 @@ library MainnetControllerInit {
         address susds;
     }
 
+    struct InitRateLimitData {
+        RateLimitData usdsMintData;
+        RateLimitData usdcToUsdsData;
+        RateLimitData usdcToCctpData;
+        RateLimitData cctpToBaseDomainData;
+    }
+
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     function subDaoInitController(
         AddressParams        memory params,
         ControllerInstance   memory controllerInst,
         AllocatorIlkInstance memory ilkInst,
-        RateLimitData        memory usdsMintData,
-        RateLimitData        memory usdcToUsdsData,
-        RateLimitData        memory usdcToCctpData,
-        RateLimitData        memory cctpToBaseDomainData
+        InitRateLimitData    memory data
     )
         internal
     {
@@ -108,20 +112,17 @@ library MainnetControllerInit {
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
         );
 
-        _setRateLimitData(controller.LIMIT_USDS_MINT(),    rateLimits, usdsMintData,         "usdsMintData");
-        _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, usdcToUsdsData,       "usdcToUsdsData");
-        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, usdcToCctpData,       "usdcToCctpData");
-        _setRateLimitData(domainKeyBase,                   rateLimits, cctpToBaseDomainData, "cctpToBaseDomainData");
+        _setRateLimitData(controller.LIMIT_USDS_MINT(),    rateLimits, data.usdsMintData,         "usdsMintData");
+        _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, data.usdcToUsdsData,       "usdcToUsdsData");
+        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, data.usdcToCctpData,       "usdcToCctpData");
+        _setRateLimitData(domainKeyBase,                   rateLimits, data.cctpToBaseDomainData, "cctpToBaseDomainData");
     }
 
     function subDaoInitFull(
         AddressParams        memory params,
         ControllerInstance   memory controllerInst,
         AllocatorIlkInstance memory ilkInst,
-        RateLimitData        memory usdsMintData,
-        RateLimitData        memory usdcToUsdsData,
-        RateLimitData        memory usdcToCctpData,
-        RateLimitData        memory cctpToBaseDomainData
+        InitRateLimitData    memory data
     )
         internal
     {
@@ -144,10 +145,7 @@ library MainnetControllerInit {
             params,
             controllerInst,
             ilkInst,
-            usdsMintData,
-            usdcToUsdsData,
-            usdcToCctpData,
-            cctpToBaseDomainData
+            data
         );
 
         // Step 3: Configure almProxy within the allocation system
@@ -197,11 +195,9 @@ library ForeignControllerInit {
 
     struct InitRateLimitData {
         RateLimitData usdcDepositData;
-        RateLimitData usdsDepositData;
-        RateLimitData susdsDepositData;
         RateLimitData usdcWithdrawData;
-        RateLimitData usdsWithdrawData;
-        RateLimitData susdsWithdrawData;
+        RateLimitData usdcToCctpData;
+        RateLimitData cctpToEthereumDomainData;
     }
 
     function init(
@@ -240,13 +236,15 @@ library ForeignControllerInit {
         bytes32 depositKey  = controller.LIMIT_PSM_DEPOSIT();
         bytes32 withdrawKey = controller.LIMIT_PSM_WITHDRAW();
 
-        _setRateLimitData(_makeKey(depositKey, params.usdc),  rateLimits, data.usdcDepositData, "usdcDepositData");
-        _setRateLimitData(_makeKey(depositKey, params.usds),  rateLimits, data.usdsDepositData, "usdsDepositData");
-        _setRateLimitData(_makeKey(depositKey, params.susds), rateLimits, data.susdsDepositData, "susdsDepositData");
+        bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
+            controller.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+        );
 
-        _setRateLimitData(_makeKey(withdrawKey, params.usdc),  rateLimits, data.usdcWithdrawData, "usdcWithdrawData");
-        _setRateLimitData(_makeKey(withdrawKey, params.usds),  rateLimits, data.usdsWithdrawData, "usdsWithdrawData");
-        _setRateLimitData(_makeKey(withdrawKey, params.susds), rateLimits, data.susdsWithdrawData, "susdsWithdrawData");
+        _setRateLimitData(_makeKey(depositKey,  params.usdc), rateLimits, data.usdcDepositData,          "usdcDepositData");
+        _setRateLimitData(_makeKey(withdrawKey, params.usdc), rateLimits, data.usdcWithdrawData,         "usdcWithdrawData");
+        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(),    rateLimits, data.usdcToCctpData,           "usdcToCctpData");
+        _setRateLimitData(domainKeyEthereum,                  rateLimits, data.cctpToEthereumDomainData, "cctpToEthereumDomainData");
     }
 
     function _makeKey(bytes32 actionKey, address asset) internal pure returns (bytes32) {
