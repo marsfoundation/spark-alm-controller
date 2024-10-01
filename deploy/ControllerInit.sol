@@ -103,21 +103,15 @@ library MainnetControllerInit {
 
         // Step 3: Configure all rate limits for controller, using Base as only domain
 
-        // Sanity check all rate limit data
-        _checkUnlimitedData(usdsMintData,         "usdsMintData");
-        _checkUnlimitedData(usdcToUsdsData,       "usdcToUsdsData");
-        _checkUnlimitedData(usdcToCctpData,       "usdcToCctpData");
-        _checkUnlimitedData(cctpToBaseDomainData, "cctpToBaseDomainData");
-
         bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
             controller.LIMIT_USDC_TO_DOMAIN(),
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
         );
 
-        rateLimits.setRateLimitData(controller.LIMIT_USDS_MINT(),    usdsMintData.maxAmount,         usdsMintData.slope);
-        rateLimits.setRateLimitData(controller.LIMIT_USDS_TO_USDC(), usdcToUsdsData.maxAmount,       usdcToUsdsData.slope);
-        rateLimits.setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), usdcToCctpData.maxAmount,       usdcToCctpData.slope);
-        rateLimits.setRateLimitData(domainKeyBase,                   cctpToBaseDomainData.maxAmount, cctpToBaseDomainData.slope);
+        _setRateLimitData(controller.LIMIT_USDS_MINT(),    rateLimits, usdsMintData,         "usdsMintData");
+        _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, usdcToUsdsData,       "usdcToUsdsData");
+        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, usdcToCctpData,       "usdcToCctpData");
+        _setRateLimitData(domainKeyBase,                   rateLimits, cctpToBaseDomainData, "cctpToBaseDomainData");
     }
 
     function subDaoInitFull(
@@ -166,13 +160,22 @@ library MainnetControllerInit {
         IPSMLike(psm).kiss(almProxy);  // To allow using no fee functionality
     }
 
-    function _checkUnlimitedData(RateLimitData memory data, string memory name) internal pure {
+    function _setRateLimitData(
+        bytes32       key,
+        IRateLimits   rateLimits,
+        RateLimitData memory data,
+        string        memory name
+    )
+        internal
+    {
+        // Handle setting an unlimited rate limit
         if (data.maxAmount == type(uint256).max) {
             require(
                 data.slope == 0,
                 string(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-", name))
             );
         }
+        rateLimits.setRateLimitData(key, data.maxAmount, data.slope);
     }
 
 }
@@ -234,38 +237,38 @@ library ForeignControllerInit {
 
         // Step 2: Configure all rate limits for controller
 
-        // Sanity check all rate limit data
-        _checkUnlimitedData(data.usdcDepositData,  "usdcDepositData");
-        _checkUnlimitedData(data.usdsDepositData,  "usdsDepositData");
-        _checkUnlimitedData(data.susdsDepositData, "susdsDepositData");
-
-        _checkUnlimitedData(data.usdcWithdrawData,  "usdcWithdrawData");
-        _checkUnlimitedData(data.usdsWithdrawData,  "usdsWithdrawData");
-        _checkUnlimitedData(data.susdsWithdrawData, "susdsWithdrawData");
-
         bytes32 depositKey  = controller.LIMIT_PSM_DEPOSIT();
         bytes32 withdrawKey = controller.LIMIT_PSM_WITHDRAW();
 
-        rateLimits.setRateLimitData(_makeKey(depositKey, params.usdc),  data.usdcDepositData.maxAmount,  data.usdcDepositData.slope);
-        rateLimits.setRateLimitData(_makeKey(depositKey, params.usds),  data.usdsDepositData.maxAmount,  data.usdsDepositData.slope);
-        rateLimits.setRateLimitData(_makeKey(depositKey, params.susds), data.susdsDepositData.maxAmount, data.susdsDepositData.slope);
+        _setRateLimitData(_makeKey(depositKey, params.usdc),  rateLimits, data.usdcDepositData, "usdcDepositData");
+        _setRateLimitData(_makeKey(depositKey, params.usds),  rateLimits, data.usdsDepositData, "usdsDepositData");
+        _setRateLimitData(_makeKey(depositKey, params.susds), rateLimits, data.susdsDepositData, "susdsDepositData");
 
-        rateLimits.setRateLimitData(_makeKey(withdrawKey, params.usdc),  data.usdcWithdrawData.maxAmount,  data.usdcWithdrawData.slope);
-        rateLimits.setRateLimitData(_makeKey(withdrawKey, params.usds),  data.usdsWithdrawData.maxAmount,  data.usdsWithdrawData.slope);
-        rateLimits.setRateLimitData(_makeKey(withdrawKey, params.susds), data.susdsWithdrawData.maxAmount, data.susdsWithdrawData.slope);
+        _setRateLimitData(_makeKey(withdrawKey, params.usdc),  rateLimits, data.usdcWithdrawData, "usdcWithdrawData");
+        _setRateLimitData(_makeKey(withdrawKey, params.usds),  rateLimits, data.usdsWithdrawData, "usdsWithdrawData");
+        _setRateLimitData(_makeKey(withdrawKey, params.susds), rateLimits, data.susdsWithdrawData, "susdsWithdrawData");
     }
 
     function _makeKey(bytes32 actionKey, address asset) internal pure returns (bytes32) {
         return RateLimitHelpers.makeAssetKey(actionKey, asset);
     }
 
-    function _checkUnlimitedData(RateLimitData memory data, string memory name) internal pure {
+    function _setRateLimitData(
+        bytes32       key,
+        IRateLimits   rateLimits,
+        RateLimitData memory data,
+        string        memory name
+    )
+        internal
+    {
+        // Handle setting an unlimited rate limit
         if (data.maxAmount == type(uint256).max) {
             require(
                 data.slope == 0,
                 string(abi.encodePacked("ForeignControllerInit/invalid-rate-limit-", name))
             );
         }
+        rateLimits.setRateLimitData(key, data.maxAmount, data.slope);
     }
 
 }
