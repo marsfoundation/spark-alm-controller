@@ -126,6 +126,10 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
         wrapper = LibraryWrapper(SPARK_PROXY);
     }
 
+    /**********************************************************************************************/
+    /*** ACL tests                                                                              ***/
+    /**********************************************************************************************/
+
     function test_init_incorrectAdminAlmProxy() external {
         // Isolate different contracts instead of setting param so can get three different failures
         vm.startPrank(SPARK_PROXY);
@@ -168,6 +172,10 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
 
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-controller"));
     }
+
+    /**********************************************************************************************/
+    /*** Constructor tests                                                                      ***/
+    /**********************************************************************************************/
 
     function test_init_incorrectAlmProxy() external {
         // Deploy new address that will not EVM revert on OZ ACL check
@@ -230,7 +238,11 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
 
     // TODO: Skipping conversion factor test and active test, can add later if needed
 
-    function test_init_unlimitedData_incorrectUsdsMintDataBoundary() external {
+    /**********************************************************************************************/
+    /*** Unlimited `maxAmount` rate limit boundary tests                                          ***/
+    /**********************************************************************************************/
+
+    function test_init_incorrectUsdsMintData_unlimitedBoundary() external {
         rateLimitData.usdsMintData.maxAmount = type(uint256).max;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdsMintData"));
 
@@ -238,7 +250,7 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
         _checkBothInitsSucceed();
     }
 
-    function test_init_unlimitedData_incorrectUsdcToUsdsDataBoundary() external {
+    function test_init_incorrectUsdcToUsdsData_unlimitedBoundary() external {
         rateLimitData.usdcToUsdsData.maxAmount = type(uint256).max;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdcToUsdsData"));
 
@@ -246,7 +258,7 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
         _checkBothInitsSucceed();
     }
 
-    function test_init_unlimitedData_incorrectUsdcToCctpDataBoundary() external {
+    function test_init_incorrectUsdcToCctpData_unlimitedBoundary() external {
         rateLimitData.usdcToCctpData.maxAmount = type(uint256).max;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdcToCctpData"));
 
@@ -254,11 +266,83 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
         _checkBothInitsSucceed();
     }
 
-    function test_init_unlimitedData_incorrectCctpToBaseDomainBoundary() external {
+    function test_init_incorrectCctpToBaseDomain_unlimitedBoundary() external {
         rateLimitData.cctpToBaseDomainData.maxAmount = type(uint256).max;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-cctpToBaseDomainData"));
 
         rateLimitData.cctpToBaseDomainData.slope = 0;
+        _checkBothInitsSucceed();
+    }
+
+    /**********************************************************************************************/
+    /*** `maxAmount` rate limit precision boundary tests                                        ***/
+    /**********************************************************************************************/
+
+    function test_init_incorrectUsdsMintData_maxAmountPrecisionBoundary() external {
+        rateLimitData.usdsMintData.maxAmount = 1e12 * 1e18 + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdsMintData"));
+
+        rateLimitData.usdsMintData.maxAmount = 1e12 * 1e18;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectUsdcToUsdsData_maxAmountPrecisionBoundary() external {
+        rateLimitData.usdcToUsdsData.maxAmount = 1e12 * 1e6 + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdcToUsdsData"));
+
+        rateLimitData.usdcToUsdsData.maxAmount = 1e12 * 1e6;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectUsdcToCctpData_maxAmountPrecisionBoundary() external {
+        rateLimitData.usdcToCctpData.maxAmount = 1e12 * 1e6 + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdcToCctpData"));
+
+        rateLimitData.usdcToCctpData.maxAmount = 1e12 * 1e6;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectCctpToBaseDomain_maxAmountPrecisionBoundary() external {
+        rateLimitData.cctpToBaseDomainData.maxAmount = 1e12 * 1e6 + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-cctpToBaseDomainData"));
+
+        rateLimitData.cctpToBaseDomainData.maxAmount = 1e12 * 1e6;
+        _checkBothInitsSucceed();
+    }
+
+    /**********************************************************************************************/
+    /*** `slope` rate limit precision boundary tests                                        ***/
+    /**********************************************************************************************/
+
+    function test_init_incorrectUsdsMintData_slopePrecisionBoundary() external {
+        rateLimitData.usdsMintData.slope = uint256(1e12 * 1e18) / 1 hours + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdsMintData"));
+
+        rateLimitData.usdsMintData.slope = uint256(1e12 * 1e18) / 1 hours;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectUsdcToUsdsData_slopePrecisionBoundary() external {
+        rateLimitData.usdcToUsdsData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdcToUsdsData"));
+
+        rateLimitData.usdcToUsdsData.slope = uint256(1e12 * 1e6) / 1 hours;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectUsdcToCctpData_slopePrecisionBoundary() external {
+        rateLimitData.usdcToCctpData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdcToCctpData"));
+
+        rateLimitData.usdcToCctpData.slope = uint256(1e12 * 1e6) / 1 hours;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectCctpToBaseDomain_slopePrecisionBoundary() external {
+        rateLimitData.cctpToBaseDomainData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-cctpToBaseDomainData"));
+
+        rateLimitData.cctpToBaseDomainData.slope = uint256(1e12 * 1e6) / 1 hours;
         _checkBothInitsSucceed();
     }
 
