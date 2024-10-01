@@ -39,23 +39,23 @@ contract ForeignControllerDeployAndInitFailureTests is ForkTestBase {
     ForeignControllerInit.AddressParams addresses;
 
     RateLimitData usdcDepositData = RateLimitData({
-        maxAmount : 1_000_000e18,
-        slope     : uint256(1_000_000e18) / 4 hours
+        maxAmount : 1_000_000e6,
+        slope     : uint256(1_000_000e6) / 4 hours
     });
 
     RateLimitData usdcWithdrawData = RateLimitData({
-        maxAmount : 2_000_000e18,
-        slope     : uint256(2_000_000e18) / 4 hours
+        maxAmount : 2_000_000e6,
+        slope     : uint256(2_000_000e6) / 4 hours
     });
 
     RateLimitData usdcToCctpData = RateLimitData({
-        maxAmount : 1_000_000e18,
-        slope     : uint256(1_000_000e18) / 4 hours
+        maxAmount : 3_000_000e6,
+        slope     : uint256(3_000_000e6) / 4 hours
     });
 
     RateLimitData cctpToEthereumDomainData = RateLimitData({
-        maxAmount : 4_000_000e18,
-        slope     : uint256(4_000_000e18) / 4 hours
+        maxAmount : 4_000_000e6,
+        slope     : uint256(4_000_000e6) / 4 hours
     });
 
     ForeignControllerInit.InitRateLimitData rateLimitData = ForeignControllerInit.InitRateLimitData({
@@ -168,7 +168,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForkTestBase {
         wrapper.init(addresses, controllerInst, rateLimitData);
     }
 
-    function test_init_unlimitedData_incorrectUsdcDepositDataBoundary() external {
+    function test_init_incorrectUsdcDepositData_unlimitedBoundary() external {
         rateLimitData.usdcDepositData.maxAmount = type(uint256).max;
 
         vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdcDepositData");
@@ -179,7 +179,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForkTestBase {
         wrapper.init(addresses, controllerInst, rateLimitData);
     }
 
-    function test_init_unlimitedData_incorrectUsdcWithdrawDataBoundary() external {
+    function test_init_incorrectUsdcWithdrawData_unlimitedBoundary() external {
         rateLimitData.usdcWithdrawData.maxAmount = type(uint256).max;
 
         vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdcWithdrawData");
@@ -190,7 +190,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForkTestBase {
         wrapper.init(addresses, controllerInst, rateLimitData);
     }
 
-    function test_init_unlimitedData_incorrectUsdcToCctpDataBoundary() external {
+    function test_init_incorrectUsdcToCctpData_unlimitedBoundary() external {
         rateLimitData.usdcToCctpData.maxAmount = type(uint256).max;
 
         vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdcToCctpData");
@@ -201,13 +201,101 @@ contract ForeignControllerDeployAndInitFailureTests is ForkTestBase {
         wrapper.init(addresses, controllerInst, rateLimitData);
     }
 
-    function test_init_unlimitedData_incorrectCctpToEthereumDomainDataBoundary() external {
+    function test_init_incorrectCctpToEthereumDomainData_unlimitedBoundary() external {
         rateLimitData.cctpToEthereumDomainData.maxAmount = type(uint256).max;
 
         vm.expectRevert("ForeignControllerInit/invalid-rate-limit-cctpToEthereumDomainData");
         wrapper.init(addresses, controllerInst, rateLimitData);
 
         rateLimitData.cctpToEthereumDomainData.slope = 0;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_incorrectUsdcDepositData_maxAmountPrecisionBoundary() external {
+        rateLimitData.usdcDepositData.maxAmount = 1e18 + 1;  // 1 USDS, but 1 trillion USDC
+
+        vm.expectRevert("ForeignControllerInit/invalid-max-amount-precision-usdcDepositData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.usdcDepositData.maxAmount = 1e18;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_incorrectUsdcWithdrawData_maxAmountPrecisionBoundary() external {
+        rateLimitData.usdcWithdrawData.maxAmount = 1e18 + 1;  // 1 USDS, but 1 trillion USDC
+
+        vm.expectRevert("ForeignControllerInit/invalid-max-amount-precision-usdcWithdrawData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.usdcWithdrawData.maxAmount = 1e18;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_incorrectUsdcToCctpData_maxAmountPrecisionBoundary() external {
+        rateLimitData.usdcToCctpData.maxAmount = 1e18 + 1;  // 1 USDS, but 1 trillion USDC
+
+        vm.expectRevert("ForeignControllerInit/invalid-max-amount-precision-usdcToCctpData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.usdcToCctpData.maxAmount = 1e18;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_incorrectCctpToEthereumDomainData_maxAmountPrecisionBoundary() external {
+        rateLimitData.cctpToEthereumDomainData.maxAmount = 1e18 + 1;  // 1 USDS, but 1 trillion USDC
+
+        vm.expectRevert("ForeignControllerInit/invalid-max-amount-precision-cctpToEthereumDomainData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.cctpToEthereumDomainData.maxAmount = 1e18;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_incorrectUsdcDepositData_slopePrecisionBoundary() external {
+        rateLimitData.usdcDepositData.slope = uint256(1e18) / 1 hours + 1;  // 1 USDS, but 1 trillion USDC
+
+        vm.expectRevert("ForeignControllerInit/invalid-slope-precision-usdcDepositData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.usdcDepositData.slope = uint256(1e18) / 1 hours;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_incorrectUsdcWithdrawData_slopePrecisionBoundary() external {
+        rateLimitData.usdcWithdrawData.slope = uint256(1e18) / 1 hours + 1;  // 1 USDS, but 1 trillion USDC
+
+        vm.expectRevert("ForeignControllerInit/invalid-slope-precision-usdcWithdrawData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.usdcWithdrawData.slope = uint256(1e18) / 1 hours;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_incorrectUsdcToCctpData_slopePrecisionBoundary() external {
+        rateLimitData.usdcToCctpData.slope = uint256(1e18) / 1 hours + 1;  // 1 USDS, but 1 trillion USDC
+
+        vm.expectRevert("ForeignControllerInit/invalid-slope-precision-usdcToCctpData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.usdcToCctpData.slope = uint256(1e18) / 1 hours;
+
+        wrapper.init(addresses, controllerInst, rateLimitData);
+    }
+
+    function test_init_incorrectCctpToEthereumDomainData_slopePrecisionBoundary() external {
+        rateLimitData.cctpToEthereumDomainData.slope = uint256(1e18) / 1 hours + 1;  // 1 USDS, but 1 trillion USDC
+
+        vm.expectRevert("ForeignControllerInit/invalid-slope-precision-cctpToEthereumDomainData");
+        wrapper.init(addresses, controllerInst, rateLimitData);
+
+        rateLimitData.cctpToEthereumDomainData.slope = uint256(1e18) / 1 hours;
 
         wrapper.init(addresses, controllerInst, rateLimitData);
     }
@@ -259,23 +347,23 @@ contract ForeignControllerDeployAndInitSuccessTests is ForkTestBase {
         });
 
         RateLimitData memory usdcDepositData = RateLimitData({
-            maxAmount : 1_000_000e18,
-            slope     : uint256(1_000_000e18) / 4 hours
+            maxAmount : 1_000_000e6,
+            slope     : uint256(1_000_000e6) / 4 hours
         });
 
         RateLimitData memory usdcWithdrawData = RateLimitData({
-            maxAmount : 2_000_000e18,
-            slope     : uint256(2_000_000e18) / 4 hours
+            maxAmount : 2_000_000e6,
+            slope     : uint256(2_000_000e6) / 4 hours
         });
 
         RateLimitData memory usdcToCctpData = RateLimitData({
-            maxAmount : 1_000_000e18,
-            slope     : uint256(1_000_000e18) / 4 hours
+            maxAmount : 3_000_000e6,
+            slope     : uint256(1_000_000e6) / 4 hours
         });
 
         RateLimitData memory cctpToEthereumDomainData = RateLimitData({
-            maxAmount : 4_000_000e18,
-            slope     : uint256(4_000_000e18) / 4 hours
+            maxAmount : 4_000_000e6,
+            slope     : uint256(4_000_000e6) / 4 hours
         });
 
         ForeignControllerInit.InitRateLimitData memory rateLimitData

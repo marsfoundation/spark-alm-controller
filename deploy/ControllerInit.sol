@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
+import { console } from "forge-std/console.sol";
+
 import { AllocatorIlkInstance } from "lib/dss-allocator/deploy/AllocatorInstances.sol";
 
 import { IAccessControl } from "lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
@@ -112,10 +114,10 @@ library MainnetControllerInit {
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
         );
 
-        _setRateLimitData(controller.LIMIT_USDS_MINT(),    rateLimits, data.usdsMintData,         "usdsMintData");
-        _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, data.usdcToUsdsData,       "usdcToUsdsData");
-        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, data.usdcToCctpData,       "usdcToCctpData");
-        _setRateLimitData(domainKeyBase,                   rateLimits, data.cctpToBaseDomainData, "cctpToBaseDomainData");
+        _setRateLimitData(controller.LIMIT_USDS_MINT(),    rateLimits, data.usdsMintData,         "usdsMintData",         18);
+        _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, data.usdcToUsdsData,       "usdcToUsdsData",       6);
+        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, data.usdcToCctpData,       "usdcToCctpData",       6);
+        _setRateLimitData(domainKeyBase,                   rateLimits, data.cctpToBaseDomainData, "cctpToBaseDomainData", 6);
     }
 
     function subDaoInitFull(
@@ -162,7 +164,8 @@ library MainnetControllerInit {
         bytes32       key,
         IRateLimits   rateLimits,
         RateLimitData memory data,
-        string        memory name
+        string        memory name,
+        uint256       decimals
     )
         internal
     {
@@ -171,6 +174,16 @@ library MainnetControllerInit {
             require(
                 data.slope == 0,
                 string(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-", name))
+            );
+        }
+        else {
+            require(
+                data.maxAmount <= 1e12 * (10 ** decimals),
+                string(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-", name))
+            );
+            require(
+                data.slope <= 1e12 * (10 ** decimals) / 1 hours,
+                string(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-", name))
             );
         }
         rateLimits.setRateLimitData(key, data.maxAmount, data.slope);
@@ -264,6 +277,16 @@ library ForeignControllerInit {
             require(
                 data.slope == 0,
                 string(abi.encodePacked("ForeignControllerInit/invalid-rate-limit-", name))
+            );
+        }
+        else {
+            require(
+                data.maxAmount <= 1e18,
+                string(abi.encodePacked("ForeignControllerInit/invalid-max-amount-precision-", name))
+            );
+            require(
+                data.slope <= uint256(1e18) / 1 hours,
+                string(abi.encodePacked("ForeignControllerInit/invalid-slope-precision-", name))
             );
         }
         rateLimits.setRateLimitData(key, data.maxAmount, data.slope);
