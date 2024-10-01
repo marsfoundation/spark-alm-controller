@@ -9,7 +9,7 @@ import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 contract ALMProxy is IALMProxy, AccessControl {
 
     using Address for address;
-    using Address for address payable;
+    // using Address for address payable;
 
     /**********************************************************************************************/
     /*** State variables                                                                        ***/
