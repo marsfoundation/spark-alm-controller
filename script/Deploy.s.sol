@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 
 import { Base } from "lib/spark-address-registry/src/Base.sol";
 
-import { Ethereum } from "lib/spark-address-registry/src/Ethereum.sol";
+import { Ethereum } from "lib/spark-address-registry/src/Ethereum.sol";  // Update to master branch
 
 import { ControllerInstance } from "../deploy/ControllerInstance.sol";
 
@@ -13,17 +13,19 @@ import { ForeignControllerDeploy, MainnetControllerDeploy } from "../deploy/Cont
 
 contract DeployMainnetFull is Script {
 
-    function run() internal {
-
+    function run() external {
         console.log("Deploying Mainnet ALMProxy, Controller and RateLimits...");
 
         vm.startBroadcast();
 
         ControllerInstance memory instance = MainnetControllerDeploy.deployFull({
-            admin      : Ethereum.SPARK_PROXY,
-            psm        : Ethereum.PSM,
-            usdc       : Ethereum.USDC,
-            cctp       : Ethereum.  //  TODO: xchain-helpers forwarders
+            admin   : Ethereum.SPARK_PROXY,
+            vault   : address(0),  // TODO: Replace
+            buffer  : address(0),  // TODO: Replace
+            psm     : Ethereum.PSM,
+            daiUsds : Ethereum.DAI_USDS,
+            cctp    : Ethereum.CCTP_MESSENGER,
+            susds   : Ethereum.SUSDS
         });
 
         vm.stopBroadcast();
@@ -37,16 +39,16 @@ contract DeployMainnetFull is Script {
 
 contract DeployBaseFull is Script {
 
-    function run() internal {
+    function run() external {
         console.log("Deploying Mainnet ALMProxy, Controller and RateLimits...");
 
         vm.startBroadcast();
 
         ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
-            admin      : Ethereum.SPARK_PROXY,
-            psm        : Ethereum.PSM,
-            usdc       : Ethereum.USDC,
-            cctp       : Ethereum.CCTP_MESSENGER
+            admin      : Base.SPARK_EXECUTOR,
+            psm        : address(0),  // TODO: Replace
+            usdc       : Base.USDC,
+            cctp       : Base.CCTP_MESSENGER
         });
 
         vm.stopBroadcast();
