@@ -103,10 +103,12 @@ library MainnetControllerInit {
         controller.grantRole(controller.RELAYER(), params.relayer);
 
         almProxy.grantRole(almProxy.CONTROLLER(), address(controller));
-        almProxy.revokeRole(almProxy.CONTROLLER(), params.oldController);
-
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
-        rateLimits.revokeRole(rateLimits.CONTROLLER(), params.oldController);
+
+        if (params.oldController != address(0)) {
+            almProxy.revokeRole(almProxy.CONTROLLER(), params.oldController);
+            rateLimits.revokeRole(rateLimits.CONTROLLER(), params.oldController);
+        }
 
         // Step 3: Configure all rate limits for controller, using Base as only domain
 
@@ -243,10 +245,13 @@ library ForeignControllerInit {
         controller.grantRole(controller.RELAYER(), params.relayer);
 
         almProxy.grantRole(almProxy.CONTROLLER(), address(controller));
-        almProxy.revokeRole(almProxy.CONTROLLER(), params.oldController);
-
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
-        rateLimits.revokeRole(rateLimits.CONTROLLER(), params.oldController);
+
+        if (params.oldController != address(0)) {
+            almProxy.revokeRole(almProxy.CONTROLLER(), params.oldController);
+            rateLimits.revokeRole(rateLimits.CONTROLLER(), params.oldController);
+        }
+
 
         // Step 2: Configure all rate limits for controller
 
