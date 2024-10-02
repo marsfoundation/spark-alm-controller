@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-interface IALMProxy {
+import { IAccessControl } from "lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+
+interface IALMProxy is IAccessControl {
 
     /**
      * @dev    This function retrieves a constant `bytes32` value that represents the controller.
