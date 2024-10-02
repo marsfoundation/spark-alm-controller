@@ -11,6 +11,7 @@ import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 import { MainnetControllerInit, RateLimitData } from "../../deploy/ControllerInit.sol";
 
 // TODO: Refactor to use live contracts
+// TODO: Refactor to use a `getDefaultParams` helper for both foreign and mainnet tests
 // TODO: Declare Inst structs to emulate mainnet
 // NOTE: Allocation should be deployed prior to Controller
 
@@ -105,6 +106,7 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
             admin         : SPARK_PROXY,
             freezer       : freezer,
             relayer       : relayer,
+            oldController : address(0),
             psm           : PSM,
             cctpMessenger : CCTP_MESSENGER,
             dai           : address(dai),
@@ -430,6 +432,7 @@ contract MainnetControllerDeployAndInitSuccessTests is ForkTestBase {
             admin         : SPARK_PROXY,
             freezer       : freezer,
             relayer       : relayer,
+            oldController : address(0),
             psm           : PSM,
             cctpMessenger : CCTP_MESSENGER,
             dai           : address(dai),
@@ -535,6 +538,7 @@ contract MainnetControllerDeployAndInitSuccessTests is ForkTestBase {
             admin         : SPARK_PROXY,
             freezer       : freezer,
             relayer       : relayer,
+            oldController : address(0),
             psm           : PSM,
             cctpMessenger : CCTP_MESSENGER,
             dai           : address(dai),

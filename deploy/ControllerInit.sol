@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import { console } from "forge-std/console.sol";
-
 import { AllocatorIlkInstance } from "lib/dss-allocator/deploy/AllocatorInstances.sol";
 
 import { IAccessControl } from "lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
@@ -48,6 +46,7 @@ library MainnetControllerInit {
         address admin;
         address freezer;
         address relayer;
+        address oldController;
         address psm;
         address cctpMessenger;
         address dai;
@@ -104,8 +103,10 @@ library MainnetControllerInit {
         controller.grantRole(controller.RELAYER(), params.relayer);
 
         almProxy.grantRole(almProxy.CONTROLLER(), address(controller));
+        almProxy.revokeRole(almProxy.CONTROLLER(), params.oldController);
 
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
+        rateLimits.revokeRole(rateLimits.CONTROLLER(), params.oldController);
 
         // Step 3: Configure all rate limits for controller, using Base as only domain
 
@@ -197,6 +198,7 @@ library ForeignControllerInit {
         address admin;
         address freezer;
         address relayer;
+        address oldController;
         address psm;
         address cctpMessenger;
         address usdc;
@@ -241,8 +243,10 @@ library ForeignControllerInit {
         controller.grantRole(controller.RELAYER(), params.relayer);
 
         almProxy.grantRole(almProxy.CONTROLLER(), address(controller));
+        almProxy.revokeRole(almProxy.CONTROLLER(), params.oldController);
 
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
+        rateLimits.revokeRole(rateLimits.CONTROLLER(), params.oldController);
 
         // Step 2: Configure all rate limits for controller
 
