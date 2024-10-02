@@ -11,6 +11,7 @@ import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 import { MainnetControllerInit, RateLimitData } from "../../deploy/ControllerInit.sol";
 
 // TODO: Refactor to use live contracts
+// TODO: Refactor to use a `getDefaultParams` helper for both foreign and mainnet tests
 // TODO: Declare Inst structs to emulate mainnet
 // NOTE: Allocation should be deployed prior to Controller
 
@@ -18,13 +19,10 @@ import { MainnetControllerInit, RateLimitData } from "../../deploy/ControllerIni
 contract LibraryWrapper {
 
     function subDaoInitController(
-        MainnetControllerInit.AddressParams memory params,
-        ControllerInstance                  memory controllerInst,
-        AllocatorIlkInstance                memory ilkInst,
-        RateLimitData                       memory usdsMintData,
-        RateLimitData                       memory usdcToUsdsData,
-        RateLimitData                       memory usdcToCctpData,
-        RateLimitData                       memory cctpToBaseDomainData
+        MainnetControllerInit.AddressParams     memory params,
+        ControllerInstance                      memory controllerInst,
+        AllocatorIlkInstance                    memory ilkInst,
+        MainnetControllerInit.InitRateLimitData memory rateLimitData
     )
         external
     {
@@ -32,21 +30,15 @@ contract LibraryWrapper {
             params,
             controllerInst,
             ilkInst,
-            usdsMintData,
-            usdcToUsdsData,
-            usdcToCctpData,
-            cctpToBaseDomainData
+            rateLimitData
         );
     }
 
     function subDaoInitFull(
-        MainnetControllerInit.AddressParams memory params,
-        ControllerInstance                  memory controllerInst,
-        AllocatorIlkInstance                memory ilkInst,
-        RateLimitData                       memory usdsMintData,
-        RateLimitData                       memory usdcToUsdsData,
-        RateLimitData                       memory usdcToCctpData,
-        RateLimitData                       memory cctpToBaseDomainData
+        MainnetControllerInit.AddressParams     memory params,
+        ControllerInstance                      memory controllerInst,
+        AllocatorIlkInstance                    memory ilkInst,
+        MainnetControllerInit.InitRateLimitData memory rateLimitData
     )
         external
     {
@@ -54,16 +46,65 @@ contract LibraryWrapper {
             params,
             controllerInst,
             ilkInst,
-            usdsMintData,
-            usdcToUsdsData,
-            usdcToCctpData,
-            cctpToBaseDomainData
+            rateLimitData
         );
     }
 
 }
 
-contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
+contract MainnetControllerDeployInitTestBase is ForkTestBase {
+
+    function _getDefaultParams()
+        internal view returns (
+            MainnetControllerInit.AddressParams     memory addresses,
+            MainnetControllerInit.InitRateLimitData memory rateLimitData
+        )
+    {
+        addresses = MainnetControllerInit.AddressParams({
+            admin         : SPARK_PROXY,
+            freezer       : freezer,
+            relayer       : relayer,
+            oldController : address(0),
+            psm           : PSM,
+            cctpMessenger : CCTP_MESSENGER,
+            dai           : address(dai),
+            daiUsds       : address(daiUsds),
+            usdc          : USDC,
+            usds          : address(usds),
+            susds         : address(susds)
+        });
+
+        RateLimitData memory usdsMintData = RateLimitData({
+            maxAmount : 1_000_000e18,
+            slope     : uint256(1_000_000e18) / 4 hours
+        });
+
+        RateLimitData memory usdcToUsdsData = RateLimitData({
+            maxAmount : 2_000_000e6,
+            slope     : uint256(2_000_000e6) / 4 hours
+        });
+
+        RateLimitData memory usdcToCctpData = RateLimitData({
+            maxAmount : 3_000_000e6,
+            slope     : uint256(3_000_000e6) / 4 hours
+        });
+
+        RateLimitData memory cctpToBaseDomainData = RateLimitData({
+            maxAmount : 4_000_000e6,
+            slope     : uint256(4_000_000e6) / 4 hours
+        });
+
+        rateLimitData = MainnetControllerInit.InitRateLimitData({
+            usdsMintData         : usdsMintData,
+            usdcToUsdsData       : usdcToUsdsData,
+            usdcToCctpData       : usdcToCctpData,
+            cctpToBaseDomainData : cctpToBaseDomainData
+        });
+    }
+
+}
+
+contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployInitTestBase {
 
     LibraryWrapper wrapper;
 
@@ -71,27 +112,8 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
 
     address public mismatchAddress = makeAddr("mismatchAddress");
 
-    MainnetControllerInit.AddressParams addresses;
-
-    RateLimitData usdsMintData = RateLimitData({
-        maxAmount : 1_000_000e18,
-        slope     : uint256(1_000_000e18) / 4 hours
-    });
-
-    RateLimitData usdcToUsdsData = RateLimitData({
-        maxAmount : 2_000_000e6,
-        slope     : uint256(2_000_000e6) / 4 hours
-    });
-
-    RateLimitData usdcToCctpData = RateLimitData({
-        maxAmount : 3_000_000e6,
-        slope     : uint256(3_000_000e6) / 4 hours
-    });
-
-    RateLimitData cctpToBaseDomainData = RateLimitData({
-        maxAmount : 4_000_000e6,
-        slope     : uint256(4_000_000e6) / 4 hours
-    });
+    MainnetControllerInit.AddressParams     addresses;
+    MainnetControllerInit.InitRateLimitData rateLimitData;
 
     function setUp() public override {
         super.setUp();
@@ -106,18 +128,7 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
             susdsInst.sUsds
         );
 
-        addresses = MainnetControllerInit.AddressParams({
-            admin         : SPARK_PROXY,
-            freezer       : freezer,
-            relayer       : relayer,
-            psm           : PSM,
-            cctpMessenger : CCTP_MESSENGER,
-            dai           : address(dai),
-            daiUsds       : address(daiUsds),
-            usdc          : USDC,
-            usds          : address(usds),
-            susds         : address(susds)
-        });
+        ( addresses, rateLimitData ) = _getDefaultParams();
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
@@ -131,6 +142,10 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
         wrapper = LibraryWrapper(SPARK_PROXY);
     }
 
+    /**********************************************************************************************/
+    /*** ACL tests                                                                              ***/
+    /**********************************************************************************************/
+
     function test_init_incorrectAdminAlmProxy() external {
         // Isolate different contracts instead of setting param so can get three different failures
         vm.startPrank(SPARK_PROXY);
@@ -138,7 +153,14 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
         almProxy.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
         vm.stopPrank();
 
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-almProxy"));
+        // Check is not in both functions
+        vm.expectRevert("MainnetControllerInit/incorrect-admin-almProxy");
+        wrapper.subDaoInitFull(
+            addresses,
+            controllerInst,
+            ilkInst,
+            rateLimitData
+        );
     }
 
     function test_init_incorrectAdminRateLimits() external {
@@ -148,7 +170,13 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
         rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
         vm.stopPrank();
 
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-rateLimits"));
+        vm.expectRevert("MainnetControllerInit/incorrect-admin-rateLimits");
+        wrapper.subDaoInitFull(
+            addresses,
+            controllerInst,
+            ilkInst,
+            rateLimitData
+        );
     }
 
     function test_init_incorrectAdminController() external {
@@ -160,6 +188,10 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
 
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-controller"));
     }
+
+    /**********************************************************************************************/
+    /*** Constructor tests                                                                      ***/
+    /**********************************************************************************************/
 
     function test_init_incorrectAlmProxy() external {
         // Deploy new address that will not EVM revert on OZ ACL check
@@ -222,35 +254,111 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
 
     // TODO: Skipping conversion factor test and active test, can add later if needed
 
-    function test_init_unlimitedData_incorrectUsdsMintDataBoundary() external {
-        usdsMintData.maxAmount = type(uint256).max;
+    /**********************************************************************************************/
+    /*** Unlimited `maxAmount` rate limit boundary tests                                          ***/
+    /**********************************************************************************************/
+
+    function test_init_incorrectUsdsMintData_unlimitedBoundary() external {
+        rateLimitData.usdsMintData.maxAmount = type(uint256).max;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdsMintData"));
 
-        usdsMintData.slope = 0;
+        rateLimitData.usdsMintData.slope = 0;
         _checkBothInitsSucceed();
     }
 
-    function test_init_unlimitedData_incorrectUsdcToUsdsDataBoundary() external {
-        usdcToUsdsData.maxAmount = type(uint256).max;
+    function test_init_incorrectUsdcToUsdsData_unlimitedBoundary() external {
+        rateLimitData.usdcToUsdsData.maxAmount = type(uint256).max;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdcToUsdsData"));
 
-        usdcToUsdsData.slope = 0;
+        rateLimitData.usdcToUsdsData.slope = 0;
         _checkBothInitsSucceed();
     }
 
-    function test_init_unlimitedData_incorrectUsdcToCctpDataBoundary() external {
-        usdcToCctpData.maxAmount = type(uint256).max;
+    function test_init_incorrectUsdcToCctpData_unlimitedBoundary() external {
+        rateLimitData.usdcToCctpData.maxAmount = type(uint256).max;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdcToCctpData"));
 
-        usdcToCctpData.slope = 0;
+        rateLimitData.usdcToCctpData.slope = 0;
         _checkBothInitsSucceed();
     }
 
-    function test_init_unlimitedData_incorrectCctpToBaseDomainBoundary() external {
-        cctpToBaseDomainData.maxAmount = type(uint256).max;
+    function test_init_incorrectCctpToBaseDomain_unlimitedBoundary() external {
+        rateLimitData.cctpToBaseDomainData.maxAmount = type(uint256).max;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-cctpToBaseDomainData"));
 
-        cctpToBaseDomainData.slope = 0;
+        rateLimitData.cctpToBaseDomainData.slope = 0;
+        _checkBothInitsSucceed();
+    }
+
+    /**********************************************************************************************/
+    /*** `maxAmount` rate limit precision boundary tests                                        ***/
+    /**********************************************************************************************/
+
+    function test_init_incorrectUsdsMintData_maxAmountPrecisionBoundary() external {
+        rateLimitData.usdsMintData.maxAmount = 1e12 * 1e18 + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdsMintData"));
+
+        rateLimitData.usdsMintData.maxAmount = 1e12 * 1e18;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectUsdcToUsdsData_maxAmountPrecisionBoundary() external {
+        rateLimitData.usdcToUsdsData.maxAmount = 1e12 * 1e6 + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdcToUsdsData"));
+
+        rateLimitData.usdcToUsdsData.maxAmount = 1e12 * 1e6;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectUsdcToCctpData_maxAmountPrecisionBoundary() external {
+        rateLimitData.usdcToCctpData.maxAmount = 1e12 * 1e6 + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdcToCctpData"));
+
+        rateLimitData.usdcToCctpData.maxAmount = 1e12 * 1e6;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectCctpToBaseDomain_maxAmountPrecisionBoundary() external {
+        rateLimitData.cctpToBaseDomainData.maxAmount = 1e12 * 1e6 + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-cctpToBaseDomainData"));
+
+        rateLimitData.cctpToBaseDomainData.maxAmount = 1e12 * 1e6;
+        _checkBothInitsSucceed();
+    }
+
+    /**********************************************************************************************/
+    /*** `slope` rate limit precision boundary tests                                        ***/
+    /**********************************************************************************************/
+
+    function test_init_incorrectUsdsMintData_slopePrecisionBoundary() external {
+        rateLimitData.usdsMintData.slope = uint256(1e12 * 1e18) / 1 hours + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdsMintData"));
+
+        rateLimitData.usdsMintData.slope = uint256(1e12 * 1e18) / 1 hours;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectUsdcToUsdsData_slopePrecisionBoundary() external {
+        rateLimitData.usdcToUsdsData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdcToUsdsData"));
+
+        rateLimitData.usdcToUsdsData.slope = uint256(1e12 * 1e6) / 1 hours;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectUsdcToCctpData_slopePrecisionBoundary() external {
+        rateLimitData.usdcToCctpData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdcToCctpData"));
+
+        rateLimitData.usdcToCctpData.slope = uint256(1e12 * 1e6) / 1 hours;
+        _checkBothInitsSucceed();
+    }
+
+    function test_init_incorrectCctpToBaseDomain_slopePrecisionBoundary() external {
+        rateLimitData.cctpToBaseDomainData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-cctpToBaseDomainData"));
+
+        rateLimitData.cctpToBaseDomainData.slope = uint256(1e12 * 1e6) / 1 hours;
         _checkBothInitsSucceed();
     }
 
@@ -262,10 +370,7 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
             addresses,
             controllerInst,
             ilkInst,
-            usdsMintData,
-            usdcToUsdsData,
-            usdcToCctpData,
-            cctpToBaseDomainData
+            rateLimitData
         );
 
         vm.expectRevert(expectedError);
@@ -273,10 +378,7 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
             addresses,
             controllerInst,
             ilkInst,
-            usdsMintData,
-            usdcToUsdsData,
-            usdcToCctpData,
-            cctpToBaseDomainData
+            rateLimitData
         );
     }
 
@@ -285,25 +387,19 @@ contract MainnetControllerDeployAndInitFailureTests is ForkTestBase {
             addresses,
             controllerInst,
             ilkInst,
-            usdsMintData,
-            usdcToUsdsData,
-            usdcToCctpData,
-            cctpToBaseDomainData
+            rateLimitData
         );
 
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
             ilkInst,
-            usdsMintData,
-            usdcToUsdsData,
-            usdcToCctpData,
-            cctpToBaseDomainData
+            rateLimitData
         );
     }
 }
 
-contract MainnetControllerDeployAndInitSuccessTests is ForkTestBase {
+contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployInitTestBase {
 
     function test_deployAllAndInitFull() external {
         // Perform new deployments against existing fork environment
@@ -346,48 +442,17 @@ contract MainnetControllerDeployAndInitSuccessTests is ForkTestBase {
         // Perform SubDAO initialization (from SPARK_PROXY during spell)
         // Setting rate limits to different values from setUp to make assertions more robust
 
-        MainnetControllerInit.AddressParams memory addresses = MainnetControllerInit.AddressParams({
-            admin         : SPARK_PROXY,
-            freezer       : freezer,
-            relayer       : relayer,
-            psm           : PSM,
-            cctpMessenger : CCTP_MESSENGER,
-            dai           : address(dai),
-            daiUsds       : address(daiUsds),
-            usdc          : USDC,
-            usds          : address(usds),
-            susds         : address(susds)
-        });
-
-        RateLimitData memory usdsMintData = RateLimitData({
-            maxAmount : 1_000_000e18,
-            slope     : uint256(1_000_000e18) / 4 hours
-        });
-
-        RateLimitData memory usdcToUsdsData = RateLimitData({
-            maxAmount : 2_000_000e6,
-            slope     : uint256(2_000_000e6) / 4 hours
-        });
-
-        RateLimitData memory usdcToCctpData = RateLimitData({
-            maxAmount : 3_000_000e6,
-            slope     : uint256(3_000_000e6) / 4 hours
-        });
-
-        RateLimitData memory cctpToBaseDomainData = RateLimitData({
-            maxAmount : 4_000_000e6,
-            slope     : uint256(4_000_000e6) / 4 hours
-        });
+        (
+            MainnetControllerInit.AddressParams     memory addresses,
+            MainnetControllerInit.InitRateLimitData memory rateLimitData
+        ) = _getDefaultParams();
 
         vm.startPrank(SPARK_PROXY);
         MainnetControllerInit.subDaoInitFull(
             addresses,
             controllerInst,
             ilkInst,
-            usdsMintData,
-            usdcToUsdsData,
-            usdcToCctpData,
-            cctpToBaseDomainData
+            rateLimitData
         );
         vm.stopPrank();
 
@@ -405,10 +470,10 @@ contract MainnetControllerDeployAndInitSuccessTests is ForkTestBase {
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
         );
 
-        _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    usdsMintData.maxAmount,         usdsMintData.slope);
-        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), usdcToUsdsData.maxAmount,       usdcToUsdsData.slope);
-        _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), usdcToCctpData.maxAmount,       usdcToCctpData.slope);
-        _assertRateLimitData(domainKeyBase,                          cctpToBaseDomainData.maxAmount, cctpToBaseDomainData.slope);
+        _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimitData.usdsMintData);
+        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdcToUsdsData);
+        _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
+        _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
 
         assertEq(IVaultLike(ilkInst.vault).wards(controllerInst.almProxy), 1);
 
@@ -444,51 +509,20 @@ contract MainnetControllerDeployAndInitSuccessTests is ForkTestBase {
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
+        (
+            MainnetControllerInit.AddressParams     memory addresses,
+            MainnetControllerInit.InitRateLimitData memory rateLimitData
+        ) = _getDefaultParams();
+
         // Perform ONLY controller initialization, setting rate limits and updating ACL
         // Setting rate limits to different values from setUp to make assertions more robust
-
-        MainnetControllerInit.AddressParams memory addresses = MainnetControllerInit.AddressParams({
-            admin         : SPARK_PROXY,
-            freezer       : freezer,
-            relayer       : relayer,
-            psm           : PSM,
-            cctpMessenger : CCTP_MESSENGER,
-            dai           : address(dai),
-            daiUsds       : address(daiUsds),
-            usdc          : USDC,
-            usds          : address(usds),
-            susds         : address(susds)
-        });
-
-        RateLimitData memory usdsMintData = RateLimitData({
-            maxAmount : 1_000_000e18,
-            slope     : uint256(1_000_000e18) / 4 hours
-        });
-
-        RateLimitData memory usdcToUsdsData = RateLimitData({
-            maxAmount : 2_000_000e6,
-            slope     : uint256(2_000_000e6) / 4 hours
-        });
-
-        RateLimitData memory usdcToCctpData = RateLimitData({
-            maxAmount : 3_000_000e6,
-            slope     : uint256(3_000_000e6) / 4 hours
-        });
-
-        RateLimitData memory cctpToBaseDomainData = RateLimitData({
-            maxAmount : 4_000_000e6,
-            slope     : uint256(4_000_000e6) / 4 hours
-        });
 
         vm.startPrank(SPARK_PROXY);
         MainnetControllerInit.subDaoInitController(
             addresses,
             controllerInst,
             ilkInst,
-            usdsMintData,
-            usdcToUsdsData,
-            usdcToCctpData,
-            cctpToBaseDomainData
+            rateLimitData
         );
         vm.stopPrank();
 
@@ -504,21 +538,95 @@ contract MainnetControllerDeployAndInitSuccessTests is ForkTestBase {
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
         );
 
-        _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    usdsMintData.maxAmount,         usdsMintData.slope);
-        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), usdcToUsdsData.maxAmount,       usdcToUsdsData.slope);
-        _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), usdcToCctpData.maxAmount,       usdcToCctpData.slope);
-        _assertRateLimitData(domainKeyBase,                          cctpToBaseDomainData.maxAmount, cctpToBaseDomainData.slope);
+        _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimitData.usdsMintData);
+        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdcToUsdsData);
+        _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
+        _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
     }
 
-    function _assertRateLimitData(bytes32 domainKey, uint256 maxAmount, uint256 slope) internal {
+    function test_init_transferAclToNewController() public {
+        // Deploy and init a controller
+
+        ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
+            SPARK_PROXY,
+            ilkInst.vault,
+            ilkInst.buffer,
+            PSM,
+            usdsInst.daiUsds,
+            CCTP_MESSENGER,
+            susdsInst.sUsds
+        );
+
+        (
+            MainnetControllerInit.AddressParams     memory addresses,
+            MainnetControllerInit.InitRateLimitData memory rateLimitData
+        ) = _getDefaultParams();
+
+        vm.startPrank(SPARK_PROXY);
+        MainnetControllerInit.subDaoInitController(
+            addresses,
+            controllerInst,
+            ilkInst,
+            rateLimitData
+        );
+        vm.stopPrank();
+
+        // Deploy a new controller (example of how an upgrade would work)
+
+        address newController = MainnetControllerDeploy.deployController(
+            SPARK_PROXY,
+            controllerInst.almProxy,
+            controllerInst.rateLimits,
+            ilkInst.vault,
+            ilkInst.buffer,
+            PSM,
+            usdsInst.daiUsds,
+            CCTP_MESSENGER,
+            susdsInst.sUsds
+        );
+
+        // Overwrite storage for all previous deployments in setUp and assert deployment
+
+        almProxy          = ALMProxy(controllerInst.almProxy);
+        mainnetController = MainnetController(controllerInst.controller);
+        rateLimits        = RateLimits(controllerInst.rateLimits);
+
+        address oldController = address(controllerInst.controller);
+
+        controllerInst.controller = newController;  // Overwrite struct for param
+
+        // All other info is the same, just need to transfer ACL
+        addresses.oldController = oldController;
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
+
+        vm.startPrank(SPARK_PROXY);
+        MainnetControllerInit.subDaoInitController(
+            addresses,
+            controllerInst,
+            ilkInst,
+            rateLimitData
+        );
+        vm.stopPrank();
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
+    }
+
+    function _assertRateLimitData(bytes32 domainKey, RateLimitData memory expectedData) internal {
         IRateLimits.RateLimitData memory data = rateLimits.getRateLimitData(domainKey);
 
-        assertEq(data.maxAmount,   maxAmount);
-        assertEq(data.slope,       slope);
-        assertEq(data.lastAmount,  maxAmount);
+        assertEq(data.maxAmount,   expectedData.maxAmount);
+        assertEq(data.slope,       expectedData.slope);
+        assertEq(data.lastAmount,  expectedData.maxAmount);
         assertEq(data.lastUpdated, block.timestamp);
 
-        assertEq(rateLimits.getCurrentRateLimit(domainKey), maxAmount);
+        assertEq(rateLimits.getCurrentRateLimit(domainKey), expectedData.maxAmount);
     }
 
 }

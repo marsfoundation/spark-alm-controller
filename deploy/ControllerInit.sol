@@ -46,6 +46,7 @@ library MainnetControllerInit {
         address admin;
         address freezer;
         address relayer;
+        address oldController;
         address psm;
         address cctpMessenger;
         address dai;
@@ -55,16 +56,20 @@ library MainnetControllerInit {
         address susds;
     }
 
+    struct InitRateLimitData {
+        RateLimitData usdsMintData;
+        RateLimitData usdcToUsdsData;
+        RateLimitData usdcToCctpData;
+        RateLimitData cctpToBaseDomainData;
+    }
+
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     function subDaoInitController(
         AddressParams        memory params,
         ControllerInstance   memory controllerInst,
         AllocatorIlkInstance memory ilkInst,
-        RateLimitData        memory usdsMintData,
-        RateLimitData        memory usdcToUsdsData,
-        RateLimitData        memory usdcToCctpData,
-        RateLimitData        memory cctpToBaseDomainData
+        InitRateLimitData    memory data
     )
         internal
     {
@@ -75,9 +80,7 @@ library MainnetControllerInit {
 
         // Step 1: Perform sanity checks
 
-        require(almProxy.hasRole(DEFAULT_ADMIN_ROLE, params.admin)   == true, "MainnetControllerInit/incorrect-admin-almProxy");
         require(controller.hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true, "MainnetControllerInit/incorrect-admin-controller");
-        require(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true, "MainnetControllerInit/incorrect-admin-rateLimits");
 
         require(address(controller.proxy())      == controllerInst.almProxy,   "MainnetControllerInit/incorrect-almProxy");
         require(address(controller.rateLimits()) == controllerInst.rateLimits, "MainnetControllerInit/incorrect-rateLimits");
@@ -100,52 +103,57 @@ library MainnetControllerInit {
         controller.grantRole(controller.RELAYER(), params.relayer);
 
         almProxy.grantRole(almProxy.CONTROLLER(), address(controller));
-
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
 
-        // Step 3: Configure all rate limits for controller, using Base as only domain
+        if (params.oldController != address(0)) {
+            almProxy.revokeRole(almProxy.CONTROLLER(), params.oldController);
+            rateLimits.revokeRole(rateLimits.CONTROLLER(), params.oldController);
+        }
 
-        // Sanity check all rate limit data
-        _checkUnlimitedData(usdsMintData,         "usdsMintData");
-        _checkUnlimitedData(usdcToUsdsData,       "usdcToUsdsData");
-        _checkUnlimitedData(usdcToCctpData,       "usdcToCctpData");
-        _checkUnlimitedData(cctpToBaseDomainData, "cctpToBaseDomainData");
+        // Step 3: Configure all rate limits for controller, using Base as only domain
 
         bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
             controller.LIMIT_USDC_TO_DOMAIN(),
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
         );
 
-        rateLimits.setRateLimitData(controller.LIMIT_USDS_MINT(),    usdsMintData.maxAmount,         usdsMintData.slope);
-        rateLimits.setRateLimitData(controller.LIMIT_USDS_TO_USDC(), usdcToUsdsData.maxAmount,       usdcToUsdsData.slope);
-        rateLimits.setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), usdcToCctpData.maxAmount,       usdcToCctpData.slope);
-        rateLimits.setRateLimitData(domainKeyBase,                   cctpToBaseDomainData.maxAmount, cctpToBaseDomainData.slope);
+        _setRateLimitData(controller.LIMIT_USDS_MINT(),    rateLimits, data.usdsMintData,         "usdsMintData",         18);
+        _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, data.usdcToUsdsData,       "usdcToUsdsData",       6);
+        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, data.usdcToCctpData,       "usdcToCctpData",       6);
+        _setRateLimitData(domainKeyBase,                   rateLimits, data.cctpToBaseDomainData, "cctpToBaseDomainData", 6);
     }
 
     function subDaoInitFull(
         AddressParams        memory params,
         ControllerInstance   memory controllerInst,
         AllocatorIlkInstance memory ilkInst,
-        RateLimitData        memory usdsMintData,
-        RateLimitData        memory usdcToUsdsData,
-        RateLimitData        memory usdcToCctpData,
-        RateLimitData        memory cctpToBaseDomainData
+        InitRateLimitData    memory data
     )
         internal
     {
-        // Step 1: Perform sanity checks, configure ACL permissions for controller
+        // Step 1: Perform initial sanity checks
+
+        require(
+            IALMProxy(controllerInst.almProxy).hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true,
+            "MainnetControllerInit/incorrect-admin-almProxy"
+        );
+
+        require(
+            IRateLimits(controllerInst.rateLimits).hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true,
+            "MainnetControllerInit/incorrect-admin-rateLimits"
+        );
+
+        // Step 2: Perform controller sanity checks, configure ACL permissions for controller
         //         and almProxy and rate limits.
+
         subDaoInitController(
             params,
             controllerInst,
             ilkInst,
-            usdsMintData,
-            usdcToUsdsData,
-            usdcToCctpData,
-            cctpToBaseDomainData
+            data
         );
 
-        // Step 2: Configure almProxy within the allocation system
+        // Step 3: Configure almProxy within the allocation system
 
         IVaultLike(ilkInst.vault).rely(controllerInst.almProxy);
         IBufferLike(ilkInst.buffer).approve(params.usds, controllerInst.almProxy, type(uint256).max);
@@ -155,13 +163,33 @@ library MainnetControllerInit {
         IPSMLike(psm).kiss(almProxy);  // To allow using no fee functionality
     }
 
-    function _checkUnlimitedData(RateLimitData memory data, string memory name) internal pure {
+    function _setRateLimitData(
+        bytes32       key,
+        IRateLimits   rateLimits,
+        RateLimitData memory data,
+        string        memory name,
+        uint256       decimals
+    )
+        internal
+    {
+        // Handle setting an unlimited rate limit
         if (data.maxAmount == type(uint256).max) {
             require(
                 data.slope == 0,
                 string(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-", name))
             );
         }
+        else {
+            require(
+                data.maxAmount <= 1e12 * (10 ** decimals),
+                string(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-", name))
+            );
+            require(
+                data.slope <= 1e12 * (10 ** decimals) / 1 hours,
+                string(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-", name))
+            );
+        }
+        rateLimits.setRateLimitData(key, data.maxAmount, data.slope);
     }
 
 }
@@ -172,6 +200,7 @@ library ForeignControllerInit {
         address admin;
         address freezer;
         address relayer;
+        address oldController;
         address psm;
         address cctpMessenger;
         address usdc;
@@ -183,11 +212,9 @@ library ForeignControllerInit {
 
     struct InitRateLimitData {
         RateLimitData usdcDepositData;
-        RateLimitData usdsDepositData;
-        RateLimitData susdsDepositData;
         RateLimitData usdcWithdrawData;
-        RateLimitData usdsWithdrawData;
-        RateLimitData susdsWithdrawData;
+        RateLimitData usdcToCctpData;
+        RateLimitData cctpToEthereumDomainData;
     }
 
     function init(
@@ -218,43 +245,60 @@ library ForeignControllerInit {
         controller.grantRole(controller.RELAYER(), params.relayer);
 
         almProxy.grantRole(almProxy.CONTROLLER(), address(controller));
-
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
 
+        if (params.oldController != address(0)) {
+            almProxy.revokeRole(almProxy.CONTROLLER(), params.oldController);
+            rateLimits.revokeRole(rateLimits.CONTROLLER(), params.oldController);
+        }
+
+
         // Step 2: Configure all rate limits for controller
-
-        // Sanity check all rate limit data
-        _checkUnlimitedData(data.usdcDepositData,  "usdcDepositData");
-        _checkUnlimitedData(data.usdsDepositData,  "usdsDepositData");
-        _checkUnlimitedData(data.susdsDepositData, "susdsDepositData");
-
-        _checkUnlimitedData(data.usdcWithdrawData,  "usdcWithdrawData");
-        _checkUnlimitedData(data.usdsWithdrawData,  "usdsWithdrawData");
-        _checkUnlimitedData(data.susdsWithdrawData, "susdsWithdrawData");
 
         bytes32 depositKey  = controller.LIMIT_PSM_DEPOSIT();
         bytes32 withdrawKey = controller.LIMIT_PSM_WITHDRAW();
 
-        rateLimits.setRateLimitData(_makeKey(depositKey, params.usdc),  data.usdcDepositData.maxAmount,  data.usdcDepositData.slope);
-        rateLimits.setRateLimitData(_makeKey(depositKey, params.usds),  data.usdsDepositData.maxAmount,  data.usdsDepositData.slope);
-        rateLimits.setRateLimitData(_makeKey(depositKey, params.susds), data.susdsDepositData.maxAmount, data.susdsDepositData.slope);
+        bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
+            controller.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+        );
 
-        rateLimits.setRateLimitData(_makeKey(withdrawKey, params.usdc),  data.usdcWithdrawData.maxAmount,  data.usdcWithdrawData.slope);
-        rateLimits.setRateLimitData(_makeKey(withdrawKey, params.usds),  data.usdsWithdrawData.maxAmount,  data.usdsWithdrawData.slope);
-        rateLimits.setRateLimitData(_makeKey(withdrawKey, params.susds), data.susdsWithdrawData.maxAmount, data.susdsWithdrawData.slope);
+        _setRateLimitData(_makeKey(depositKey,  params.usdc), rateLimits, data.usdcDepositData,          "usdcDepositData");
+        _setRateLimitData(_makeKey(withdrawKey, params.usdc), rateLimits, data.usdcWithdrawData,         "usdcWithdrawData");
+        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(),    rateLimits, data.usdcToCctpData,           "usdcToCctpData");
+        _setRateLimitData(domainKeyEthereum,                  rateLimits, data.cctpToEthereumDomainData, "cctpToEthereumDomainData");
     }
 
     function _makeKey(bytes32 actionKey, address asset) internal pure returns (bytes32) {
         return RateLimitHelpers.makeAssetKey(actionKey, asset);
     }
 
-    function _checkUnlimitedData(RateLimitData memory data, string memory name) internal pure {
+    function _setRateLimitData(
+        bytes32       key,
+        IRateLimits   rateLimits,
+        RateLimitData memory data,
+        string        memory name
+    )
+        internal
+    {
+        // Handle setting an unlimited rate limit
         if (data.maxAmount == type(uint256).max) {
             require(
                 data.slope == 0,
                 string(abi.encodePacked("ForeignControllerInit/invalid-rate-limit-", name))
             );
         }
+        else {
+            require(
+                data.maxAmount <= 1e18,
+                string(abi.encodePacked("ForeignControllerInit/invalid-max-amount-precision-", name))
+            );
+            require(
+                data.slope <= uint256(1e18) / 1 hours,
+                string(abi.encodePacked("ForeignControllerInit/invalid-slope-precision-", name))
+            );
+        }
+        rateLimits.setRateLimitData(key, data.maxAmount, data.slope);
     }
 
 }
