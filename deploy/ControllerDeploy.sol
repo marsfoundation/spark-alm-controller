@@ -18,7 +18,7 @@ library ForeignControllerDeploy {
         address usdc,
         address cctp
     )
-        external returns (address controller)
+        internal returns (address controller)
     {
         controller = address(new ForeignController({
             admin_      : admin,
@@ -36,7 +36,7 @@ library ForeignControllerDeploy {
         address usdc,
         address cctp
     )
-        external returns (ControllerInstance memory instance)
+        internal returns (ControllerInstance memory instance)
     {
         instance.almProxy   = address(new ALMProxy(admin));
         instance.rateLimits = address(new RateLimits(admin));
@@ -66,7 +66,7 @@ library MainnetControllerDeploy {
         address cctp,
         address susds
     )
-        external returns (address controller)
+        internal returns (address controller)
     {
         controller = address(new MainnetController({
             admin_      : admin,
@@ -90,7 +90,7 @@ library MainnetControllerDeploy {
         address cctp,
         address susds
     )
-        external returns (ControllerInstance memory instance)
+        internal returns (ControllerInstance memory instance)
     {
         instance.almProxy   = address(new ALMProxy(admin));
         instance.rateLimits = address(new RateLimits(admin));
