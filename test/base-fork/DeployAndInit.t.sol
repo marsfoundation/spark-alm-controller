@@ -104,7 +104,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         foreignController = ForeignController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
@@ -332,7 +332,7 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         foreignController = ForeignController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
@@ -420,7 +420,7 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
 
         // Overwrite storage of previous deployments in setUp
 
-        almProxy   = ALMProxy(controllerInst.almProxy);
+        almProxy   = ALMProxy(payable(controllerInst.almProxy));
         rateLimits = RateLimits(controllerInst.rateLimits);
 
         address oldController = address(controllerInst.controller);

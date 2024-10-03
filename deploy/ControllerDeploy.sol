@@ -18,7 +18,7 @@ library ForeignControllerDeploy {
         address usdc,
         address cctp
     )
-        external returns (address controller)
+        internal returns (address controller)
     {
         controller = address(new ForeignController({
             admin_      : admin,
@@ -36,7 +36,7 @@ library ForeignControllerDeploy {
         address usdc,
         address cctp
     )
-        external returns (ControllerInstance memory instance)
+        internal returns (ControllerInstance memory instance)
     {
         instance.almProxy   = address(new ALMProxy(admin));
         instance.rateLimits = address(new RateLimits(admin));
@@ -60,20 +60,18 @@ library MainnetControllerDeploy {
         address almProxy,
         address rateLimits,
         address vault,
-        address buffer,
         address psm,
         address daiUsds,
         address cctp,
         address susds
     )
-        external returns (address controller)
+        internal returns (address controller)
     {
         controller = address(new MainnetController({
             admin_      : admin,
             proxy_      : almProxy,
             rateLimits_ : rateLimits,
             vault_      : vault,
-            buffer_     : buffer,
             psm_        : psm,
             daiUsds_    : daiUsds,
             cctp_       : cctp,
@@ -84,13 +82,12 @@ library MainnetControllerDeploy {
     function deployFull(
         address admin,
         address vault,
-        address buffer,
         address psm,
         address daiUsds,
         address cctp,
         address susds
     )
-        external returns (ControllerInstance memory instance)
+        internal returns (ControllerInstance memory instance)
     {
         instance.almProxy   = address(new ALMProxy(admin));
         instance.rateLimits = address(new RateLimits(admin));
@@ -100,7 +97,6 @@ library MainnetControllerDeploy {
             proxy_      : instance.almProxy,
             rateLimits_ : instance.rateLimits,
             vault_      : vault,
-            buffer_     : buffer,
             psm_        : psm,
             daiUsds_    : daiUsds,
             cctp_       : cctp,

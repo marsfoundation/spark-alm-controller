@@ -10,6 +10,7 @@ import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
 import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
 import { MockPSM3 }    from "test/unit/mocks/MockPSM3.sol";
 import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
+import { MockVault }   from "test/unit/mocks/MockVault.sol";
 
 contract MainnetControllerConstructorTests is UnitTestBase {
 
@@ -17,13 +18,13 @@ contract MainnetControllerConstructorTests is UnitTestBase {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
         MockSUsds   susds   = new MockSUsds(makeAddr("usds"));
+        MockVault   vault   = new MockVault(makeAddr("buffer"));
 
         MainnetController mainnetController = new MainnetController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
-            makeAddr("vault"),
-            makeAddr("buffer"),
+            address(vault),
             address(psm),
             address(daiUsds),
             makeAddr("cctp"),
@@ -34,8 +35,8 @@ contract MainnetControllerConstructorTests is UnitTestBase {
 
         assertEq(address(mainnetController.proxy()),      makeAddr("almProxy"));
         assertEq(address(mainnetController.rateLimits()), makeAddr("rateLimits"));
-        assertEq(address(mainnetController.vault()),      makeAddr("vault"));
-        assertEq(address(mainnetController.buffer()),     makeAddr("buffer"));
+        assertEq(address(mainnetController.vault()),      address(vault));
+        assertEq(address(mainnetController.buffer()),     makeAddr("buffer"));  // Buffer param in MockVault
         assertEq(address(mainnetController.psm()),        address(psm));
         assertEq(address(mainnetController.daiUsds()),    address(daiUsds));
         assertEq(address(mainnetController.cctp()),       makeAddr("cctp"));

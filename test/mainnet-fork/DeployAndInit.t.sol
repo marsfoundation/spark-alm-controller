@@ -11,7 +11,6 @@ import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 import { MainnetControllerInit, RateLimitData } from "../../deploy/ControllerInit.sol";
 
 // TODO: Refactor to use live contracts
-// TODO: Refactor to use a `getDefaultParams` helper for both foreign and mainnet tests
 // TODO: Declare Inst structs to emulate mainnet
 // NOTE: Allocation should be deployed prior to Controller
 
@@ -121,7 +120,6 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -132,7 +130,7 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
@@ -255,7 +253,7 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     // TODO: Skipping conversion factor test and active test, can add later if needed
 
     /**********************************************************************************************/
-    /*** Unlimited `maxAmount` rate limit boundary tests                                          ***/
+    /*** Unlimited `maxAmount` rate limit boundary tests                                        ***/
     /**********************************************************************************************/
 
     function test_init_incorrectUsdsMintData_unlimitedBoundary() external {
@@ -407,7 +405,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -416,7 +413,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
@@ -496,7 +493,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -505,7 +501,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
@@ -550,7 +546,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -578,7 +573,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             controllerInst.almProxy,
             controllerInst.rateLimits,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -587,7 +581,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
