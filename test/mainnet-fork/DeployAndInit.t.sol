@@ -11,7 +11,6 @@ import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 import { MainnetControllerInit, RateLimitData } from "../../deploy/ControllerInit.sol";
 
 // TODO: Refactor to use live contracts
-// TODO: Refactor to use a `getDefaultParams` helper for both foreign and mainnet tests
 // TODO: Declare Inst structs to emulate mainnet
 // NOTE: Allocation should be deployed prior to Controller
 
@@ -254,7 +253,7 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     // TODO: Skipping conversion factor test and active test, can add later if needed
 
     /**********************************************************************************************/
-    /*** Unlimited `maxAmount` rate limit boundary tests                                          ***/
+    /*** Unlimited `maxAmount` rate limit boundary tests                                        ***/
     /**********************************************************************************************/
 
     function test_init_incorrectUsdsMintData_unlimitedBoundary() external {

@@ -19,3 +19,6 @@
 [submodule "lib/sdai"]
 	path = lib/sdai
 	url = https://github.com/makerdao/sdai
+[submodule "lib/spark-address-registry"]
+	path = lib/spark-address-registry
+	url = https://github.com/marsfoundation/spark-address-registry
