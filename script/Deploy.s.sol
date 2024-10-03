@@ -22,7 +22,6 @@ contract DeployMainnetFull is Script {
         ControllerInstance memory instance = MainnetControllerDeploy.deployFull({
             admin   : Ethereum.SPARK_PROXY,
             vault   : address(0),  // TODO: Replace
-            buffer  : address(0),  // TODO: Replace
             psm     : Ethereum.PSM,
             daiUsds : Ethereum.DAI_USDS,
             cctp    : Ethereum.CCTP_TOKEN_MESSENGER,
