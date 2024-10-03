@@ -29,8 +29,7 @@ import { AllocatorVault }  from "lib/dss-allocator/src/AllocatorVault.sol";
 import { Jug }        from "../common/Jug.sol";
 import { PauseProxy } from "../common/PauseProxy.sol";
 import { Vat }        from "../common/Vat.sol";
-import { UsdsJoin }   from "./UsdsJoin.sol";
-import { UsdsJoin }   from "./UsdsJoin.sol";
+import { UsdsJoin }   from "../common/UsdsJoin.sol";
 import { PSM }        from "./PSM.sol";
 
 struct Domain {
