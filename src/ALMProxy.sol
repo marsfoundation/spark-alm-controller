@@ -47,4 +47,10 @@ contract ALMProxy is IALMProxy, AccessControl {
         result = target.functionDelegateCall(data);
     }
 
+    /**********************************************************************************************/
+    /*** Receive function                                                                       ***/
+    /**********************************************************************************************/
+
+    receive() external payable { }
+
 }

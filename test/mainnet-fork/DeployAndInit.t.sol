@@ -132,7 +132,7 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
@@ -416,7 +416,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
@@ -505,7 +505,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
@@ -587,7 +587,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 

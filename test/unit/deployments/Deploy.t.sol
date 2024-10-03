@@ -51,7 +51,7 @@ contract ForeignControllerDeployTests is UnitTestBase {
         ControllerInstance memory instance
             = ForeignControllerDeploy.deployFull(admin, psm, usdc, cctp);
 
-        ALMProxy          almProxy   = ALMProxy(instance.almProxy);
+        ALMProxy          almProxy   = ALMProxy(payable(instance.almProxy));
         ForeignController controller = ForeignController(instance.controller);
         RateLimits        rateLimits = RateLimits(instance.rateLimits);
 
@@ -152,7 +152,7 @@ contract MainnetControllerDeployTests is UnitTestBase {
             vars.susds
         );
 
-        ALMProxy          almProxy   = ALMProxy(instance.almProxy);
+        ALMProxy          almProxy   = ALMProxy(payable(instance.almProxy));
         MainnetController controller = MainnetController(instance.controller);
         RateLimits        rateLimits = RateLimits(instance.rateLimits);
 
