@@ -5,10 +5,10 @@ import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
-contract PSM extends Ownable {
+contract PSM is Ownable {
 
-    IERC20 public gem;
-    IERC20 public dai;
+    IERC20 public immutable gem;
+    IERC20 public immutable dai;
 
     constructor(address owner_, address gem_, address dai_) Ownable(owner_) {
         gem = IERC20(gem_);

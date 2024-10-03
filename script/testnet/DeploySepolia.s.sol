@@ -2,15 +2,13 @@
 pragma solidity ^0.8.21;
 
 import { Script }       from "forge-std/Script.sol";
+import { MockERC20 }    from "forge-std/mocks/MockERC20.sol";
 import { IERC20 }       from "forge-std/interfaces/IERC20.sol";
 import { ScriptTools }  from "dss-test/ScriptTools.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import { UsdsDeploy } from "lib/usds/deploy/UsdsDeploy.sol";
-import { Usds }       from "lib/usds/src/Usds.sol";
-
-import { SUsdsDeploy } from "lib/sdai/deploy/SUsdsDeploy.sol";
-import { SUsds }       from "lib/sdai/src/SUsds.sol";
+import { Usds }  from "lib/usds/src/Usds.sol";
+import { SUsds } from "lib/sdai/src/SUsds.sol";
 
 import {
     AllocatorDeploy,
@@ -26,10 +24,13 @@ import {
 import { AllocatorBuffer } from "lib/dss-allocator/src/AllocatorBuffer.sol";
 import { AllocatorVault }  from "lib/dss-allocator/src/AllocatorVault.sol";
 
+import { MainnetControllerDeploy } from "deploy/ControllerDeploy.sol";
+
 import { Jug }        from "../common/Jug.sol";
 import { PauseProxy } from "../common/PauseProxy.sol";
 import { Vat }        from "../common/Vat.sol";
 import { UsdsJoin }   from "../common/UsdsJoin.sol";
+import { DaiUsds }    from "../common/DaiUsds.sol";
 import { PSM }        from "./PSM.sol";
 
 struct Domain {
@@ -49,14 +50,17 @@ contract DeploySepolia is Script {
     Domain base;
 
     // Mainnet contracts
+    MockERC20 dai;
     Usds usds;
     SUsds susds;
     IERC20 usdc = IERC20(USDC);
 
     Vat vat;
     UsdsJoin usdsJoin;
+    DaiUsds daiUsds;
     Jug jug;
     PauseProxy pauseProxy;
+    PSM psm;
 
     AllocatorSharedInstance allocatorSharedInstance;
     AllocatorIlkInstance    allocatorIlkInstance;
@@ -68,6 +72,13 @@ contract DeploySepolia is Script {
         usds = Usds(_usds);
     }
 
+    function _deploySUSDS(address _deployer, address _owner) internal {
+        address _sUsdsImp = address(new SUsds(usdsJoin, address(0)));
+        address _sUsds = address(new ERC1967Proxy(_sUsdsImp, abi.encodeCall(SUsds.initialize, ())));
+        ScriptTools.switchOwner(_sUsds, _deployer, _owner);
+        susds = SUsds(_sUsds);
+    }
+
     function setupMCDMocks() internal {
         vm.selectFork(mainnet.forkId);
 
@@ -76,19 +87,30 @@ contract DeploySepolia is Script {
         
         vm.startBroadcast();
 
+        // Init tokens
+        dai        = new MockERC20();
+        dai.initialize("DAI", "DAI", 18);
         _deployUSDS(deployer, mainnet.admin);
+        _deploySUSDS(deployer, mainnet.admin);
 
+        // Init MCD contracts
         vat        = new Vat();
         pauseProxy = new PauseProxy(mainnet.admin);
         usdsJoin   = new UsdsJoin(mainnet.admin, address(vat), address(usds));
+        daiUsds    = new DaiUsds(mainnet.admin, address(dai), address(usds));
         jug        = new Jug();
+        psm        = new PSM(mainnet.admin, address(usdc), address(dai));
 
         // Mint some USDS into the join contract
         usds.mint(address(usdsJoin), 1_000_000e18);
 
         // Fill the psm with dai and usdc
         usdc.transfer(address(psm), 1e6);
-        dai.transfer(address(psm), 1e18);
+        dai.mint(address(psm), 1_000_000e18);
+
+        // Fill the DaiUsds join contract
+        dai.mint(address(daiUsds), 1_000_000e18);
+        usds.mint(address(daiUsds), 1_000_000e18);
 
         vm.stopBroadcast();
     }
@@ -132,7 +154,7 @@ contract DeploySepolia is Script {
             daiUsds: address(daiUsds),
             cctp:    CCTP_TOKEN_MESSENGER_MAINNET,
             susds:   address(susds)
-        })
+        });
 
         vm.stopBroadcast();
     }
