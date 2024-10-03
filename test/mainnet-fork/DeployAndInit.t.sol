@@ -121,7 +121,6 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -407,7 +406,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -496,7 +494,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -550,7 +547,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -578,7 +574,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             controllerInst.almProxy,
             controllerInst.rateLimits,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,

@@ -10,6 +10,7 @@ import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
 import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
 import { MockPSM3 }    from "test/unit/mocks/MockPSM3.sol";
 import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
+import { MockVault }   from "test/unit/mocks/MockVault.sol";
 
 interface IBaseControllerLike {
     function active() external view returns (bool);
@@ -26,14 +27,14 @@ contract ControllerTestBase is UnitTestBase {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
         MockSUsds   susds   = new MockSUsds(makeAddr("susds"));
+        MockVault   vault   = new MockVault(makeAddr("buffer"));
 
         // Default to mainnet controller for tests and override with foreign controller
         controller = IBaseControllerLike(address(new MainnetController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
-            makeAddr("vault"),
-            makeAddr("buffer"),
+            address(vault),
             address(psm),
             address(daiUsds),
             makeAddr("cctp"),

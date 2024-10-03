@@ -9,6 +9,7 @@ import { MainnetController } from "src/MainnetController.sol";
 import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
 import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
 import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
+import { MockVault }   from "test/unit/mocks/MockVault.sol";
 
 contract MainnetControllerAdminTests is UnitTestBase {
 
@@ -21,13 +22,13 @@ contract MainnetControllerAdminTests is UnitTestBase {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
         MockSUsds   susds   = new MockSUsds(makeAddr("susds"));
+        MockVault   vault   = new MockVault(makeAddr("buffer"));
 
         mainnetController = new MainnetController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
-            makeAddr("vault"),
-            makeAddr("buffer"),
+            address(vault),
             address(psm),
             address(daiUsds),
             makeAddr("cctp"),

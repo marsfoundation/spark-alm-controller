@@ -8,6 +8,7 @@ import "deploy/ControllerDeploy.sol";  // All imports needed so not importing ex
 import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
 import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
 import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
+import { MockVault }   from "test/unit/mocks/MockVault.sol";
 
 contract ForeignControllerDeployTests is UnitTestBase {
 
@@ -76,10 +77,8 @@ contract MainnetControllerDeployTests is UnitTestBase {
         address daiUsds;
         address psm;
         address susds;
-
         address admin;
         address vault;
-        address buffer;
         address cctp;
     }
 
@@ -89,11 +88,10 @@ contract MainnetControllerDeployTests is UnitTestBase {
         vars.daiUsds = address(new MockDaiUsds(makeAddr("dai")));
         vars.psm     = address(new MockPSM(makeAddr("usdc")));
         vars.susds   = address(new MockSUsds(makeAddr("usds")));
+        vars.vault   = address(new MockVault(makeAddr("buffer")));
 
-        vars.admin   = makeAddr("admin");
-        vars.vault   = makeAddr("vault");
-        vars.buffer  = makeAddr("buffer");
-        vars.cctp    = makeAddr("cctp");
+        vars.admin = makeAddr("admin");
+        vars.cctp  = makeAddr("cctp");
 
         address almProxy   = address(new ALMProxy(admin));
         address rateLimits = address(new RateLimits(admin));
@@ -104,7 +102,6 @@ contract MainnetControllerDeployTests is UnitTestBase {
                 almProxy,
                 rateLimits,
                 vars.vault,
-                vars.buffer,
                 vars.psm,
                 vars.daiUsds,
                 vars.cctp,
@@ -117,7 +114,7 @@ contract MainnetControllerDeployTests is UnitTestBase {
         assertEq(address(controller.proxy()),      almProxy);
         assertEq(address(controller.rateLimits()), rateLimits);
         assertEq(address(controller.vault()),      vars.vault);
-        assertEq(address(controller.buffer()),     vars.buffer);
+        assertEq(address(controller.buffer()),     makeAddr("buffer"));  // Buffer param in MockVault
         assertEq(address(controller.psm()),        vars.psm);
         assertEq(address(controller.daiUsds()),    vars.daiUsds);
         assertEq(address(controller.cctp()),       vars.cctp);
@@ -136,16 +133,14 @@ contract MainnetControllerDeployTests is UnitTestBase {
         vars.daiUsds = address(new MockDaiUsds(makeAddr("dai")));
         vars.psm     = address(new MockPSM(makeAddr("usdc")));
         vars.susds   = address(new MockSUsds(makeAddr("usds")));
+        vars.vault   = address(new MockVault(makeAddr("buffer")));
 
-        vars.admin   = makeAddr("admin");
-        vars.vault   = makeAddr("vault");
-        vars.buffer  = makeAddr("buffer");
-        vars.cctp    = makeAddr("cctp");
+        vars.admin  = makeAddr("admin");
+        vars.cctp   = makeAddr("cctp");
 
         ControllerInstance memory instance = MainnetControllerDeploy.deployFull(
             admin,
             vars.vault,
-            vars.buffer,
             vars.psm,
             vars.daiUsds,
             vars.cctp,
@@ -163,7 +158,7 @@ contract MainnetControllerDeployTests is UnitTestBase {
         assertEq(address(controller.proxy()),      instance.almProxy);
         assertEq(address(controller.rateLimits()), instance.rateLimits);
         assertEq(address(controller.vault()),      vars.vault);
-        assertEq(address(controller.buffer()),     vars.buffer);
+        assertEq(address(controller.buffer()),     makeAddr("buffer"));  // Buffer param in MockVault
         assertEq(address(controller.psm()),        vars.psm);
         assertEq(address(controller.daiUsds()),    vars.daiUsds);
         assertEq(address(controller.cctp()),       vars.cctp);

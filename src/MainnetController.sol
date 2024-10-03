@@ -23,6 +23,7 @@ interface ISUSDSLike is IERC4626 {
 }
 
 interface IVaultLike {
+    function buffer() external view returns(address);
     function draw(uint256 usdsAmount) external;
     function wipe(uint256 usdsAmount) external;
 }
@@ -91,7 +92,6 @@ contract MainnetController is AccessControl {
         address proxy_,
         address rateLimits_,
         address vault_,
-        address buffer_,
         address psm_,
         address daiUsds_,
         address cctp_,
@@ -102,7 +102,7 @@ contract MainnetController is AccessControl {
         proxy      = IALMProxy(proxy_);
         rateLimits = IRateLimits(rateLimits_);
         vault      = IVaultLike(vault_);
-        buffer     = buffer_;
+        buffer     = IVaultLike(vault_).buffer();
         psm        = IPSMLike(psm_);
         daiUsds    = IDaiUsdsLike(daiUsds_);
         cctp       = ICCTPLike(cctp_);
