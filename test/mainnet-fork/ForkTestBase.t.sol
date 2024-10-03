@@ -216,7 +216,6 @@ contract ForkTestBase is DssTest {
             proxy_      : address(almProxy),
             rateLimits_ : address(rateLimits),
             vault_      : ilkInst.vault,
-            buffer_     : ilkInst.buffer,
             psm_        : PSM,
             daiUsds_    : usdsInst.daiUsds,
             cctp_       : CCTP_MESSENGER,

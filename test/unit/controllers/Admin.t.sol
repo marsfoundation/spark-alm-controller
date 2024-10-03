@@ -9,8 +9,11 @@ import { MainnetController } from "src/MainnetController.sol";
 import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
 import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
 import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
+import { MockVault }   from "test/unit/mocks/MockVault.sol";
 
 contract MainnetControllerAdminTests is UnitTestBase {
+
+    event MintRecipientSet(uint32 indexed destinationDomain, bytes32 mintRecipient);
 
     bytes32 mintRecipient1 = bytes32(uint256(uint160(makeAddr("mintRecipient1"))));
     bytes32 mintRecipient2 = bytes32(uint256(uint160(makeAddr("mintRecipient2"))));
@@ -21,13 +24,13 @@ contract MainnetControllerAdminTests is UnitTestBase {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
         MockSUsds   susds   = new MockSUsds(makeAddr("susds"));
+        MockVault   vault   = new MockVault(makeAddr("buffer"));
 
         mainnetController = new MainnetController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
-            makeAddr("vault"),
-            makeAddr("buffer"),
+            address(vault),
             address(psm),
             address(daiUsds),
             makeAddr("cctp"),
@@ -57,16 +60,22 @@ contract MainnetControllerAdminTests is UnitTestBase {
         assertEq(mainnetController.mintRecipients(2), bytes32(0));
 
         vm.prank(admin);
+        vm.expectEmit(address(mainnetController));
+        emit MintRecipientSet(1, mintRecipient1);
         mainnetController.setMintRecipient(1, mintRecipient1);
 
         assertEq(mainnetController.mintRecipients(1), mintRecipient1);
 
         vm.prank(admin);
+        vm.expectEmit(address(mainnetController));
+        emit MintRecipientSet(2, mintRecipient2);
         mainnetController.setMintRecipient(2, mintRecipient2);
 
         assertEq(mainnetController.mintRecipients(2), mintRecipient2);
 
         vm.prank(admin);
+        vm.expectEmit(address(mainnetController));
+        emit MintRecipientSet(1, mintRecipient2);
         mainnetController.setMintRecipient(1, mintRecipient2);
 
         assertEq(mainnetController.mintRecipients(1), mintRecipient2);
@@ -75,6 +84,8 @@ contract MainnetControllerAdminTests is UnitTestBase {
 }
 
 contract ForeignControllerAdminTests is UnitTestBase {
+
+    event MintRecipientSet(uint32 indexed destinationDomain, bytes32 mintRecipient);
 
     ForeignController foreignController;
 
@@ -114,16 +125,22 @@ contract ForeignControllerAdminTests is UnitTestBase {
         assertEq(foreignController.mintRecipients(2), bytes32(0));
 
         vm.prank(admin);
+        vm.expectEmit(address(foreignController));
+        emit MintRecipientSet(1, mintRecipient1);
         foreignController.setMintRecipient(1, mintRecipient1);
 
         assertEq(foreignController.mintRecipients(1), mintRecipient1);
 
         vm.prank(admin);
+        vm.expectEmit(address(foreignController));
+        emit MintRecipientSet(2, mintRecipient2);
         foreignController.setMintRecipient(2, mintRecipient2);
 
         assertEq(foreignController.mintRecipients(2), mintRecipient2);
 
         vm.prank(admin);
+        vm.expectEmit(address(foreignController));
+        emit MintRecipientSet(1, mintRecipient2);
         foreignController.setMintRecipient(1, mintRecipient2);
 
         assertEq(foreignController.mintRecipients(1), mintRecipient2);

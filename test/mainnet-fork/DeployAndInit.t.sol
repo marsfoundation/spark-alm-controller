@@ -120,7 +120,6 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -131,7 +130,7 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
@@ -406,7 +405,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -415,7 +413,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
@@ -495,7 +493,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -504,7 +501,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
@@ -549,7 +546,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -577,7 +573,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             controllerInst.almProxy,
             controllerInst.rateLimits,
             ilkInst.vault,
-            ilkInst.buffer,
             PSM,
             usdsInst.daiUsds,
             CCTP_MESSENGER,
@@ -586,7 +581,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
-        almProxy          = ALMProxy(controllerInst.almProxy);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         mainnetController = MainnetController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 

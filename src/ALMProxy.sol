@@ -9,7 +9,6 @@ import { IALMProxy } from "src/interfaces/IALMProxy.sol";
 contract ALMProxy is IALMProxy, AccessControl {
 
     using Address for address;
-    using Address for address payable;
 
     /**********************************************************************************************/
     /*** State variables                                                                        ***/
@@ -46,5 +45,11 @@ contract ALMProxy is IALMProxy, AccessControl {
     {
         result = target.functionDelegateCall(data);
     }
+
+    /**********************************************************************************************/
+    /*** Receive function                                                                       ***/
+    /**********************************************************************************************/
+
+    receive() external payable { }
 
 }

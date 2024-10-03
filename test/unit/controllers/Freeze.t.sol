@@ -10,6 +10,7 @@ import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
 import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
 import { MockPSM3 }    from "test/unit/mocks/MockPSM3.sol";
 import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
+import { MockVault }   from "test/unit/mocks/MockVault.sol";
 
 interface IBaseControllerLike {
     function active() external view returns (bool);
@@ -26,14 +27,14 @@ contract ControllerTestBase is UnitTestBase {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
         MockSUsds   susds   = new MockSUsds(makeAddr("susds"));
+        MockVault   vault   = new MockVault(makeAddr("buffer"));
 
         // Default to mainnet controller for tests and override with foreign controller
         controller = IBaseControllerLike(address(new MainnetController(
             admin,
             makeAddr("almProxy"),
             makeAddr("rateLimits"),
-            makeAddr("vault"),
-            makeAddr("buffer"),
+            address(vault),
             address(psm),
             address(daiUsds),
             makeAddr("cctp"),
@@ -57,6 +58,8 @@ contract ControllerTestBase is UnitTestBase {
 }
 
 contract ControllerFreezeTests is ControllerTestBase {
+
+    event Frozen();
 
     function test_freeze_unauthorizedAccount() public {
         vm.expectRevert(abi.encodeWithSignature(
@@ -84,6 +87,8 @@ contract ControllerFreezeTests is ControllerTestBase {
         assertEq(controller.active(), false);
 
         vm.prank(freezer);
+        vm.expectEmit(address(controller));
+        emit Frozen();
         controller.freeze();
 
         assertEq(controller.active(), false);
@@ -92,6 +97,8 @@ contract ControllerFreezeTests is ControllerTestBase {
 }
 
 contract ControllerReactivateTests is ControllerTestBase {
+
+    event Reactivated();
 
     function test_reactivate_unauthorizedAccount() public {
         vm.expectRevert(abi.encodeWithSignature(
@@ -122,6 +129,8 @@ contract ControllerReactivateTests is ControllerTestBase {
         assertEq(controller.active(), true);
 
         vm.prank(admin);
+        vm.expectEmit(address(controller));
+        emit Reactivated();
         controller.reactivate();
 
         assertEq(controller.active(), true);
