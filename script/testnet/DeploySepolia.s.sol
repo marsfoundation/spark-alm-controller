@@ -2,10 +2,10 @@
 pragma solidity ^0.8.21;
 
 import { Script }       from "forge-std/Script.sol";
-import { MockERC20 }    from "forge-std/mocks/MockERC20.sol";
 import { IERC20 }       from "forge-std/interfaces/IERC20.sol";
 import { ScriptTools }  from "dss-test/ScriptTools.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { MockERC20 }    from "erc20-helpers/MockERC20.sol";
 
 import { Usds }  from "lib/usds/src/Usds.sol";
 import { SUsds } from "lib/sdai/src/SUsds.sol";
@@ -73,7 +73,7 @@ contract DeploySepolia is Script {
     }
 
     function _deploySUSDS(address _deployer, address _owner) internal {
-        address _sUsdsImp = address(new SUsds(usdsJoin, address(0)));
+        address _sUsdsImp = address(new SUsds(address(usdsJoin), address(0)));
         address _sUsds = address(new ERC1967Proxy(_sUsdsImp, abi.encodeCall(SUsds.initialize, ())));
         ScriptTools.switchOwner(_sUsds, _deployer, _owner);
         susds = SUsds(_sUsds);
@@ -88,10 +88,8 @@ contract DeploySepolia is Script {
         vm.startBroadcast();
 
         // Init tokens
-        dai        = new MockERC20();
-        dai.initialize("DAI", "DAI", 18);
+        dai = new MockERC20("DAI", "DAI", 18);
         _deployUSDS(deployer, mainnet.admin);
-        _deploySUSDS(deployer, mainnet.admin);
 
         // Init MCD contracts
         vat        = new Vat();
@@ -100,6 +98,9 @@ contract DeploySepolia is Script {
         daiUsds    = new DaiUsds(mainnet.admin, address(dai), address(usds));
         jug        = new Jug();
         psm        = new PSM(mainnet.admin, address(usdc), address(dai));
+
+        // Dependency on usdsJoin
+        _deploySUSDS(deployer, mainnet.admin);
 
         // Mint some USDS into the join contract
         usds.mint(address(usdsJoin), 1_000_000e18);
@@ -149,7 +150,6 @@ contract DeploySepolia is Script {
         MainnetControllerDeploy.deployFull({
             admin:   mainnet.admin,
             vault:   address(allocatorIlkInstance.vault),
-            buffer:  address(allocatorIlkInstance.buffer),
             psm:     address(psm),
             daiUsds: address(daiUsds),
             cctp:    CCTP_TOKEN_MESSENGER_MAINNET,
