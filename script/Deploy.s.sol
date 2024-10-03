@@ -14,6 +14,8 @@ import { ForeignControllerDeploy, MainnetControllerDeploy } from "../deploy/Cont
 contract DeployMainnetFull is Script {
 
     function run() external {
+        vm.createSelectFork(getChain("mainnet").rpcUrl);
+
         console.log("Deploying Mainnet ALMProxy, Controller and RateLimits...");
 
         vm.startBroadcast();
@@ -37,25 +39,44 @@ contract DeployMainnetFull is Script {
 
 }
 
-contract DeployBaseFull is Script {
+contract DeployForeignFull is Script {
 
-    function run() external {
+    function deploy(
+        string memory remoteRpcUrl,
+        address admin,
+        address psm,
+        address usdc,
+        address cctp
+    )
+        internal
+    {
+        vm.createSelectFork(remoteRpcUrl);
+
         console.log("Deploying Mainnet ALMProxy, Controller and RateLimits...");
 
         vm.startBroadcast();
 
-        ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
-            admin      : Base.SPARK_EXECUTOR,
-            psm        : address(0),  // TODO: Replace
-            usdc       : Base.USDC,
-            cctp       : Base.CCTP_TOKEN_MESSENGER
-        });
+        ControllerInstance memory instance
+            = ForeignControllerDeploy.deployFull(admin, psm, usdc, cctp);
 
         vm.stopBroadcast();
 
         console.log("ALMProxy   deployed at", instance.almProxy);
         console.log("Controller deployed at", instance.controller);
         console.log("RateLimits deployed at", instance.rateLimits);
+    }
+}
+
+contract DeployBaseFull is DeployForeignFull {
+
+    function run() external {
+        deploy({
+            remoteRpcUrl : getChain("base").rpcUrl,
+            admin        : Base.SPARK_EXECUTOR,
+            psm          : address(0),  // TODO: Replace,
+            usdc         : Base.USDC,
+            cctp         : Base.CCTP_TOKEN_MESSENGER
+        });
     }
 
 }
