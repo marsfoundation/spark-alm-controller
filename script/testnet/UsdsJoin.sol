@@ -10,7 +10,7 @@ contract UsdsJoin is Ownable {
     address public immutable vat;
     IERC20  public immutable usds;
 
-    constructor(address vat_, address usds_) {
+    constructor(address owner_, address vat_, address usds_) Ownable(owner_) {
         vat  = vat_;
         usds = IERC20(usds_);
     }
