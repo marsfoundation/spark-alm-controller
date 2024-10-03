@@ -59,6 +59,8 @@ contract ControllerTestBase is UnitTestBase {
 
 contract ControllerFreezeTests is ControllerTestBase {
 
+    event Frozen();
+
     function test_freeze_unauthorizedAccount() public {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
@@ -85,6 +87,8 @@ contract ControllerFreezeTests is ControllerTestBase {
         assertEq(controller.active(), false);
 
         vm.prank(freezer);
+        vm.expectEmit(address(controller));
+        emit Frozen();
         controller.freeze();
 
         assertEq(controller.active(), false);
@@ -93,6 +97,8 @@ contract ControllerFreezeTests is ControllerTestBase {
 }
 
 contract ControllerReactivateTests is ControllerTestBase {
+
+    event Reactivated();
 
     function test_reactivate_unauthorizedAccount() public {
         vm.expectRevert(abi.encodeWithSignature(
@@ -123,6 +129,8 @@ contract ControllerReactivateTests is ControllerTestBase {
         assertEq(controller.active(), true);
 
         vm.prank(admin);
+        vm.expectEmit(address(controller));
+        emit Reactivated();
         controller.reactivate();
 
         assertEq(controller.active(), true);

@@ -51,6 +51,12 @@ contract MainnetController is AccessControl {
         uint256 usdcAmount
     );
 
+    event Frozen();
+
+    event MintRecipientSet(uint32 indexed destinationDomain, bytes32 mintRecipient);
+
+    event Reactivated();
+
     /**********************************************************************************************/
     /*** State variables                                                                        ***/
     /**********************************************************************************************/
@@ -144,6 +150,7 @@ contract MainnetController is AccessControl {
         external onlyRole(DEFAULT_ADMIN_ROLE)
     {
         mintRecipients[destinationDomain] = mintRecipient;
+        emit MintRecipientSet(destinationDomain, mintRecipient);
     }
 
     /**********************************************************************************************/
@@ -152,10 +159,12 @@ contract MainnetController is AccessControl {
 
     function freeze() external onlyRole(FREEZER) {
         active = false;
+        emit Frozen();
     }
 
     function reactivate() external onlyRole(DEFAULT_ADMIN_ROLE) {
         active = true;
+        emit Reactivated();
     }
 
     /**********************************************************************************************/
