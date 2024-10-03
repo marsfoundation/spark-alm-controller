@@ -24,7 +24,7 @@ contract DeployMainnetFull is Script {
             buffer  : address(0),  // TODO: Replace
             psm     : Ethereum.PSM,
             daiUsds : Ethereum.DAI_USDS,
-            cctp    : Ethereum.CCTP_MESSENGER,
+            cctp    : Ethereum.CCTP_TOKEN_MESSENGER,
             susds   : Ethereum.SUSDS
         });
 
@@ -48,7 +48,7 @@ contract DeployBaseFull is Script {
             admin      : Base.SPARK_EXECUTOR,
             psm        : address(0),  // TODO: Replace
             usdc       : Base.USDC,
-            cctp       : Base.CCTP_MESSENGER
+            cctp       : Base.CCTP_TOKEN_MESSENGER
         });
 
         vm.stopBroadcast();
