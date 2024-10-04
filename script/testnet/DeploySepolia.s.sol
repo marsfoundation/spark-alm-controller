@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import { Script }       from "forge-std/Script.sol";
-import { IERC20 }       from "forge-std/interfaces/IERC20.sol";
-import { ScriptTools }  from "dss-test/ScriptTools.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { MockERC20 }    from "erc20-helpers/MockERC20.sol";
+import { Script, console } from "forge-std/Script.sol";
+import { IERC20 }          from "forge-std/interfaces/IERC20.sol";
+import { ScriptTools }     from "dss-test/ScriptTools.sol";
+import { ERC1967Proxy }    from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { MockERC20 }       from "erc20-helpers/MockERC20.sol";
 
 import { Usds }  from "lib/usds/src/Usds.sol";
 import { SUsds } from "lib/sdai/src/SUsds.sol";
@@ -24,7 +24,14 @@ import {
 import { AllocatorBuffer } from "lib/dss-allocator/src/AllocatorBuffer.sol";
 import { AllocatorVault }  from "lib/dss-allocator/src/AllocatorVault.sol";
 
-import { MainnetControllerDeploy } from "deploy/ControllerDeploy.sol";
+import {
+    MainnetControllerDeploy,
+    ControllerInstance
+} from "deploy/ControllerDeploy.sol";
+import {
+    MainnetControllerInit,
+    RateLimitData
+} from "deploy/ControllerInit.sol";
 
 import { Jug }        from "../common/Jug.sol";
 import { PauseProxy } from "../common/PauseProxy.sol";
@@ -34,6 +41,8 @@ import { DaiUsds }    from "../common/DaiUsds.sol";
 import { PSM }        from "./PSM.sol";
 
 struct Domain {
+    string  name;
+    string  config;
     uint256 forkId;
     address admin;
 }
@@ -114,6 +123,11 @@ contract DeploySepolia is Script {
         usds.mint(address(daiUsds), 1_000_000e18);
 
         vm.stopBroadcast();
+
+        ScriptTools.exportContract(mainnet.name, "usdc", address(usdc));
+        ScriptTools.exportContract(mainnet.name, "dai", address(dai));
+        ScriptTools.exportContract(mainnet.name, "usds", address(usds));
+        ScriptTools.exportContract(mainnet.name, "sUsds", address(susds));
     }
 
     function setupAllocationSystem() internal {
@@ -139,7 +153,16 @@ contract DeploySepolia is Script {
         ScriptTools.switchOwner(allocatorIlkInstance.vault,  allocatorIlkInstance.owner, mainnet.admin);
         ScriptTools.switchOwner(allocatorIlkInstance.buffer, allocatorIlkInstance.owner, mainnet.admin);
 
+        // Custom contract permission changes (not relevant for production deploy)
+        usdsJoin.transferOwnership(address(allocatorIlkInstance.vault));
+
         vm.stopBroadcast();
+
+        ScriptTools.exportContract(mainnet.name, "allocatorOracle",   allocatorSharedInstance.oracle);
+        ScriptTools.exportContract(mainnet.name, "allocatorRoles",    allocatorSharedInstance.roles);
+        ScriptTools.exportContract(mainnet.name, "allocatorRegistry", allocatorSharedInstance.registry);
+        ScriptTools.exportContract(mainnet.name, "allocatorVault",    allocatorIlkInstance.vault);
+        ScriptTools.exportContract(mainnet.name, "allocatorBuffer",   allocatorIlkInstance.buffer);
     }
 
     function setupALMController() internal {
@@ -147,7 +170,7 @@ contract DeploySepolia is Script {
         
         vm.startBroadcast();
 
-        MainnetControllerDeploy.deployFull({
+        ControllerInstance memory instance = MainnetControllerDeploy.deployFull({
             admin:   mainnet.admin,
             vault:   address(allocatorIlkInstance.vault),
             psm:     address(psm),
@@ -156,10 +179,54 @@ contract DeploySepolia is Script {
             susds:   address(susds)
         });
 
+        RateLimitData memory rateLimitData18 = RateLimitData({
+            maxAmount: 5e18,
+            slope:     uint256(1e18) / 4 hours
+        });
+        RateLimitData memory rateLimitData6 = RateLimitData({
+            maxAmount: 5e6,
+            slope:     uint256(1e6) / 4 hours
+        });
+        RateLimitData memory unlimitedRateLimit = RateLimitData({
+            maxAmount: type(uint256).max,
+            slope:     0
+        });
+
+        MainnetControllerInit.subDaoInitFull({
+            params: MainnetControllerInit.AddressParams({
+                admin:   mainnet.admin,
+                freezer: makeAddr("freezer"),
+                relayer: deployer, // TODO: replace with SAFE
+                oldController: address(0),
+                psm: address(psm),
+                cctpMessenger: CCTP_TOKEN_MESSENGER_MAINNET,
+                dai: address(dai),
+                daiUsds: address(daiUsds),
+                usdc: address(usdc),
+                usds: address(usds),
+                susds: address(susds)
+            }),
+            controllerInst: instance,
+            ilkInst: allocatorIlkInstance,
+            data: MainnetControllerInit.InitRateLimitData({
+                usdsMintData: rateLimitData18,
+                usdcToUsdsData: rateLimitData6,
+                usdcToCctpData: unlimitedRateLimit,
+                cctpToBaseDomainData: rateLimitData6
+            })
+        });
+
         vm.stopBroadcast();
+
+        ScriptTools.exportContract(mainnet.name, "almProxy",   instance.almProxy);
+        ScriptTools.exportContract(mainnet.name, "controller", instance.controller);
+        ScriptTools.exportContract(mainnet.name, "rateLimits", instance.rateLimits);
     }
 
     function run() public {
+        vm.setEnv("FOUNDRY_ROOT_CHAINID", "11155111");
+        vm.setEnv("FOUNDRY_EXPORTS_OVERWRITE_LATEST", "true");
+
         deployer = msg.sender;
         ilk      = "ALLOCATOR-SPARK-1";
 
@@ -170,10 +237,14 @@ contract DeploySepolia is Script {
         }));
 
         mainnet = Domain({
+            name:   "mainnet",
+            config: ScriptTools.loadConfig("mainnet"),
             forkId: vm.createFork(getChain("sepolia").rpcUrl),
             admin:  deployer
         });
         base = Domain({
+            name:   "base",
+            config: ScriptTools.loadConfig("base"),
             forkId: vm.createFork(getChain("sepolia_base").rpcUrl),
             admin:  deployer
         });
@@ -181,6 +252,9 @@ contract DeploySepolia is Script {
         setupMCDMocks();
         setupAllocationSystem();
         setupALMController();
+
+        ScriptTools.exportContract(mainnet.name, "admin", deployer);
+        ScriptTools.exportContract(base.name, "admin", deployer);
     }
 
 }

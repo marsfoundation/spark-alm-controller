@@ -12,6 +12,10 @@ remappings = [
     "spark-psm/=lib/spark-psm/",
     "xchain-helpers/=lib/xchain-helpers/",
 ]
+fs_permissions = [
+    { access = "read", path = "./script/input/"},
+    { access = "read-write", path = "./script/output/"}
+]
 
 [fuzz]
 runs = 1000
