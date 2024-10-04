@@ -26,6 +26,7 @@ import { AllocatorVault }  from "lib/dss-allocator/src/AllocatorVault.sol";
 
 import {
     MainnetControllerDeploy,
+    ForeignControllerDeploy,
     ControllerInstance
 } from "deploy/ControllerDeploy.sol";
 import {
@@ -50,7 +51,9 @@ struct Domain {
 contract DeploySepolia is Script {
 
     address CCTP_TOKEN_MESSENGER_MAINNET = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
+    address CCTP_TOKEN_MESSENGER_BASE = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
     address USDC = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
+    address USDC_BASE = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
 
     address deployer;
     bytes32 ilk;
@@ -226,6 +229,66 @@ contract DeploySepolia is Script {
         ScriptTools.exportContract(mainnet.name, "controller", instance.controller);
         ScriptTools.exportContract(mainnet.name, "rateLimits", instance.rateLimits);
     }
+    
+    function setupBaseALMController() public {
+        vm.selectFork(base.forkId);
+        
+        vm.startBroadcast();
+
+        ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
+            admin: mainnet.admin,
+            psm:   address(psm),
+            usdc:  USDC_BASE,
+            cctp:  CCTP_TOKEN_MESSENGER_BASE
+        });
+
+        RateLimitData memory rateLimitData18 = RateLimitData({
+            maxAmount: 5e18,
+            slope:     uint256(1e18) / 4 hours
+        });
+        RateLimitData memory rateLimitData6 = RateLimitData({
+            maxAmount: 5e6,
+            slope:     uint256(1e6) / 4 hours
+        });
+        RateLimitData memory unlimitedRateLimit = RateLimitData({
+            maxAmount: type(uint256).max,
+            slope:     0
+        });
+
+        ForeignControllerDeploy.init({
+            params: ForeignControllerDeploy.AddressParams({
+                admin:   mainnet.admin,
+                freezer: makeAddr("freezer"),
+                relayer: deployer, // TODO: replace with SAFE
+                oldController: address(0),
+                psm: address(psm),
+                cctpMessenger: CCTP_TOKEN_MESSENGER_MAINNET,
+                dai: address(dai),
+                daiUsds: address(daiUsds),
+                usdc: address(usdc),
+                usds: address(usds),
+                susds: address(susds)
+            }),
+            controllerInst: instance,
+            ilkInst: allocatorIlkInstance,
+            data: ForeignControllerDeploy.InitRateLimitData({
+                usdsMintData: rateLimitData18,
+                usdcToUsdsData: rateLimitData6,
+                usdcToCctpData: unlimitedRateLimit,
+                cctpToBaseDomainData: rateLimitData6
+            })
+        });
+
+        // Custom contract permission changes (not relevant for production deploy)
+        daiUsds.transferOwnership(instance.almProxy);
+        psm.transferOwnership(instance.almProxy);
+
+        vm.stopBroadcast();
+
+        ScriptTools.exportContract(mainnet.name, "almProxy",   instance.almProxy);
+        ScriptTools.exportContract(mainnet.name, "controller", instance.controller);
+        ScriptTools.exportContract(mainnet.name, "rateLimits", instance.rateLimits);
+    }
 
     function run() public {
         vm.setEnv("FOUNDRY_ROOT_CHAINID", "11155111");
@@ -256,6 +319,7 @@ contract DeploySepolia is Script {
         setupMCDMocks();
         setupAllocationSystem();
         setupALMController();
+        setupBaseALMController();
 
         ScriptTools.exportContract(mainnet.name, "admin", deployer);
         ScriptTools.exportContract(base.name, "admin", deployer);
