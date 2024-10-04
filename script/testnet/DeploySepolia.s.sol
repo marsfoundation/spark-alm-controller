@@ -92,7 +92,7 @@ contract DeploySepolia is Script {
         vm.selectFork(mainnet.forkId);
 
         // Pre-requirements check
-        require(usdc.balanceOf(deployer) >= 1e6, "USDC balance too low");
+        require(usdc.balanceOf(deployer) >= 5e6, "USDC balance too low");
         
         vm.startBroadcast();
 
@@ -115,7 +115,7 @@ contract DeploySepolia is Script {
         usds.mint(address(usdsJoin), 1_000_000e18);
 
         // Fill the psm with dai and usdc
-        usdc.transfer(address(psm), 1e6);
+        usdc.transfer(address(psm), 5e6);
         dai.mint(address(psm), 1_000_000e18);
 
         // Fill the DaiUsds join contract
@@ -154,7 +154,7 @@ contract DeploySepolia is Script {
         ScriptTools.switchOwner(allocatorIlkInstance.buffer, allocatorIlkInstance.owner, mainnet.admin);
 
         // Custom contract permission changes (not relevant for production deploy)
-        usdsJoin.transferOwnership(address(allocatorIlkInstance.vault));
+        usdsJoin.transferOwnership(allocatorIlkInstance.vault);
 
         vm.stopBroadcast();
 
@@ -215,6 +215,10 @@ contract DeploySepolia is Script {
                 cctpToBaseDomainData: rateLimitData6
             })
         });
+
+        // Custom contract permission changes (not relevant for production deploy)
+        daiUsds.transferOwnership(instance.almProxy);
+        psm.transferOwnership(instance.almProxy);
 
         vm.stopBroadcast();
 

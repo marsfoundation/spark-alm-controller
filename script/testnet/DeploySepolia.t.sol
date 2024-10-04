@@ -117,4 +117,17 @@ contract DeploySepoliaTest is Test {
         assertEq(usds.balanceOf(address(almProxy)), 1e18);
     }
 
+    function test_mintAndSwapToUSDC() public {
+        assertEq(usdc.balanceOf(address(almProxy)), 0);
+
+        vm.startPrank(admin);
+
+        mainnetController.mintUSDS(1e18);
+        mainnetController.swapUSDSToUSDC(1e6);
+
+        vm.stopPrank();
+
+        assertEq(usdc.balanceOf(address(almProxy)), 1e6);
+    }
+
 }

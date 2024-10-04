@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 contract Jug {
 
-    function drip(bytes32) external returns (uint256) {
+    function drip(bytes32) external pure returns (uint256) {
         return 1e27;
     }
 
