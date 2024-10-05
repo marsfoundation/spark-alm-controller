@@ -50,10 +50,13 @@ struct Domain {
 
 contract DeploySepolia is Script {
 
-    address CCTP_TOKEN_MESSENGER_MAINNET = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
-    address CCTP_TOKEN_MESSENGER_BASE = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
-    address USDC = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
-    address USDC_BASE = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+    address constant CCTP_TOKEN_MESSENGER_MAINNET = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
+    address constant CCTP_TOKEN_MESSENGER_BASE = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
+    address constant USDC = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
+    address constant USDC_BASE = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+
+    uint256 constant USDC_UNIT_SIZE = 1000e6;        // Ballpark sizing of rate limits, tokens in PSMs, etc
+    uint256 constant USDS_UNIT_SIZE = 1_000_000e18;  // Ballpark sizing of USDS to put in the join contracts, PSMs, etc
 
     address deployer;
     bytes32 ilk;
@@ -77,6 +80,8 @@ contract DeploySepolia is Script {
     AllocatorSharedInstance allocatorSharedInstance;
     AllocatorIlkInstance    allocatorIlkInstance;
 
+    // Base contracts
+
     function _deployUSDS(address _deployer, address _owner) internal {
         address _usdsImp = address(new Usds());
         address _usds = address((new ERC1967Proxy(_usdsImp, abi.encodeCall(Usds.initialize, ()))));
@@ -95,7 +100,8 @@ contract DeploySepolia is Script {
         vm.selectFork(mainnet.forkId);
 
         // Pre-requirements check
-        require(usdc.balanceOf(deployer) >= 5e6, "USDC balance too low");
+        require(usdc.balanceOf(deployer) >= USDC_UNIT_SIZE * 10, "USDC balance too low");
+        require(USDC_UNIT_SIZE * 1000 <= usdc.balanceOf(deployer), "Unit size too large (don't want to run out of USDC)");
         
         vm.startBroadcast();
 
@@ -115,15 +121,15 @@ contract DeploySepolia is Script {
         _deploySUSDS(deployer, mainnet.admin);
 
         // Mint some USDS into the join contract
-        usds.mint(address(usdsJoin), 1_000_000e18);
+        usds.mint(address(usdsJoin), USDS_UNIT_SIZE);
 
         // Fill the psm with dai and usdc
-        usdc.transfer(address(psm), 5e6);
-        dai.mint(address(psm), 1_000_000e18);
+        usdc.transfer(address(psm), USDC_UNIT_SIZE * 10);
+        dai.mint(address(psm), USDS_UNIT_SIZE);
 
         // Fill the DaiUsds join contract
-        dai.mint(address(daiUsds), 1_000_000e18);
-        usds.mint(address(daiUsds), 1_000_000e18);
+        dai.mint(address(daiUsds), USDS_UNIT_SIZE);
+        usds.mint(address(daiUsds), USDS_UNIT_SIZE);
 
         vm.stopBroadcast();
 
@@ -182,13 +188,14 @@ contract DeploySepolia is Script {
             susds:   address(susds)
         });
 
+        // Still constrained by the USDC_UNIT_SIZE
         RateLimitData memory rateLimitData18 = RateLimitData({
-            maxAmount: 5e18,
-            slope:     uint256(1e18) / 4 hours
+            maxAmount: USDC_UNIT_SIZE * 1e12 * 5,
+            slope:     USDC_UNIT_SIZE * 1e12 / 4 hours
         });
         RateLimitData memory rateLimitData6 = RateLimitData({
-            maxAmount: 5e6,
-            slope:     uint256(1e6) / 4 hours
+            maxAmount: USDC_UNIT_SIZE * 5,
+            slope:     USDC_UNIT_SIZE / 4 hours
         });
         RateLimitData memory unlimitedRateLimit = RateLimitData({
             maxAmount: type(uint256).max,
@@ -237,18 +244,14 @@ contract DeploySepolia is Script {
 
         ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
             admin: mainnet.admin,
-            psm:   address(psm),
+            psm:   address(psmBase),
             usdc:  USDC_BASE,
             cctp:  CCTP_TOKEN_MESSENGER_BASE
         });
 
-        RateLimitData memory rateLimitData18 = RateLimitData({
-            maxAmount: 5e18,
-            slope:     uint256(1e18) / 4 hours
-        });
         RateLimitData memory rateLimitData6 = RateLimitData({
-            maxAmount: 5e6,
-            slope:     uint256(1e6) / 4 hours
+            maxAmount: USDC_UNIT_SIZE * 5,
+            slope:     USDC_UNIT_SIZE / 4 hours
         });
         RateLimitData memory unlimitedRateLimit = RateLimitData({
             maxAmount: type(uint256).max,
@@ -257,25 +260,22 @@ contract DeploySepolia is Script {
 
         ForeignControllerDeploy.init({
             params: ForeignControllerDeploy.AddressParams({
-                admin:   mainnet.admin,
+                admin:   base.admin,
                 freezer: makeAddr("freezer"),
                 relayer: deployer, // TODO: replace with SAFE
                 oldController: address(0),
-                psm: address(psm),
-                cctpMessenger: CCTP_TOKEN_MESSENGER_MAINNET,
-                dai: address(dai),
-                daiUsds: address(daiUsds),
-                usdc: address(usdc),
-                usds: address(usds),
-                susds: address(susds)
+                psm: address(psmBase),
+                cctpMessenger: CCTP_TOKEN_MESSENGER_BASE,
+                usdc: USDC_BASE,
+                usds: USDC_BASE,
+                susds: USDC_BASE
             }),
             controllerInst: instance,
-            ilkInst: allocatorIlkInstance,
             data: ForeignControllerDeploy.InitRateLimitData({
-                usdsMintData: rateLimitData18,
-                usdcToUsdsData: rateLimitData6,
+                usdcDepositData: rateLimitData6,
+                usdcWithdrawData: rateLimitData6,
                 usdcToCctpData: unlimitedRateLimit,
-                cctpToBaseDomainData: rateLimitData6
+                cctpToEthereumDomainData: rateLimitData6
             })
         });
 
