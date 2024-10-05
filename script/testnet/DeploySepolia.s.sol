@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import { Script, console } from "forge-std/Script.sol";
 import { IERC20 }          from "forge-std/interfaces/IERC20.sol";
-import { ScriptTools }     from "dss-test/ScriptTools.sol";
+import { ScriptTools }     from "lib/dss-test/src/ScriptTools.sol";
 import { MockERC20 }       from "erc20-helpers/MockERC20.sol";
 import { CCTPForwarder }   from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
@@ -87,7 +87,7 @@ contract DeploySepolia is Script {
     ControllerInstance mainnetController;
 
     // Base contracts
-    IERC20 usdcBase = IERC20(USDC);
+    IERC20 usdcBase = IERC20(USDC_BASE);
     MockERC20 usdsBase;
     MockERC20 susdsBase;
     
@@ -248,8 +248,19 @@ contract DeploySepolia is Script {
             address(new RateProvider())
         );
 
+        // Fill the PSM with USDS and sUSDS amounts
+        usdsBase.mint(deployer, USDS_UNIT_SIZE);
+        susdsBase.mint(deployer, USDS_UNIT_SIZE);
+        usdsBase.approve(address(psmBase), type(uint256).max);
+        susdsBase.approve(address(psmBase), type(uint256).max);
+        psmBase.deposit(address(usdsBase), deployer, USDS_UNIT_SIZE);
+        psmBase.deposit(address(susdsBase), deployer, USDS_UNIT_SIZE);
+
         vm.stopBroadcast();
 
+        ScriptTools.exportContract(base.name, "usds", address(usdsBase));
+        ScriptTools.exportContract(base.name, "sUsds", address(susdsBase));
+        ScriptTools.exportContract(base.name, "usdc", address(usdcBase));
         ScriptTools.exportContract(base.name, "psm", address(psmBase));
     }
     
@@ -344,6 +355,7 @@ contract DeploySepolia is Script {
         setupMCDMocks();
         setupAllocationSystem();
         setupALMController();
+        setupBasePSM();
         setupBaseALMController();
 
         ScriptTools.exportContract(mainnet.name, "admin", deployer);

@@ -42,7 +42,6 @@ contract DeploySepoliaTest is Test {
 
     Domain mainnet;
     Domain base;
-    Bridge bridge;
     Bridge cctpBridge;
 
     // Mainnet contracts
@@ -75,7 +74,8 @@ contract DeploySepoliaTest is Test {
         vm.setEnv("FOUNDRY_ROOT_CHAINID", "11155111");
 
         setChain("sepolia_base", ChainData({
-            rpcUrl: "https://base-sepolia-rpc.publicnode.com",
+            //rpcUrl: "https://base-sepolia-rpc.publicnode.com",
+            rpcUrl: "http://localhost:8546",
             chainId: 84532,
             name: "Sepolia Base Testnet"
         }));
@@ -146,17 +146,74 @@ contract DeploySepoliaTest is Test {
 
         assertEq(usdcBase.balanceOf(address(almProxyBase)), 0);
 
+        mainnet.selectFork();
+
         vm.startPrank(admin);
 
         mainnetController.mintUSDS(1000e18);
         mainnetController.swapUSDSToUSDC(1000e6);
-        mainnetController.transferUSDCToCCTP(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE, 1000e6);
+        mainnetController.transferUSDCToCCTP(1000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
         vm.stopPrank();
 
         cctpBridge.relayMessagesToDestination(true);
 
         assertEq(usdcBase.balanceOf(address(almProxyBase)), 1000e6);
+    }
+
+    function test_transferToPSM() public {
+        base.selectFork();
+
+        assertEq(usdcBase.balanceOf(address(psm)), 0);
+
+        mainnet.selectFork();
+
+        vm.startPrank(admin);
+
+        mainnetController.mintUSDS(1000e18);
+        mainnetController.swapUSDSToUSDC(1000e6);
+        mainnetController.transferUSDCToCCTP(1000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        vm.startPrank(admin);
+
+        foreignController.depositPSM(address(usdcBase), 1000e6);
+
+        vm.stopPrank();
+
+        assertEq(usdcBase.balanceOf(address(psm)), 1000e6);
+    }
+
+    function test_fullRoundTrip() public {
+        mainnet.selectFork();
+
+        vm.startPrank(admin);
+        mainnetController.mintUSDS(1000e18);
+        mainnetController.swapUSDSToUSDC(1000e6);
+        mainnetController.transferUSDCToCCTP(1000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        vm.startPrank(admin);
+        foreignController.depositPSM(address(usdcBase), 1000e6);
+        foreignController.withdrawPSM(address(usdcBase), 1000e6);
+        foreignController.transferUSDCToCCTP(1000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+        vm.stopPrank();
+
+        // There is a bug when the messenger addresses are the same
+        // Need to force update to skip the previous relayed message
+        // See: https://github.com/marsfoundation/xchain-helpers/issues/24
+        cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
+        cctpBridge.relayMessagesToSource(true);
+
+        vm.startPrank(admin);
+        mainnetController.swapUSDCToUSDS(1000e6);
+        mainnetController.burnUSDS(1000e18);
+        vm.stopPrank();
     }
 
 }
