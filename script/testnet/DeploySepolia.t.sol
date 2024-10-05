@@ -35,6 +35,7 @@ contract DeploySepoliaTest is Test {
     address USDC                         = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
 
     address admin;
+    address safe;  // Will be the same on all chains
 
     string outputMainnet;
     string inputBase;
@@ -59,8 +60,6 @@ contract DeploySepoliaTest is Test {
     RateLimits rateLimits;
 
     // Base contracts
-    address safeBase;
-
     PSM3 psm;
 
     IERC20 usdsBase;
@@ -97,6 +96,7 @@ contract DeploySepoliaTest is Test {
         outputBase = ScriptTools.readOutput("base");
 
         admin = outputMainnet.readAddress(".admin");
+        safe  = outputMainnet.readAddress(".safe");
 
         usds  = Usds(outputMainnet.readAddress(".usds"));
         susds = SUsds(outputMainnet.readAddress(".sUsds"));
@@ -122,7 +122,7 @@ contract DeploySepoliaTest is Test {
     function test_mintUSDS() public {
         assertEq(usds.balanceOf(address(almProxy)), 0);
 
-        vm.prank(admin);
+        vm.prank(safe);
         mainnetController.mintUSDS(1000e18);
 
         assertEq(usds.balanceOf(address(almProxy)), 1000e18);
@@ -131,11 +131,9 @@ contract DeploySepoliaTest is Test {
     function test_mintAndSwapToUSDC() public {
         assertEq(usdc.balanceOf(address(almProxy)), 0);
 
-        vm.startPrank(admin);
-
+        vm.startPrank(safe);
         mainnetController.mintUSDS(1000e18);
         mainnetController.swapUSDSToUSDC(1000e6);
-
         vm.stopPrank();
 
         assertEq(usdc.balanceOf(address(almProxy)), 1000e6);
@@ -148,12 +146,10 @@ contract DeploySepoliaTest is Test {
 
         mainnet.selectFork();
 
-        vm.startPrank(admin);
-
+        vm.startPrank(safe);
         mainnetController.mintUSDS(1000e18);
         mainnetController.swapUSDSToUSDC(1000e6);
         mainnetController.transferUSDCToCCTP(1000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-
         vm.stopPrank();
 
         cctpBridge.relayMessagesToDestination(true);
@@ -168,20 +164,16 @@ contract DeploySepoliaTest is Test {
 
         mainnet.selectFork();
 
-        vm.startPrank(admin);
-
+        vm.startPrank(safe);
         mainnetController.mintUSDS(1000e18);
         mainnetController.swapUSDSToUSDC(1000e6);
         mainnetController.transferUSDCToCCTP(1000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-
         vm.stopPrank();
 
         cctpBridge.relayMessagesToDestination(true);
 
-        vm.startPrank(admin);
-
+        vm.startPrank(safe);
         foreignController.depositPSM(address(usdcBase), 1000e6);
-
         vm.stopPrank();
 
         assertEq(usdcBase.balanceOf(address(psm)), 1000e6);
@@ -190,7 +182,7 @@ contract DeploySepoliaTest is Test {
     function test_fullRoundTrip() public {
         mainnet.selectFork();
 
-        vm.startPrank(admin);
+        vm.startPrank(safe);
         mainnetController.mintUSDS(1000e18);
         mainnetController.swapUSDSToUSDC(1000e6);
         mainnetController.transferUSDCToCCTP(1000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
@@ -198,7 +190,7 @@ contract DeploySepoliaTest is Test {
 
         cctpBridge.relayMessagesToDestination(true);
 
-        vm.startPrank(admin);
+        vm.startPrank(safe);
         foreignController.depositPSM(address(usdcBase), 1000e6);
         foreignController.withdrawPSM(address(usdcBase), 1000e6);
         foreignController.transferUSDCToCCTP(1000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
@@ -210,7 +202,7 @@ contract DeploySepoliaTest is Test {
         cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
         cctpBridge.relayMessagesToSource(true);
 
-        vm.startPrank(admin);
+        vm.startPrank(safe);
         mainnetController.swapUSDCToUSDS(1000e6);
         mainnetController.burnUSDS(1000e18);
         vm.stopPrank();
