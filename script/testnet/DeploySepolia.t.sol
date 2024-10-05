@@ -71,8 +71,7 @@ contract DeploySepoliaTest is Test {
         vm.setEnv("FOUNDRY_ROOT_CHAINID", "11155111");
 
         setChain("sepolia_base", ChainData({
-            //rpcUrl: "https://base-sepolia-rpc.publicnode.com",
-            rpcUrl: "http://localhost:8546",
+            rpcUrl: "https://base-sepolia-rpc.publicnode.com",
             chainId: 84532,
             name: "Sepolia Base Testnet"
         }));
@@ -89,9 +88,9 @@ contract DeploySepoliaTest is Test {
             extraData:                      ""
         }));
 
-        outputMainnet = ScriptTools.readOutput("mainnet");
+        outputMainnet = ScriptTools.readOutput("mainnet-release", 20241005);
         inputBase = ScriptTools.readInput("base");
-        outputBase = ScriptTools.readOutput("base");
+        outputBase = ScriptTools.readOutput("base-release", 20241005);
 
         admin = outputMainnet.readAddress(".admin");
         safe  = outputMainnet.readAddress(".safe");

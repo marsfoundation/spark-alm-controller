@@ -340,8 +340,7 @@ contract DeploySepolia is Script {
         ilk      = "ALLOCATOR-SPARK-1";
 
         setChain("sepolia_base", ChainData({
-            //rpcUrl: "https://base-sepolia-rpc.publicnode.com",
-            rpcUrl: "http://localhost:8546",
+            rpcUrl: "https://base-sepolia-rpc.publicnode.com",
             chainId: 84532,
             name: "Sepolia Base Testnet"
         }));
