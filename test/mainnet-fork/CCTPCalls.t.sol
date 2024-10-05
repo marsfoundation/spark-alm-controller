@@ -178,7 +178,7 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
         deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
 
         psmBase = IPSM3(PSM3Deploy.deploy(
-            address(usdsBase), USDC_BASE, address(susdsBase), address(rateProvider)
+            admin, USDC_BASE, address(usdsBase), address(susdsBase), address(rateProvider)
         ));
 
         foreignAlmProxy   = new ALMProxy(admin);
