@@ -50,8 +50,6 @@ contract DeploySepoliaTest is Test {
     SUsds  susds;
     IERC20 usdc;
 
-    address safe;
-
     AllocatorVault allocatorVault;
     AllocatorBuffer allocatorBuffer;
 
