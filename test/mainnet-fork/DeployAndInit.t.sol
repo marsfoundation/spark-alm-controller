@@ -20,7 +20,6 @@ contract LibraryWrapper {
     function subDaoInitController(
         MainnetControllerInit.AddressParams     memory params,
         ControllerInstance                      memory controllerInst,
-        AllocatorIlkInstance                    memory ilkInst,
         MainnetControllerInit.InitRateLimitData memory rateLimitData
     )
         external
@@ -28,7 +27,6 @@ contract LibraryWrapper {
         MainnetControllerInit.subDaoInitController(
             params,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
     }
@@ -36,7 +34,6 @@ contract LibraryWrapper {
     function subDaoInitFull(
         MainnetControllerInit.AddressParams     memory params,
         ControllerInstance                      memory controllerInst,
-        AllocatorIlkInstance                    memory ilkInst,
         MainnetControllerInit.InitRateLimitData memory rateLimitData
     )
         external
@@ -44,7 +41,6 @@ contract LibraryWrapper {
         MainnetControllerInit.subDaoInitFull(
             params,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
     }
@@ -65,6 +61,8 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
             relayer       : relayer,
             oldController : address(0),
             psm           : PSM,
+            vault         : ilkInst.vault,
+            buffer        : ilkInst.buffer,
             cctpMessenger : CCTP_MESSENGER,
             dai           : address(dai),
             daiUsds       : address(daiUsds),
@@ -156,7 +154,6 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
     }
@@ -172,7 +169,6 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
     }
@@ -206,12 +202,12 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     }
 
     function test_init_incorrectVault() external {
-        ilkInst.vault = mismatchAddress;
+        addresses.vault = mismatchAddress;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-vault"));
     }
 
     function test_init_incorrectBuffer() external {
-        ilkInst.buffer = mismatchAddress;
+        addresses.buffer = mismatchAddress;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-buffer"));
     }
 
@@ -367,7 +363,6 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitController(
             addresses,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
 
@@ -375,7 +370,6 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
     }
@@ -384,14 +378,12 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitController(
             addresses,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
 
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
     }
@@ -448,7 +440,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         MainnetControllerInit.subDaoInitFull(
             addresses,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
         vm.stopPrank();
@@ -517,7 +508,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         MainnetControllerInit.subDaoInitController(
             addresses,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
         vm.stopPrank();
@@ -561,7 +551,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         MainnetControllerInit.subDaoInitController(
             addresses,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
         vm.stopPrank();
@@ -601,7 +590,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         MainnetControllerInit.subDaoInitController(
             addresses,
             controllerInst,
-            ilkInst,
             rateLimitData
         );
         vm.stopPrank();

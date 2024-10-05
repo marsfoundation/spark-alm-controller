@@ -48,6 +48,8 @@ library MainnetControllerInit {
         address relayer;
         address oldController;
         address psm;
+        address vault;
+        address buffer;
         address cctpMessenger;
         address dai;
         address daiUsds;
@@ -66,10 +68,9 @@ library MainnetControllerInit {
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     function subDaoInitController(
-        AddressParams        memory params,
-        ControllerInstance   memory controllerInst,
-        AllocatorIlkInstance memory ilkInst,
-        InitRateLimitData    memory data
+        AddressParams      memory params,
+        ControllerInstance memory controllerInst,
+        InitRateLimitData  memory data
     )
         internal
     {
@@ -84,8 +85,8 @@ library MainnetControllerInit {
 
         require(address(controller.proxy())      == controllerInst.almProxy,   "MainnetControllerInit/incorrect-almProxy");
         require(address(controller.rateLimits()) == controllerInst.rateLimits, "MainnetControllerInit/incorrect-rateLimits");
-        require(address(controller.vault())      == ilkInst.vault,             "MainnetControllerInit/incorrect-vault");
-        require(address(controller.buffer())     == ilkInst.buffer,            "MainnetControllerInit/incorrect-buffer");
+        require(address(controller.vault())      == params.vault,              "MainnetControllerInit/incorrect-vault");
+        require(address(controller.buffer())     == params.buffer,             "MainnetControllerInit/incorrect-buffer");
         require(address(controller.psm())        == params.psm,                "MainnetControllerInit/incorrect-psm");
         require(address(controller.daiUsds())    == params.daiUsds,            "MainnetControllerInit/incorrect-daiUsds");
         require(address(controller.cctp())       == params.cctpMessenger,      "MainnetControllerInit/incorrect-cctpMessenger");
@@ -124,10 +125,9 @@ library MainnetControllerInit {
     }
 
     function subDaoInitFull(
-        AddressParams        memory params,
-        ControllerInstance   memory controllerInst,
-        AllocatorIlkInstance memory ilkInst,
-        InitRateLimitData    memory data
+        AddressParams      memory params,
+        ControllerInstance memory controllerInst,
+        InitRateLimitData  memory data
     )
         internal
     {
@@ -149,14 +149,13 @@ library MainnetControllerInit {
         subDaoInitController(
             params,
             controllerInst,
-            ilkInst,
             data
         );
 
         // Step 3: Configure almProxy within the allocation system
 
-        IVaultLike(ilkInst.vault).rely(controllerInst.almProxy);
-        IBufferLike(ilkInst.buffer).approve(params.usds, controllerInst.almProxy, type(uint256).max);
+        IVaultLike(params.vault).rely(controllerInst.almProxy);
+        IBufferLike(params.buffer).approve(params.usds, controllerInst.almProxy, type(uint256).max);
     }
 
     function pauseProxyInit(address psm, address almProxy) internal {
@@ -251,7 +250,6 @@ library ForeignControllerInit {
             almProxy.revokeRole(almProxy.CONTROLLER(), params.oldController);
             rateLimits.revokeRole(rateLimits.CONTROLLER(), params.oldController);
         }
-
 
         // Step 2: Configure all rate limits for controller
 
