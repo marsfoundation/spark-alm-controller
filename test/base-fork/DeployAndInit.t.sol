@@ -199,6 +199,19 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
+    function test_init_controllerInactive() external {
+        // Cheating to set this outside of init scripts so that the controller can be frozen
+        vm.startPrank(admin);
+        foreignController.grantRole(FREEZER, freezer);
+
+        vm.startPrank(freezer);
+        foreignController.freeze();
+        vm.stopPrank();
+
+        vm.expectRevert("ForeignControllerInit/controller-not-active");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
     function test_init_oldControllerIsNewController() external {
         addresses.oldController = controllerInst.controller;
 

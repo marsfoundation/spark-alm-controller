@@ -45,7 +45,6 @@ contract ControllerTestBase is UnitTestBase {
     }
 
     function _setRoles() internal {
-
         // Done with spell by pause proxy
         vm.startPrank(admin);
 

@@ -270,12 +270,24 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-usds"));
     }
 
+    function test_init_controllerInactive() external {
+        // Cheating to set this outside of init scripts so that the controller can be frozen
+        vm.startPrank(SPARK_PROXY);
+        mainnetController.grantRole(FREEZER, freezer);
+
+        vm.startPrank(freezer);
+        mainnetController.freeze();
+        vm.stopPrank();
+
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/controller-not-active"));
+    }
+
     function test_init_oldControllerIsNewController() external {
         addresses.oldController = controllerInst.controller;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-is-new-controller"));
     }
 
-    // TODO: Skipping conversion factor test and active test, can add later if needed
+    // TODO: Skipping conversion factor test, can add later if needed
 
     /**********************************************************************************************/
     /*** Unlimited `maxAmount` rate limit boundary tests                                        ***/
