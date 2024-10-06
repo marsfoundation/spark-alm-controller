@@ -27,6 +27,8 @@ interface IForeignControllerLike is IAccessControl {
 
 interface IPSMLike {
     function kiss(address) external;
+    function totalAssets() external view returns (uint256);
+    function totalShares() external view returns (uint256);
 }
 
 interface IVaultLike {
@@ -248,6 +250,9 @@ library ForeignControllerInit {
         require(address(controller.psm())        == addresses.psm,             "ForeignControllerInit/incorrect-psm");
         require(address(controller.usdc())       == addresses.usdc,            "ForeignControllerInit/incorrect-usdc");
         require(address(controller.cctp())       == addresses.cctpMessenger,   "ForeignControllerInit/incorrect-cctp");
+
+        require(IPSMLike(addresses.psm).totalAssets() >= 1e18, "ForeignControllerInit/psm-totalAssets-not-seeded");
+        require(IPSMLike(addresses.psm).totalShares() >= 1e18, "ForeignControllerInit/psm-totalShares-not-seeded");
 
         // Step 1: Configure ACL permissions for controller and almProxy
 

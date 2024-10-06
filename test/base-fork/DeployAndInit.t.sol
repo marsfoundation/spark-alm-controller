@@ -331,6 +331,50 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
+    function test_init_totalAssetsNotSeededBoundary() external {
+        // Remove one wei from PSM to make seeded condition not met
+        vm.prank(address(0));
+        psmBase.withdraw(address(usdsBase), address(this), 1);  // Withdraw one wei from PSM
+
+        assertEq(psmBase.totalAssets(), 1e18 - 1);
+
+        vm.expectRevert("ForeignControllerInit/psm-totalAssets-not-seeded");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+
+        // Approve from address(this) cause it received the one wei
+        // Redo the seeding
+        usdsBase.approve(address(psmBase), 1);
+        psmBase.deposit(address(usdsBase), address(0), 1);
+
+        assertEq(psmBase.totalAssets(), 1e18);
+
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
+    function test_init_totalSharesNotSeededBoundary() external {
+        // Remove one wei from PSM to make seeded condition not met
+        vm.prank(address(0));
+        psmBase.withdraw(address(usdsBase), address(this), 1);  // Withdraw one wei from PSM
+
+        usdsBase.transfer(address(psmBase), 1);  // Transfer one wei to PSM to update totalAssets
+
+        assertEq(psmBase.totalAssets(), 1e18);
+        assertEq(psmBase.totalShares(), 1e18 - 1);
+
+        vm.expectRevert("ForeignControllerInit/psm-totalShares-not-seeded");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+
+        // Do deposit to update shares, need to do 2 wei to get back to 1e18 because of rounding
+        deal(address(usdsBase), address(this), 2);
+        usdsBase.approve(address(psmBase), 2);
+        psmBase.deposit(address(usdsBase), address(0), 2);
+
+        assertEq(psmBase.totalAssets(), 1e18 + 2);
+        assertEq(psmBase.totalShares(), 1e18);
+
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
 }
 
 contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAndInitTestBase {
