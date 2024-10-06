@@ -8,7 +8,11 @@ import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 
-import { MainnetControllerInit, RateLimitData } from "../../deploy/ControllerInit.sol";
+import {
+    MainnetControllerInit,
+    RateLimitData,
+    MintRecipient
+} from "../../deploy/ControllerInit.sol";
 
 // TODO: Refactor to use live contracts
 // TODO: Declare Inst structs to emulate mainnet
@@ -20,28 +24,32 @@ contract LibraryWrapper {
     function subDaoInitController(
         MainnetControllerInit.AddressParams     memory params,
         ControllerInstance                      memory controllerInst,
-        MainnetControllerInit.InitRateLimitData memory rateLimitData
+        MainnetControllerInit.InitRateLimitData memory rateLimitData,
+        MintRecipient[]                         memory mintRecipients
     )
         external
     {
         MainnetControllerInit.subDaoInitController(
             params,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 
     function subDaoInitFull(
         MainnetControllerInit.AddressParams     memory params,
         ControllerInstance                      memory controllerInst,
-        MainnetControllerInit.InitRateLimitData memory rateLimitData
+        MainnetControllerInit.InitRateLimitData memory rateLimitData,
+        MintRecipient[]                         memory mintRecipients
     )
         external
     {
         MainnetControllerInit.subDaoInitFull(
             params,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 
@@ -50,9 +58,10 @@ contract LibraryWrapper {
 contract MainnetControllerDeployInitTestBase is ForkTestBase {
 
     function _getDefaultParams()
-        internal view returns (
+        internal returns (
             MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData
+            MainnetControllerInit.InitRateLimitData memory rateLimitData,
+            MintRecipient[]                         memory mintRecipients
         )
     {
         addresses = MainnetControllerInit.AddressParams({
@@ -97,6 +106,13 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
             usdcToCctpData       : usdcToCctpData,
             cctpToBaseDomainData : cctpToBaseDomainData
         });
+
+        mintRecipients = new MintRecipient[](1);
+
+        mintRecipients[0] = MintRecipient({
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
+        });
     }
 
 }
@@ -111,6 +127,7 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
 
     MainnetControllerInit.AddressParams     addresses;
     MainnetControllerInit.InitRateLimitData rateLimitData;
+    MintRecipient[]                         mintRecipients;
 
     function setUp() public override {
         super.setUp();
@@ -124,7 +141,12 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
             susdsInst.sUsds
         );
 
-        ( addresses, rateLimitData ) = _getDefaultParams();
+        MintRecipient[] memory mintRecipients_ = new MintRecipient[](1);
+
+        ( addresses, rateLimitData, mintRecipients_ ) = _getDefaultParams();
+
+        // NOTE: This would need to be refactored to a for loop if more than one recipient
+        mintRecipients.push(mintRecipients_[0]);
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
@@ -154,7 +176,8 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 
@@ -169,7 +192,8 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 
@@ -363,14 +387,16 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitController(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
 
         vm.expectRevert(expectedError);
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 
@@ -378,13 +404,15 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitController(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
 
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 }
@@ -433,14 +461,16 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         (
             MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData
+            MainnetControllerInit.InitRateLimitData memory rateLimitData,
+            MintRecipient[]                         memory mintRecipients
         ) = _getDefaultParams();
 
         vm.startPrank(SPARK_PROXY);
         MainnetControllerInit.subDaoInitFull(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
         vm.stopPrank();
 
@@ -462,6 +492,16 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdcToUsdsData);
         _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
         _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
+
+        assertEq(
+            mainnetController.mintRecipients(mintRecipients[0].domain),
+            mintRecipients[0].mintRecipient
+        );
+
+        assertEq(
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
+        );
 
         assertEq(IVaultLike(ilkInst.vault).wards(controllerInst.almProxy), 1);
 
@@ -498,7 +538,8 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         (
             MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData
+            MainnetControllerInit.InitRateLimitData memory rateLimitData,
+            MintRecipient[]                         memory mintRecipients
         ) = _getDefaultParams();
 
         // Perform ONLY controller initialization, setting rate limits and updating ACL
@@ -508,7 +549,8 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         MainnetControllerInit.subDaoInitController(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
         vm.stopPrank();
 
@@ -528,6 +570,16 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdcToUsdsData);
         _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
         _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
+
+        assertEq(
+            mainnetController.mintRecipients(mintRecipients[0].domain),
+            mintRecipients[0].mintRecipient
+        );
+
+        assertEq(
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
+        );
     }
 
     function test_init_transferAclToNewController() public {
@@ -544,14 +596,16 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         (
             MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData
+            MainnetControllerInit.InitRateLimitData memory rateLimitData,
+            MintRecipient[]                         memory mintRecipients
         ) = _getDefaultParams();
 
         vm.startPrank(SPARK_PROXY);
         MainnetControllerInit.subDaoInitController(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
         vm.stopPrank();
 
@@ -590,7 +644,8 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         MainnetControllerInit.subDaoInitController(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
         vm.stopPrank();
 

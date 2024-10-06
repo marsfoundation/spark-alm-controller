@@ -10,7 +10,7 @@ import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 
-import { ForeignControllerInit, RateLimitData } from "../../deploy/ControllerInit.sol";
+import { ForeignControllerInit, RateLimitData, MintRecipient } from "../../deploy/ControllerInit.sol";
 
 // Necessary to get error message assertions to work
 contract LibraryWrapper {
@@ -18,11 +18,12 @@ contract LibraryWrapper {
     function init(
         ForeignControllerInit.AddressParams     memory params,
         ControllerInstance                      memory controllerInst,
-        ForeignControllerInit.InitRateLimitData memory data
+        ForeignControllerInit.InitRateLimitData memory data,
+        MintRecipient[]                         memory mintRecipients
     )
         external
     {
-        ForeignControllerInit.init(params, controllerInst, data);
+        ForeignControllerInit.init(params, controllerInst, data, mintRecipients);
     }
 }
 
@@ -30,9 +31,10 @@ contract ForeignControllerDeployAndInitTestBase is ForkTestBase {
 
     // Default params used for all testing, can be overridden where needed.
     function _getDefaultParams()
-        internal view returns (
+        internal returns (
             ForeignControllerInit.AddressParams     memory addresses,
-            ForeignControllerInit.InitRateLimitData memory rateLimitData
+            ForeignControllerInit.InitRateLimitData memory rateLimitData,
+            MintRecipient[]                         memory mintRecipients
         )
     {
         addresses = ForeignControllerInit.AddressParams({
@@ -73,6 +75,13 @@ contract ForeignControllerDeployAndInitTestBase is ForkTestBase {
             usdcToCctpData           : usdcToCctpData,
             cctpToEthereumDomainData : cctpToEthereumDomainData
         });
+
+        mintRecipients = new MintRecipient[](1);
+
+        mintRecipients[0] = MintRecipient({
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            mintRecipient : bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
+        });
     }
 
 }
@@ -89,6 +98,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
 
     ForeignControllerInit.AddressParams     addresses;
     ForeignControllerInit.InitRateLimitData rateLimitData;
+    MintRecipient[]                         mintRecipients;
 
     function setUp() public override {
         super.setUp();
@@ -100,7 +110,12 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
             CCTP_MESSENGER_BASE
         );
 
-        ( addresses, rateLimitData ) = _getDefaultParams();
+        MintRecipient[] memory mintRecipients_ = new MintRecipient[](1);
+
+        ( addresses, rateLimitData, mintRecipients_ ) = _getDefaultParams();
+
+        // NOTE: This would need to be refactored to a for loop if more than one recipient
+        mintRecipients.push(mintRecipients_[0]);
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
@@ -122,7 +137,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         vm.stopPrank();
 
         vm.expectRevert("ForeignControllerInit/incorrect-admin-almProxy");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectAdminRateLimits() external {
@@ -133,7 +148,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         vm.stopPrank();
 
         vm.expectRevert("ForeignControllerInit/incorrect-admin-rateLimits");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectAdminController() external {
@@ -144,7 +159,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         vm.stopPrank();
 
         vm.expectRevert("ForeignControllerInit/incorrect-admin-controller");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectAlmProxy() external {
@@ -152,7 +167,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         controllerInst.almProxy = address(new ALMProxy(admin));
 
         vm.expectRevert("ForeignControllerInit/incorrect-almProxy");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectRateLimits() external {
@@ -160,160 +175,160 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         controllerInst.rateLimits = address(new RateLimits(admin));
 
         vm.expectRevert("ForeignControllerInit/incorrect-rateLimits");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectPsm() external {
         addresses.psm = mismatchAddress;
 
         vm.expectRevert("ForeignControllerInit/incorrect-psm");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectUsdc() external {
         addresses.usdc = mismatchAddress;
 
         vm.expectRevert("ForeignControllerInit/incorrect-usdc");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectCctp() external {
         addresses.cctpMessenger = mismatchAddress;
 
         vm.expectRevert("ForeignControllerInit/incorrect-cctp");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectUsdcDepositData_unlimitedBoundary() external {
         rateLimitData.usdcDepositData.maxAmount = type(uint256).max;
 
         vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdcDepositData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.usdcDepositData.slope = 0;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectUsdcWithdrawData_unlimitedBoundary() external {
         rateLimitData.usdcWithdrawData.maxAmount = type(uint256).max;
 
         vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdcWithdrawData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.usdcWithdrawData.slope = 0;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectUsdcToCctpData_unlimitedBoundary() external {
         rateLimitData.usdcToCctpData.maxAmount = type(uint256).max;
 
         vm.expectRevert("ForeignControllerInit/invalid-rate-limit-usdcToCctpData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.usdcToCctpData.slope = 0;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectCctpToEthereumDomainData_unlimitedBoundary() external {
         rateLimitData.cctpToEthereumDomainData.maxAmount = type(uint256).max;
 
         vm.expectRevert("ForeignControllerInit/invalid-rate-limit-cctpToEthereumDomainData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.cctpToEthereumDomainData.slope = 0;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectUsdcDepositData_maxAmountPrecisionBoundary() external {
         rateLimitData.usdcDepositData.maxAmount = 1e18 + 1;  // 1 USDS, but 1 trillion USDC
 
         vm.expectRevert("ForeignControllerInit/invalid-max-amount-precision-usdcDepositData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.usdcDepositData.maxAmount = 1e18;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectUsdcWithdrawData_maxAmountPrecisionBoundary() external {
         rateLimitData.usdcWithdrawData.maxAmount = 1e18 + 1;  // 1 USDS, but 1 trillion USDC
 
         vm.expectRevert("ForeignControllerInit/invalid-max-amount-precision-usdcWithdrawData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.usdcWithdrawData.maxAmount = 1e18;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectUsdcToCctpData_maxAmountPrecisionBoundary() external {
         rateLimitData.usdcToCctpData.maxAmount = 1e18 + 1;  // 1 USDS, but 1 trillion USDC
 
         vm.expectRevert("ForeignControllerInit/invalid-max-amount-precision-usdcToCctpData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.usdcToCctpData.maxAmount = 1e18;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectCctpToEthereumDomainData_maxAmountPrecisionBoundary() external {
         rateLimitData.cctpToEthereumDomainData.maxAmount = 1e18 + 1;  // 1 USDS, but 1 trillion USDC
 
         vm.expectRevert("ForeignControllerInit/invalid-max-amount-precision-cctpToEthereumDomainData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.cctpToEthereumDomainData.maxAmount = 1e18;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectUsdcDepositData_slopePrecisionBoundary() external {
         rateLimitData.usdcDepositData.slope = uint256(1e18) / 1 hours + 1;  // 1 USDS, but 1 trillion USDC
 
         vm.expectRevert("ForeignControllerInit/invalid-slope-precision-usdcDepositData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.usdcDepositData.slope = uint256(1e18) / 1 hours;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectUsdcWithdrawData_slopePrecisionBoundary() external {
         rateLimitData.usdcWithdrawData.slope = uint256(1e18) / 1 hours + 1;  // 1 USDS, but 1 trillion USDC
 
         vm.expectRevert("ForeignControllerInit/invalid-slope-precision-usdcWithdrawData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.usdcWithdrawData.slope = uint256(1e18) / 1 hours;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectUsdcToCctpData_slopePrecisionBoundary() external {
         rateLimitData.usdcToCctpData.slope = uint256(1e18) / 1 hours + 1;  // 1 USDS, but 1 trillion USDC
 
         vm.expectRevert("ForeignControllerInit/invalid-slope-precision-usdcToCctpData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.usdcToCctpData.slope = uint256(1e18) / 1 hours;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
     function test_init_incorrectCctpToEthereumDomainData_slopePrecisionBoundary() external {
         rateLimitData.cctpToEthereumDomainData.slope = uint256(1e18) / 1 hours + 1;  // 1 USDS, but 1 trillion USDC
 
         vm.expectRevert("ForeignControllerInit/invalid-slope-precision-cctpToEthereumDomainData");
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
 
         rateLimitData.cctpToEthereumDomainData.slope = uint256(1e18) / 1 hours;
 
-        wrapper.init(addresses, controllerInst, rateLimitData);
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
 }
@@ -353,14 +368,16 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
 
         (
             ForeignControllerInit.AddressParams     memory addresses,
-            ForeignControllerInit.InitRateLimitData memory rateLimitData
+            ForeignControllerInit.InitRateLimitData memory rateLimitData,
+            MintRecipient[]                         memory mintRecipients
         ) = _getDefaultParams();
 
         vm.startPrank(admin);
         ForeignControllerInit.init(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
         vm.stopPrank();
 
@@ -385,6 +402,16 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
         _assertRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
 
         _assertRateLimitData(domainKeyEthereum, rateLimitData.cctpToEthereumDomainData);
+
+        assertEq(
+            foreignController.mintRecipients(mintRecipients[0].domain),
+            mintRecipients[0].mintRecipient
+        );
+
+        assertEq(
+            foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
+            bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
+        );
     }
 
     function test_init_transferAclToNewController() public {
@@ -397,14 +424,16 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
 
         (
             ForeignControllerInit.AddressParams     memory addresses,
-            ForeignControllerInit.InitRateLimitData memory rateLimitData
+            ForeignControllerInit.InitRateLimitData memory rateLimitData,
+            MintRecipient[]                         memory mintRecipients
         ) = _getDefaultParams();
 
         vm.startPrank(admin);
         ForeignControllerInit.init(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
         vm.stopPrank();
 
@@ -439,7 +468,8 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
         ForeignControllerInit.init(
             addresses,
             controllerInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
         vm.stopPrank();
 
