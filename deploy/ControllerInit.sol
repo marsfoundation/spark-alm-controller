@@ -253,6 +253,8 @@ library ForeignControllerInit {
         require(address(controller.usdc())       == addresses.usdc,            "ForeignControllerInit/incorrect-usdc");
         require(address(controller.cctp())       == addresses.cctpMessenger,   "ForeignControllerInit/incorrect-cctp");
 
+        require(controller.active() == true, "ForeignControllerInit/controller-not-active");
+
         require(addresses.oldController != address(controller), "ForeignControllerInit/old-controller-is-new-controller");
 
         require(IPSMLike(addresses.psm).totalAssets() >= 1e18, "ForeignControllerInit/psm-totalAssets-not-seeded");
