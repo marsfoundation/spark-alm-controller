@@ -199,6 +199,13 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
+    function test_init_oldControllerIsNewController() external {
+        addresses.oldController = controllerInst.controller;
+
+        vm.expectRevert("ForeignControllerInit/old-controller-is-new-controller");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
     function test_init_incorrectUsdcDepositData_unlimitedBoundary() external {
         rateLimitData.usdcDepositData.maxAmount = type(uint256).max;
 

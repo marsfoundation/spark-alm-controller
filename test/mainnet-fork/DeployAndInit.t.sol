@@ -270,6 +270,11 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-usds"));
     }
 
+    function test_init_oldControllerIsNewController() external {
+        addresses.oldController = controllerInst.controller;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-is-new-controller"));
+    }
+
     // TODO: Skipping conversion factor test and active test, can add later if needed
 
     /**********************************************************************************************/

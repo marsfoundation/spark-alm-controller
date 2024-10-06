@@ -104,6 +104,8 @@ library MainnetControllerInit {
         require(controller.psmTo18ConversionFactor() == 1e12, "MainnetControllerInit/incorrect-psmTo18ConversionFactor");
         require(controller.active()                  == true, "MainnetControllerInit/controller-not-active");
 
+        require(addresses.oldController != address(controller), "MainnetControllerInit/old-controller-is-new-controller");
+
         // Step 2: Configure ACL permissions for controller and almProxy
 
         controller.grantRole(controller.FREEZER(), addresses.freezer);
@@ -250,6 +252,8 @@ library ForeignControllerInit {
         require(address(controller.psm())        == addresses.psm,             "ForeignControllerInit/incorrect-psm");
         require(address(controller.usdc())       == addresses.usdc,            "ForeignControllerInit/incorrect-usdc");
         require(address(controller.cctp())       == addresses.cctpMessenger,   "ForeignControllerInit/incorrect-cctp");
+
+        require(addresses.oldController != address(controller), "ForeignControllerInit/old-controller-is-new-controller");
 
         require(IPSMLike(addresses.psm).totalAssets() >= 1e18, "ForeignControllerInit/psm-totalAssets-not-seeded");
         require(IPSMLike(addresses.psm).totalShares() >= 1e18, "ForeignControllerInit/psm-totalShares-not-seeded");
