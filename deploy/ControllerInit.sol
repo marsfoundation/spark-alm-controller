@@ -217,8 +217,6 @@ library ForeignControllerInit {
         address psm;
         address cctpMessenger;
         address usdc;
-        address usds;
-        address susds;
     }
 
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;

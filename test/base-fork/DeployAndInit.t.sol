@@ -44,9 +44,7 @@ contract ForeignControllerDeployAndInitTestBase is ForkTestBase {
             oldController : address(0),  // Empty
             psm           : address(psmBase),
             cctpMessenger : CCTP_MESSENGER_BASE,
-            usdc          : USDC_BASE,
-            usds          : address(usdsBase),
-            susds         : address(susdsBase)
+            usdc          : USDC_BASE
         });
 
         RateLimitData memory usdcDepositData = RateLimitData({
