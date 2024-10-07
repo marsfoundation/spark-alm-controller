@@ -136,9 +136,9 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
             SPARK_PROXY,
             ilkInst.vault,
             PSM,
-            usdsInst.daiUsds,
+            daiUsds,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         MintRecipient[] memory mintRecipients_ = new MintRecipient[](1);
@@ -443,9 +443,9 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             SPARK_PROXY,
             ilkInst.vault,
             PSM,
-            usdsInst.daiUsds,
+            daiUsds,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
@@ -463,9 +463,9 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         assertEq(address(mainnetController.vault()),      ilkInst.vault);
         assertEq(address(mainnetController.buffer()),     ilkInst.buffer);
         assertEq(address(mainnetController.psm()),        PSM);
-        assertEq(address(mainnetController.daiUsds()),    usdsInst.daiUsds);
+        assertEq(address(mainnetController.daiUsds()),    daiUsds);
         assertEq(address(mainnetController.cctp()),       CCTP_MESSENGER);
-        assertEq(address(mainnetController.susds()),      susdsInst.sUsds);
+        assertEq(address(mainnetController.susds()),      address(susds));
         assertEq(address(mainnetController.dai()),        address(dai));
         assertEq(address(mainnetController.usdc()),       address(usdc));
         assertEq(address(mainnetController.usds()),       address(usds));
@@ -542,9 +542,9 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             SPARK_PROXY,
             ilkInst.vault,
             PSM,
-            usdsInst.daiUsds,
+            daiUsds,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
@@ -606,9 +606,9 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             SPARK_PROXY,
             ilkInst.vault,
             PSM,
-            usdsInst.daiUsds,
+            daiUsds,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         (
@@ -634,9 +634,9 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             controllerInst.rateLimits,
             ilkInst.vault,
             PSM,
-            usdsInst.daiUsds,
+            daiUsds,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment

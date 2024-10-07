@@ -14,20 +14,22 @@ import { AllocatorDeploy } from "dss-allocator/deploy/AllocatorDeploy.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
-import { UsdsDeploy }   from "usds/deploy/UsdsDeploy.sol";
-import { UsdsInit }     from "usds/deploy/UsdsInit.sol";
-import { UsdsInstance } from "usds/deploy/UsdsInstance.sol";
-
-import { ISUsds }                 from "sdai/src/ISUsds.sol";
-import { SUsdsDeploy }            from "sdai/deploy/SUsdsDeploy.sol";
-import { SUsdsInit, SUsdsConfig } from "sdai/deploy/SUsdsInit.sol";
-import { SUsdsInstance }          from "sdai/deploy/SUsdsInstance.sol";
+import { ISUsds } from "sdai/src/ISUsds.sol";
 
 import { Ethereum } from "spark-address-registry/Ethereum.sol";
 
 import { Bridge }                from "xchain-helpers/src/testing/Bridge.sol";
 import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
+
+import { MainnetControllerDeploy } from "deploy/ControllerDeploy.sol";
+import { ControllerInstance }      from "deploy/ControllerInstance.sol";
+
+import { MainnetControllerInit,
+    MintRecipient,
+    RateLimitData
+} from "deploy/ControllerInit.sol";
+
 
 import { ALMProxy }          from "src/ALMProxy.sol";
 import { RateLimits }        from "src/RateLimits.sol";
@@ -114,8 +116,6 @@ contract ForkTestBase is DssTest {
 
     AllocatorIlkInstance    ilkInst;
     AllocatorSharedInstance sharedInst;
-    UsdsInstance            usdsInst;
-    SUsdsInstance           susdsInst;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
@@ -148,41 +148,35 @@ contract ForkTestBase is DssTest {
     /**********************************************************************************************/
 
     function setUp() public virtual {
+
+        /*** Step 1: Set up environment, cast addresses ***/
+
         source = getChain("mainnet").createSelectFork(20819000);  //  September 24, 2024
 
         dss = MCD.loadFromChainlog(LOG);
         ILK_REGISTRY = IChainlogLike(LOG).getAddress("ILK_REGISTRY");
 
-        /*** Step 1: Deploy USDS, sUSDS and allocation system ***/
+        usdsJoin = IChainlogLike(LOG).getAddress("USDS_JOIN");
+        buffer   = ilkInst.buffer;
+        daiUsds  = Ethereum.DAI_USDS;
+        pocket   = IPSMLike(PSM).pocket();
+        vault    = ilkInst.vault;
 
-        usdsInst = UsdsDeploy.deploy(
-            address(this),
-            PAUSE_PROXY,
-            IChainlogLike(LOG).getAddress("MCD_JOIN_DAI")
-        );
+        DAI_BAL_PSM  = dai.balanceOf(PSM);
+        DAI_SUPPLY   = dai.totalSupply();
+        USDC_BAL_PSM = usdc.balanceOf(pocket);
+        USDC_SUPPLY  = usdc.totalSupply();
 
-        susdsInst = SUsdsDeploy.deploy({
-            deployer : address(this),
-            owner    : PAUSE_PROXY,
-            usdsJoin : usdsInst.usdsJoin
-        });
+        /*** Step 2: Deploy and configure allocation system ***/
 
-        sharedInst = AllocatorDeploy.deployShared(address(this), PAUSE_PROXY);
+        sharedInst = AllocatorDeploy.deployShared(address(this), Ethereum.PAUSE_PROXY);
 
         ilkInst = AllocatorDeploy.deployIlk({
             deployer : address(this),
-            owner    : PAUSE_PROXY,
+            owner    : Ethereum.PAUSE_PROXY,  // TODO: Is this correct?
             roles    : sharedInst.roles,
             ilk      : ilk,
-            usdsJoin : usdsInst.usdsJoin
-        });
-
-        /*** Step 2: Configure USDS, sUSDS and allocation system ***/
-
-        SUsdsConfig memory susdsConfig = SUsdsConfig({
-            usdsJoin : address(usdsInst.usdsJoin),
-            usds     : address(usdsInst.usds),
-            ssr      : SEVEN_PCT_APY
+            usdsJoin : usdsJoin
         });
 
         AllocatorIlkConfig memory ilkConfig = AllocatorIlkConfig({
@@ -196,81 +190,91 @@ contract ForkTestBase is DssTest {
         });
 
         vm.startPrank(PAUSE_PROXY);
-
-        UsdsInit.init(dss, usdsInst);
-        SUsdsInit.init(dss, susdsInst, susdsConfig);
         AllocatorInit.initShared(dss, sharedInst);
         AllocatorInit.initIlk(dss, sharedInst, ilkInst, ilkConfig);
-
         vm.stopPrank();
 
-        /*** Step 3: Deploy ALM system ***/
+        /*** Step 3: Deploy and configure ALM system ***/
 
-        almProxy = new ALMProxy(SPARK_PROXY);
-
-        rateLimits = new RateLimits(SPARK_PROXY);
-
-        mainnetController = new MainnetController({
-            admin_      : SPARK_PROXY,
-            proxy_      : address(almProxy),
-            rateLimits_ : address(rateLimits),
-            vault_      : ilkInst.vault,
-            psm_        : PSM,
-            daiUsds_    : usdsInst.daiUsds,
-            cctp_       : CCTP_MESSENGER,
-            susds_      : susdsInst.sUsds
+        ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull({
+            admin  : Ethereum.SPARK_PROXY,
+            vault  : ilkInst.vault,
+            psm    : Ethereum.PSM,
+            daiUsds: Ethereum.DAI_USDS,
+            cctp   : Ethereum.CCTP_TOKEN_MESSENGER,
+            susds  : Ethereum.SUSDS
         });
+
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
+        rateLimits        = RateLimits(controllerInst.rateLimits);
+        mainnetController = MainnetController(controllerInst.controller);
 
         CONTROLLER = almProxy.CONTROLLER();
         FREEZER    = mainnetController.FREEZER();
         RELAYER    = mainnetController.RELAYER();
 
-        /*** Step 4: Configure ALM system in allocation system ***/
+        MainnetControllerInit.AddressParams memory addresses = MainnetControllerInit.AddressParams({
+            admin         : Ethereum.SPARK_PROXY,
+            freezer       : freezer,
+            relayer       : relayer,
+            oldController : address(0),
+            psm           : Ethereum.PSM,
+            vault         : ilkInst.vault,
+            buffer        : ilkInst.buffer,
+            cctpMessenger : Ethereum.CCTP_TOKEN_MESSENGER,
+            dai           : Ethereum.DAI,
+            daiUsds       : Ethereum.DAI_USDS,
+            usdc          : Ethereum.USDC,
+            usds          : Ethereum.USDS,
+            susds         : Ethereum.SUSDS
+        });
+
+        RateLimitData memory usdsMintData = RateLimitData({
+            maxAmount : 5_000_000e18,
+            slope     : uint256(1_000_000e18) / 4 hours
+        });
+
+        RateLimitData memory usdcToUsdsData = RateLimitData({
+            maxAmount : 5_000_000e6,
+            slope     : uint256(1_000_000e6) / 4 hours
+        });
+
+        RateLimitData memory usdcToCctpData = RateLimitData({
+            maxAmount : 5_000_000e6,
+            slope     : uint256(1_000_000e6) / 4 hours
+        });
+
+        RateLimitData memory cctpToBaseDomainData = RateLimitData({
+            maxAmount : 5_000_000e6,
+            slope     : uint256(1_000_000e6) / 4 hours
+        });
+
+        MainnetControllerInit.InitRateLimitData memory rateLimitData
+            = MainnetControllerInit.InitRateLimitData({
+                usdsMintData         : usdsMintData,
+                usdcToUsdsData       : usdcToUsdsData,
+                usdcToCctpData       : usdcToCctpData,
+                cctpToBaseDomainData : cctpToBaseDomainData
+            });
+
+        MintRecipient[] memory mintRecipients = new MintRecipient[](1);
+
+        mintRecipients[0] = MintRecipient({
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
+        });
 
         vm.startPrank(SPARK_PROXY);
-
-        IVaultLike(ilkInst.vault).rely(address(almProxy));
-
-        mainnetController.grantRole(FREEZER, freezer);
-        mainnetController.grantRole(RELAYER, relayer);
-
-        almProxy.grantRole(CONTROLLER, address(mainnetController));
-
-        rateLimits.grantRole(CONTROLLER, address(mainnetController));
-
-        bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
-            mainnetController.LIMIT_USDC_TO_DOMAIN(),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
+        MainnetControllerInit.subDaoInitFull(
+            addresses,
+            controllerInst,
+            rateLimitData,
+            mintRecipients
         );
-
-        // Setup rate limits to be 1m / 4 hours recharge and 5m max
-        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_MINT(),    5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), 5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
-        rateLimits.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), 5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
-        rateLimits.setRateLimitData(domainKeyBase,                          5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
-
-        IBufferLike(ilkInst.buffer).approve(usdsInst.usds, address(almProxy), type(uint256).max);
-
         vm.stopPrank();
 
         vm.prank(PAUSE_PROXY);
-        IPSMLike(PSM).kiss(address(almProxy));  // Allow using no fee functionality
-
-        /*** Step 5: Perform casting for easier testing, cache values from mainnet ***/
-
-        buffer   = ilkInst.buffer;
-        daiUsds  = usdsInst.daiUsds;
-        usds     = IERC20(address(usdsInst.usds));
-        usdsJoin = usdsInst.usdsJoin;
-        pocket   = IPSMLike(PSM).pocket();
-        psm      = IPSMLike(PSM);
-        susds    = ISUsds(address(susdsInst.sUsds));
-        vault    = ilkInst.vault;
-
-        DAI_BAL_PSM  = dai.balanceOf(PSM);
-        DAI_SUPPLY   = dai.totalSupply();
-        USDC_BAL_PSM = usdc.balanceOf(pocket);
-        USDC_SUPPLY  = usdc.totalSupply();
+        MainnetControllerInit.pauseProxyInit(Ethereum.PSM, controllerInst.almProxy);
     }
 
 }
