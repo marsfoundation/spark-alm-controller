@@ -75,7 +75,7 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
             cctpMessenger : CCTP_MESSENGER,
             dai           : address(dai),
             daiUsds       : address(daiUsds),
-            usdc          : USDC,
+            usdc          : address(usdc),
             usds          : address(usds),
             susds         : address(susds)
         });

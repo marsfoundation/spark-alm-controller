@@ -89,24 +89,24 @@ contract ForkTestBase is DssTest {
 
     address constant CCTP_MESSENGER = 0xBd3fa81B58Ba92a82136038B25aDec7066af3155;
     address constant LOG            = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
-    address constant PSM            = 0xf6e72Db5454dd049d0788e411b06CfAF16853042;  // Lite PSM
-    address constant SPARK_PROXY    = 0x3300f198988e4C9C63F75dF86De36421f06af8c4;
+
+    address constant PSM = Ethereum.PSM;
 
     IERC20 dai   = IERC20(Ethereum.DAI);
     IERC20 usdc  = IERC20(Ethereum.USDC);
     IERC20 usds  = IERC20(Ethereum.USDS);
     ISUsds susds = ISUsds(Ethereum.SUSDS);
 
-    IPSMLike psm = IPSMLike(Ethereum.PSM);
+    IPSMLike psm = IPSMLike(PSM);
 
     bytes32 constant PSM_ILK = 0x4c4954452d50534d2d555344432d410000000000000000000000000000000000;
 
     DssInstance dss;  // Mainnet DSS
 
     address ILK_REGISTRY;
-    address PAUSE_PROXY;
-    address USDC;
-    address DAI;
+
+    address constant PAUSE_PROXY = Ethereum.PAUSE_PROXY;
+    address constant SPARK_PROXY = Ethereum.SPARK_PROXY;
 
     /**********************************************************************************************/
     /*** Deployment instances                                                                   ***/
@@ -150,11 +150,8 @@ contract ForkTestBase is DssTest {
     function setUp() public virtual {
         source = getChain("mainnet").createSelectFork(20819000);  //  September 24, 2024
 
-        dss          = MCD.loadFromChainlog(LOG);
-        DAI          = IChainlogLike(LOG).getAddress("MCD_DAI");
+        dss = MCD.loadFromChainlog(LOG);
         ILK_REGISTRY = IChainlogLike(LOG).getAddress("ILK_REGISTRY");
-        PAUSE_PROXY  = IChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
-        USDC         = IChainlogLike(LOG).getAddress("USDC");
 
         /*** Step 1: Deploy USDS, sUSDS and allocation system ***/
 
@@ -262,14 +259,12 @@ contract ForkTestBase is DssTest {
         /*** Step 5: Perform casting for easier testing, cache values from mainnet ***/
 
         buffer   = ilkInst.buffer;
-        dai      = IERC20(DAI);
         daiUsds  = usdsInst.daiUsds;
         usds     = IERC20(address(usdsInst.usds));
         usdsJoin = usdsInst.usdsJoin;
         pocket   = IPSMLike(PSM).pocket();
         psm      = IPSMLike(PSM);
         susds    = ISUsds(address(susdsInst.sUsds));
-        usdc     = IERC20(USDC);
         vault    = ilkInst.vault;
 
         DAI_BAL_PSM  = dai.balanceOf(PSM);
