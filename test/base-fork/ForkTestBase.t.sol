@@ -32,6 +32,7 @@ contract ForkTestBase is Test {
 
     address admin   = makeAddr("admin");
     address freezer = makeAddr("freezer");
+    address pocket  = makeAddr("pocket");
     address relayer = makeAddr("relayer");
 
     /**********************************************************************************************/
@@ -81,6 +82,12 @@ contract ForkTestBase is Test {
         psmBase = IPSM3(PSM3Deploy.deploy(
             admin, USDC_BASE, address(usdsBase), address(susdsBase), address(rateProvider)
         ));
+
+        vm.prank(admin);
+        psmBase.setPocket(pocket);
+
+        vm.prank(pocket);
+        usdcBase.approve(address(psmBase), type(uint256).max);
 
         almProxy = new ALMProxy(admin);
 
