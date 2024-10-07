@@ -17,9 +17,11 @@ contract ForeignControllerPSMSuccessTestBase is ForkTestBase {
     )
         internal view
     {
+        address custodian = address(token) == address(usdcBase) ? pocket : address(psmBase);
+
         assertEq(token.balanceOf(address(almProxy)),          proxyBalance);
         assertEq(token.balanceOf(address(foreignController)), 0);  // Should always be zero
-        assertEq(token.balanceOf(address(psmBase)),           psmBalance);
+        assertEq(token.balanceOf(custodian),                  psmBalance);
 
         assertEq(psmBase.shares(address(almProxy)), proxyShares);
         assertEq(psmBase.totalShares(),             totalShares);
