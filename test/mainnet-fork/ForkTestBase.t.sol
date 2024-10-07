@@ -23,6 +23,8 @@ import { SUsdsDeploy }            from "sdai/deploy/SUsdsDeploy.sol";
 import { SUsdsInit, SUsdsConfig } from "sdai/deploy/SUsdsInit.sol";
 import { SUsdsInstance }          from "sdai/deploy/SUsdsInstance.sol";
 
+import { Ethereum } from "spark-address-registry/Ethereum.sol";
+
 import { Bridge }                from "xchain-helpers/src/testing/Bridge.sol";
 import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
@@ -90,6 +92,13 @@ contract ForkTestBase is DssTest {
     address constant PSM            = 0xf6e72Db5454dd049d0788e411b06CfAF16853042;  // Lite PSM
     address constant SPARK_PROXY    = 0x3300f198988e4C9C63F75dF86De36421f06af8c4;
 
+    IERC20 dai   = IERC20(Ethereum.DAI);
+    IERC20 usdc  = IERC20(Ethereum.USDC);
+    IERC20 usds  = IERC20(Ethereum.USDS);
+    ISUsds susds = ISUsds(Ethereum.SUSDS);
+
+    IPSMLike psm = IPSMLike(Ethereum.PSM);
+
     bytes32 constant PSM_ILK = 0x4c4954452d50534d2d555344432d410000000000000000000000000000000000;
 
     DssInstance dss;  // Mainnet DSS
@@ -119,13 +128,6 @@ contract ForkTestBase is DssTest {
     /**********************************************************************************************/
     /*** Casted addresses for testing                                                           ***/
     /**********************************************************************************************/
-
-    IERC20 dai;
-    IERC20 usds;
-    IERC20 usdc;
-    ISUsds susds;
-
-    IPSMLike psm;
 
     address buffer;
     address daiUsds;
