@@ -27,7 +27,7 @@ contract MainnetControllerMintUSDSTests is ForkTestBase {
         ( uint256 ink, uint256 art ) = dss.vat.urns(ilk, vault);
         ( uint256 Art,,,, )          = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(usdsJoin), VAT_DAI_USDS_JOIN);
+        assertEq(dss.vat.dai(USDS_JOIN), VAT_DAI_USDS_JOIN);
 
         assertEq(Art, 0);
         assertEq(ink, INK);
@@ -42,7 +42,7 @@ contract MainnetControllerMintUSDSTests is ForkTestBase {
         ( ink, art ) = dss.vat.urns(ilk, vault);
         ( Art,,,, )  = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(usdsJoin), VAT_DAI_USDS_JOIN + 1e45);
+        assertEq(dss.vat.dai(USDS_JOIN), VAT_DAI_USDS_JOIN + 1e45);
 
         assertEq(Art, 1e18);
         assertEq(ink, INK);
@@ -110,7 +110,7 @@ contract MainnetControllerBurnUSDSTests is ForkTestBase {
         ( uint256 ink, uint256 art ) = dss.vat.urns(ilk, vault);
         ( uint256 Art,,,, )          = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(address(usdsJoin)), VAT_DAI_USDS_JOIN + 1e45);
+        assertEq(dss.vat.dai(USDS_JOIN), VAT_DAI_USDS_JOIN + 1e45);
 
         assertEq(Art, 1e18);
         assertEq(ink, INK);
@@ -125,7 +125,7 @@ contract MainnetControllerBurnUSDSTests is ForkTestBase {
         ( ink, art ) = dss.vat.urns(ilk, vault);
         ( Art,,,, )  = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(address(usdsJoin)), VAT_DAI_USDS_JOIN);
+        assertEq(dss.vat.dai(USDS_JOIN), VAT_DAI_USDS_JOIN);
 
         assertEq(Art, 0);
         assertEq(ink, INK);

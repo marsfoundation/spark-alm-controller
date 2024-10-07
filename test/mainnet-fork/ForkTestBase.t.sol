@@ -30,7 +30,6 @@ import { MainnetControllerInit,
     RateLimitData
 } from "deploy/ControllerInit.sol";
 
-
 import { ALMProxy }          from "src/ALMProxy.sol";
 import { RateLimits }        from "src/RateLimits.sol";
 import { RateLimitHelpers }  from "src/RateLimitHelpers.sol";
@@ -64,14 +63,14 @@ contract ForkTestBase is DssTest {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 constant ilk = "ILK-A";
+    bytes32 constant ilk                = "ILK-A";
+    bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
-    uint256 constant INK = 1e12 * 1e18;  // Ink initialization amount
+    bytes32 constant PSM_ILK = 0x4c4954452d50534d2d555344432d410000000000000000000000000000000000;
 
+    uint256 constant INK           = 1e12 * 1e18;  // Ink initialization amount
     uint256 constant SEVEN_PCT_APY = 1.000000002145441671308778766e27;  // 7% APY (current DSR)
     uint256 constant EIGHT_PCT_APY = 1.000000002440418608258400030e27;  // 8% APY (current DSR + 1%)
-
-    bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     address freezer = makeAddr("freezer");
     address relayer = makeAddr("relayer");
@@ -80,62 +79,39 @@ contract ForkTestBase is DssTest {
     bytes32 FREEZER;
     bytes32 RELAYER;
 
-    uint256 DAI_BAL_PSM;
-    uint256 DAI_SUPPLY;
-    uint256 USDC_BAL_PSM;
-    uint256 USDC_SUPPLY;
-    uint256 USDS_SUPPLY;
-    uint256 USDS_BAL_SUSDS;
-    uint256 VAT_DAI_USDS_JOIN;
-
     /**********************************************************************************************/
     /*** Mainnet addresses/constants                                                            ***/
     /**********************************************************************************************/
 
-    address constant CCTP_MESSENGER = 0xBd3fa81B58Ba92a82136038B25aDec7066af3155;
-    address constant LOG            = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
+    address constant LOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
 
-    address constant PSM = Ethereum.PSM;
+    address constant CCTP_MESSENGER = Ethereum.CCTP_TOKEN_MESSENGER;
+    address constant DAI_USDS       = Ethereum.DAI_USDS;
+    address constant PAUSE_PROXY    = Ethereum.PAUSE_PROXY;
+    address constant PSM            = Ethereum.PSM;
+    address constant SPARK_PROXY    = Ethereum.SPARK_PROXY;
 
-    IERC20 dai   = IERC20(Ethereum.DAI);
-    IERC20 usdc  = IERC20(Ethereum.USDC);
-    IERC20 usds  = IERC20(Ethereum.USDS);
-    ISUsds susds = ISUsds(Ethereum.SUSDS);
+    IERC20 constant dai   = IERC20(Ethereum.DAI);
+    IERC20 constant usdc  = IERC20(Ethereum.USDC);
+    IERC20 constant usds  = IERC20(Ethereum.USDS);
+    ISUsds constant susds = ISUsds(Ethereum.SUSDS);
 
-    IPSMLike psm = IPSMLike(PSM);
+    IPSMLike constant psm = IPSMLike(PSM);
 
-    bytes32 constant PSM_ILK = 0x4c4954452d50534d2d555344432d410000000000000000000000000000000000;
+    address POCKET;
+    address USDS_JOIN;
 
     DssInstance dss;  // Mainnet DSS
 
-    address ILK_REGISTRY;
-
-    address constant PAUSE_PROXY = Ethereum.PAUSE_PROXY;
-    address constant SPARK_PROXY = Ethereum.SPARK_PROXY;
-
     /**********************************************************************************************/
-    /*** Deployment instances                                                                   ***/
-    /**********************************************************************************************/
-
-    AllocatorIlkInstance    ilkInst;
-    AllocatorSharedInstance sharedInst;
-
-    /**********************************************************************************************/
-    /*** ALM system deployments                                                                 ***/
+    /*** ALM system and allocation system deployments                                           ***/
     /**********************************************************************************************/
 
     ALMProxy          almProxy;
     RateLimits        rateLimits;
     MainnetController mainnetController;
 
-    /**********************************************************************************************/
-    /*** Casted addresses for testing                                                           ***/
-    /**********************************************************************************************/
-
     address buffer;
-    address daiUsds;
-    address usdsJoin;
-    address pocket;
     address vault;
 
     /**********************************************************************************************/
@@ -145,6 +121,18 @@ contract ForkTestBase is DssTest {
     Bridge bridge;
     Domain source;
     Domain destination;
+
+    /**********************************************************************************************/
+    /*** Cached mainnet state variables                                                         ***/
+    /**********************************************************************************************/
+
+    uint256 DAI_BAL_PSM;
+    uint256 DAI_SUPPLY;
+    uint256 USDC_BAL_PSM;
+    uint256 USDC_SUPPLY;
+    uint256 USDS_SUPPLY;
+    uint256 USDS_BAL_SUSDS;
+    uint256 VAT_DAI_USDS_JOIN;
 
     /**********************************************************************************************/
     /*** Test setup                                                                             ***/
@@ -157,30 +145,29 @@ contract ForkTestBase is DssTest {
         source = getChain("mainnet").createSelectFork(20819000);  //  September 24, 2024
 
         dss = MCD.loadFromChainlog(LOG);
-        ILK_REGISTRY = IChainlogLike(LOG).getAddress("ILK_REGISTRY");
 
-        usdsJoin = IChainlogLike(LOG).getAddress("USDS_JOIN");
-        daiUsds  = Ethereum.DAI_USDS;
-        pocket   = IPSMLike(PSM).pocket();
+        USDS_JOIN = IChainlogLike(LOG).getAddress("USDS_JOIN");
+        POCKET    = IChainlogLike(LOG).getAddress("MCD_LITE_PSM_USDC_A_POCKET");
 
         DAI_BAL_PSM       = dai.balanceOf(PSM);
         DAI_SUPPLY        = dai.totalSupply();
-        USDC_BAL_PSM      = usdc.balanceOf(pocket);
+        USDC_BAL_PSM      = usdc.balanceOf(POCKET);
         USDC_SUPPLY       = usdc.totalSupply();
         USDS_SUPPLY       = usds.totalSupply();
         USDS_BAL_SUSDS    = usds.balanceOf(address(susds));
-        VAT_DAI_USDS_JOIN = dss.vat.dai(usdsJoin);
+        VAT_DAI_USDS_JOIN = dss.vat.dai(USDS_JOIN);
 
         /*** Step 2: Deploy and configure allocation system ***/
 
-        sharedInst = AllocatorDeploy.deployShared(address(this), Ethereum.PAUSE_PROXY);
+        AllocatorSharedInstance memory sharedInst
+            = AllocatorDeploy.deployShared(address(this), Ethereum.PAUSE_PROXY);
 
-        ilkInst = AllocatorDeploy.deployIlk({
+        AllocatorIlkInstance memory ilkInst = AllocatorDeploy.deployIlk({
             deployer : address(this),
-            owner    : Ethereum.PAUSE_PROXY,  // TODO: Is this correct?
+            owner    : Ethereum.PAUSE_PROXY,
             roles    : sharedInst.roles,
             ilk      : ilk,
-            usdsJoin : usdsJoin
+            usdsJoin : USDS_JOIN
         });
 
         AllocatorIlkConfig memory ilkConfig = AllocatorIlkConfig({
@@ -189,11 +176,11 @@ contract ForkTestBase is DssTest {
             maxLine        : 100_000_000 * RAD,
             gap            : 10_000_000 * RAD,
             ttl            : 6 hours,
-            allocatorProxy : SPARK_PROXY,
-            ilkRegistry    : ILK_REGISTRY
+            allocatorProxy : Ethereum.SPARK_PROXY,
+            ilkRegistry    : IChainlogLike(LOG).getAddress("ILK_REGISTRY")
         });
 
-        vm.startPrank(PAUSE_PROXY);
+        vm.startPrank(Ethereum.PAUSE_PROXY);
         AllocatorInit.initShared(dss, sharedInst);
         AllocatorInit.initIlk(dss, sharedInst, ilkInst, ilkConfig);
         vm.stopPrank();
@@ -226,8 +213,8 @@ contract ForkTestBase is DssTest {
             relayer       : relayer,
             oldController : address(0),
             psm           : Ethereum.PSM,
-            vault         : ilkInst.vault,
-            buffer        : ilkInst.buffer,
+            vault         : vault,
+            buffer        : buffer,
             cctpMessenger : Ethereum.CCTP_TOKEN_MESSENGER,
             dai           : Ethereum.DAI,
             daiUsds       : Ethereum.DAI_USDS,
@@ -271,7 +258,7 @@ contract ForkTestBase is DssTest {
             mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         });
 
-        vm.startPrank(SPARK_PROXY);
+        vm.startPrank(Ethereum.SPARK_PROXY);
         MainnetControllerInit.subDaoInitFull(
             addresses,
             controllerInst,
@@ -280,7 +267,7 @@ contract ForkTestBase is DssTest {
         );
         vm.stopPrank();
 
-        vm.prank(PAUSE_PROXY);
+        vm.prank(Ethereum.PAUSE_PROXY);
         MainnetControllerInit.pauseProxyInit(Ethereum.PSM, controllerInst.almProxy);
 
         /*** Step 4: Label addresses ***/

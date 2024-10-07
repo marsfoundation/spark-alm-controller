@@ -18,7 +18,7 @@ import { RateLimits }        from "src/RateLimits.sol";
 
 contract ForkTestBase is Test {
 
-    // TODO: Refactor to use deployment libraries/testnet addresses
+    // TODO: Refactor to use live addresses
 
     /**********************************************************************************************/
     /*** Constants/state variables                                                              ***/
