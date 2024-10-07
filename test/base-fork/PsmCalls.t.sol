@@ -3,6 +3,8 @@ pragma solidity >=0.8.0;
 
 import "test/base-fork/ForkTestBase.t.sol";
 
+import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
+
 contract ForeignControllerPSMSuccessTestBase is ForkTestBase {
 
     function _assertState(
@@ -65,6 +67,12 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
     function test_deposit_usds() external {
         bytes32 key = foreignController.LIMIT_PSM_DEPOSIT();
 
+        // NOTE: USDS deposits are not going to be rate limited for launch
+        bytes32 assetKey = RateLimitHelpers.makeAssetKey(key, address(usdsBase));
+
+        vm.prank(SPARK_EXECUTOR);
+        rateLimits.setUnlimitedRateLimitData(assetKey);
+
         deal(address(usdsBase), address(almProxy), 100e18);
 
         _assertState({
@@ -75,7 +83,7 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
             totalShares      : 1e18,  // From seeding USDS
             totalAssets      : 1e18,  // From seeding USDS
             rateLimitKey     : key,
-            currentRateLimit : 5_000_000e18
+            currentRateLimit : type(uint256).max
         });
 
         vm.prank(relayer);
@@ -91,7 +99,7 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
             totalShares      : 101e18,
             totalAssets      : 101e18,
             rateLimitKey     : key,
-            currentRateLimit : 4_999_900e18
+            currentRateLimit : type(uint256).max
         });
     }
 
@@ -131,6 +139,12 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
     function test_deposit_susds() external {
         bytes32 key = foreignController.LIMIT_PSM_DEPOSIT();
 
+        // NOTE: sUSDS deposits are not going to be rate limited for launch
+        bytes32 assetKey = RateLimitHelpers.makeAssetKey(key, address(susdsBase));
+
+        vm.prank(SPARK_EXECUTOR);
+        rateLimits.setUnlimitedRateLimitData(assetKey);
+
         deal(address(susdsBase), address(almProxy), 100e18);
 
         _assertState({
@@ -141,7 +155,7 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
             totalShares      : 1e18,  // From seeding USDS
             totalAssets      : 1e18,  // From seeding USDS
             rateLimitKey     : key,
-            currentRateLimit : 5_000_000e18
+            currentRateLimit : type(uint256).max
         });
 
         vm.prank(relayer);
@@ -157,7 +171,7 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
             totalShares      : 126e18,
             totalAssets      : 126e18,
             rateLimitKey     : key,
-            currentRateLimit : 4_999_900e18
+            currentRateLimit : type(uint256).max
         });
     }
 
@@ -188,7 +202,18 @@ contract ForeignControllerWithdrawPSMFailureTests is ForkTestBase {
 contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
 
     function test_withdraw_usds() external {
-        bytes32 key = foreignController.LIMIT_PSM_WITHDRAW();
+        bytes32 depositKey  = foreignController.LIMIT_PSM_DEPOSIT();
+        bytes32 withdrawKey = foreignController.LIMIT_PSM_WITHDRAW();
+
+        // NOTE: sUSDS deposit and withdrawals are not going to be rate limited for launch
+        bytes32 depositAssetKey  = RateLimitHelpers.makeAssetKey(depositKey,  address(usdsBase));
+        bytes32 withdrawAssetKey = RateLimitHelpers.makeAssetKey(withdrawKey, address(usdsBase));
+
+        vm.startPrank(SPARK_EXECUTOR);
+        rateLimits.setUnlimitedRateLimitData(depositAssetKey);
+        rateLimits.setUnlimitedRateLimitData(withdrawAssetKey);
+        vm.stopPrank();
+
         deal(address(usdsBase), address(almProxy), 100e18);
         vm.prank(relayer);
         foreignController.depositPSM(address(usdsBase), 100e18);
@@ -200,8 +225,8 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
             proxyShares      : 100e18,
             totalShares      : 101e18,
             totalAssets      : 101e18,
-            rateLimitKey     : key,
-            currentRateLimit : 5_000_000e18
+            rateLimitKey     : withdrawKey,
+            currentRateLimit : type(uint256).max
         });
 
         vm.prank(relayer);
@@ -216,8 +241,8 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
             proxyShares      : 0,
             totalShares      : 1e18,  // From seeding USDS
             totalAssets      : 1e18,  // From seeding USDS
-            rateLimitKey     : key,
-            currentRateLimit : 4_999_900e18
+            rateLimitKey     : withdrawKey,
+            currentRateLimit : type(uint256).max
         });
     }
 
@@ -257,7 +282,17 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
     }
 
     function test_withdraw_susds() external {
-        bytes32 key = foreignController.LIMIT_PSM_WITHDRAW();
+        bytes32 depositKey  = foreignController.LIMIT_PSM_DEPOSIT();
+        bytes32 withdrawKey = foreignController.LIMIT_PSM_WITHDRAW();
+
+        // NOTE: sUSDS deposit and withdrawals are not going to be rate limited for launch
+        bytes32 depositAssetKey  = RateLimitHelpers.makeAssetKey(depositKey,  address(susdsBase));
+        bytes32 withdrawAssetKey = RateLimitHelpers.makeAssetKey(withdrawKey, address(susdsBase));
+
+        vm.startPrank(SPARK_EXECUTOR);
+        rateLimits.setUnlimitedRateLimitData(depositAssetKey);
+        rateLimits.setUnlimitedRateLimitData(withdrawAssetKey);
+        vm.stopPrank();
 
         deal(address(susdsBase), address(almProxy), 100e18);
         vm.prank(relayer);
@@ -270,8 +305,8 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
             proxyShares      : 125e18,
             totalShares      : 126e18,
             totalAssets      : 126e18,
-            rateLimitKey     : key,
-            currentRateLimit : 5_000_000e18
+            rateLimitKey     : withdrawKey,
+            currentRateLimit : type(uint256).max
         });
 
         vm.prank(relayer);
@@ -286,8 +321,8 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
             proxyShares      : 0,
             totalShares      : 1e18,  // From seeding USDS
             totalAssets      : 1e18,  // From seeding USDS
-            rateLimitKey     : key,
-            currentRateLimit : 4_999_900e18
+            rateLimitKey     : withdrawKey,
+            currentRateLimit : type(uint256).max
         });
     }
 
