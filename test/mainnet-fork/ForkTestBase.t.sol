@@ -84,6 +84,9 @@ contract ForkTestBase is DssTest {
     uint256 DAI_SUPPLY;
     uint256 USDC_BAL_PSM;
     uint256 USDC_SUPPLY;
+    uint256 USDS_SUPPLY;
+    uint256 USDS_BAL_SUSDS;
+    uint256 VAT_DAI_USDS_JOIN;
 
     /**********************************************************************************************/
     /*** Mainnet addresses/constants                                                            ***/
@@ -157,15 +160,16 @@ contract ForkTestBase is DssTest {
         ILK_REGISTRY = IChainlogLike(LOG).getAddress("ILK_REGISTRY");
 
         usdsJoin = IChainlogLike(LOG).getAddress("USDS_JOIN");
-        buffer   = ilkInst.buffer;
         daiUsds  = Ethereum.DAI_USDS;
         pocket   = IPSMLike(PSM).pocket();
-        vault    = ilkInst.vault;
 
-        DAI_BAL_PSM  = dai.balanceOf(PSM);
-        DAI_SUPPLY   = dai.totalSupply();
-        USDC_BAL_PSM = usdc.balanceOf(pocket);
-        USDC_SUPPLY  = usdc.totalSupply();
+        DAI_BAL_PSM       = dai.balanceOf(PSM);
+        DAI_SUPPLY        = dai.totalSupply();
+        USDC_BAL_PSM      = usdc.balanceOf(pocket);
+        USDC_SUPPLY       = usdc.totalSupply();
+        USDS_SUPPLY       = usds.totalSupply();
+        USDS_BAL_SUSDS    = usds.balanceOf(address(susds));
+        VAT_DAI_USDS_JOIN = dss.vat.dai(usdsJoin);
 
         /*** Step 2: Deploy and configure allocation system ***/
 
@@ -193,6 +197,9 @@ contract ForkTestBase is DssTest {
         AllocatorInit.initShared(dss, sharedInst);
         AllocatorInit.initIlk(dss, sharedInst, ilkInst, ilkConfig);
         vm.stopPrank();
+
+        buffer = ilkInst.buffer;
+        vault  = ilkInst.vault;
 
         /*** Step 3: Deploy and configure ALM system ***/
 

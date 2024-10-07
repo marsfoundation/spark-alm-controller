@@ -8,6 +8,9 @@ contract SUSDSTestBase is ForkTestBase {
     uint256 SUSDS_CONVERTED_ASSETS;
     uint256 SUSDS_CONVERTED_SHARES;
 
+    uint256 SUSDS_TOTAL_ASSETS;
+    uint256 SUSDS_TOTAL_SUPPLY;
+
     function setUp() override public {
         super.setUp();
 
@@ -17,8 +20,14 @@ contract SUSDSTestBase is ForkTestBase {
         SUSDS_CONVERTED_ASSETS = susds.convertToAssets(1e18);
         SUSDS_CONVERTED_SHARES = susds.convertToShares(1e18);
 
-        assertEq(SUSDS_CONVERTED_ASSETS, 1.001855380694731009e18);
-        assertEq(SUSDS_CONVERTED_SHARES, 0.998148055367587678e18);
+        SUSDS_TOTAL_ASSETS = susds.totalAssets();
+        SUSDS_TOTAL_SUPPLY = susds.totalSupply();
+
+        assertEq(SUSDS_CONVERTED_ASSETS, 1.002797066310553904e18);
+        assertEq(SUSDS_CONVERTED_SHARES, 0.997210735447357513e18);
+
+        assertEq(SUSDS_TOTAL_ASSETS, 33_701_950.435576758238360096e18);
+        assertEq(SUSDS_TOTAL_SUPPLY, 33_607_946.779871889980091084e18);
     }
 
 }
@@ -53,13 +62,13 @@ contract MainnetControllerDepositToSUSDSTests is SUSDSTestBase {
 
         assertEq(usds.balanceOf(address(almProxy)),          1e18);
         assertEq(usds.balanceOf(address(mainnetController)), 0);
-        assertEq(usds.balanceOf(address(susds)),             0);
+        assertEq(usds.balanceOf(address(susds)),             USDS_BAL_SUSDS);
 
         assertEq(usds.allowance(address(buffer),   address(vault)),  type(uint256).max);
         assertEq(usds.allowance(address(almProxy), address(susds)),  0);
 
-        assertEq(susds.totalSupply(),                0);
-        assertEq(susds.totalAssets(),                0);
+        assertEq(susds.totalSupply(),                SUSDS_TOTAL_SUPPLY);
+        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS);
         assertEq(susds.balanceOf(address(almProxy)), 0);
 
         vm.prank(relayer);
@@ -69,13 +78,13 @@ contract MainnetControllerDepositToSUSDSTests is SUSDSTestBase {
 
         assertEq(usds.balanceOf(address(almProxy)),          0);
         assertEq(usds.balanceOf(address(mainnetController)), 0);
-        assertEq(usds.balanceOf(address(susds)),             1e18);
+        assertEq(usds.balanceOf(address(susds)),             USDS_BAL_SUSDS + 1e18);
 
         assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(usds.allowance(address(almProxy), address(susds)), 0);
 
-        assertEq(susds.totalSupply(),                SUSDS_CONVERTED_SHARES);
-        assertEq(susds.totalAssets(),                1e18 - 1);  // Rounding
+        assertEq(susds.totalSupply(),                SUSDS_TOTAL_SUPPLY + shares);
+        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18);  // Rounding
         assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
     }
 
@@ -175,13 +184,13 @@ contract MainnetControllerRedeemFromSUSDSTests is SUSDSTestBase {
 
         assertEq(usds.balanceOf(address(almProxy)),          0);
         assertEq(usds.balanceOf(address(mainnetController)), 0);
-        assertEq(usds.balanceOf(address(susds)),             1e18);
+        assertEq(usds.balanceOf(address(susds)),             USDS_BAL_SUSDS + 1e18);
 
         assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(usds.allowance(address(almProxy), address(susds)),  0);
 
-        assertEq(susds.totalSupply(),                SUSDS_CONVERTED_SHARES);
-        assertEq(susds.totalAssets(),                1e18 - 1);  // Rounding
+        assertEq(susds.totalSupply(),                SUSDS_TOTAL_SUPPLY + 1e18);
+        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + SUSDS_CONVERTED_SHARES);
         assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
 
         vm.prank(relayer);
@@ -191,13 +200,13 @@ contract MainnetControllerRedeemFromSUSDSTests is SUSDSTestBase {
 
         assertEq(usds.balanceOf(address(almProxy)),          1e18 - 1);  // Rounding
         assertEq(usds.balanceOf(address(mainnetController)), 0);
-        assertEq(usds.balanceOf(address(susds)),             1);  // Rounding
+        assertEq(usds.balanceOf(address(susds)),             USDS_BAL_SUSDS);  // Rounding
 
         assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(usds.allowance(address(almProxy), address(susds)), 0);
 
-        assertEq(susds.totalSupply(),                0);
-        assertEq(susds.totalAssets(),                0);
+        assertEq(susds.totalSupply(),                SUSDS_TOTAL_SUPPLY);
+        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS);
         assertEq(susds.balanceOf(address(almProxy)), 0);
     }
 
