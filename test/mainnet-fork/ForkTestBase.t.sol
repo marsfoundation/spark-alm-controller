@@ -282,6 +282,14 @@ contract ForkTestBase is DssTest {
 
         vm.prank(PAUSE_PROXY);
         MainnetControllerInit.pauseProxyInit(Ethereum.PSM, controllerInst.almProxy);
+
+        /*** Step 4: Label addresses ***/
+
+        vm.label(buffer,         "buffer");
+        vm.label(address(susds), "susds");
+        vm.label(address(usdc),  "usdc");
+        vm.label(address(usds),  "usds");
+        vm.label(vault,          "vault");
     }
 
 }
