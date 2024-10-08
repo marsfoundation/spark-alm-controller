@@ -205,7 +205,7 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
         bytes32 depositKey  = foreignController.LIMIT_PSM_DEPOSIT();
         bytes32 withdrawKey = foreignController.LIMIT_PSM_WITHDRAW();
 
-        // NOTE: sUSDS deposit and withdrawals are not going to be rate limited for launch
+        // NOTE: USDS deposits and withdrawals are not going to be rate limited for launch
         bytes32 depositAssetKey  = RateLimitHelpers.makeAssetKey(depositKey,  address(usdsBase));
         bytes32 withdrawAssetKey = RateLimitHelpers.makeAssetKey(withdrawKey, address(usdsBase));
 
@@ -285,7 +285,7 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
         bytes32 depositKey  = foreignController.LIMIT_PSM_DEPOSIT();
         bytes32 withdrawKey = foreignController.LIMIT_PSM_WITHDRAW();
 
-        // NOTE: sUSDS deposit and withdrawals are not going to be rate limited for launch
+        // NOTE: sUSDS deposits and withdrawals are not going to be rate limited for launch
         bytes32 depositAssetKey  = RateLimitHelpers.makeAssetKey(depositKey,  address(susdsBase));
         bytes32 withdrawAssetKey = RateLimitHelpers.makeAssetKey(withdrawKey, address(susdsBase));
 

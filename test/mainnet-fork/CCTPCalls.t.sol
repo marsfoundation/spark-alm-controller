@@ -151,8 +151,8 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
     /*** Base addresses                                                                         ***/
     /**********************************************************************************************/
 
-    address constant SPARK_EXECUTOR      = Base.SPARK_EXECUTOR;
     address constant CCTP_MESSENGER_BASE = Base.CCTP_TOKEN_MESSENGER;
+    address constant SPARK_EXECUTOR      = Base.SPARK_EXECUTOR;
     address constant USDC_BASE           = Base.USDC;
 
     /**********************************************************************************************/
@@ -179,6 +179,8 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
     function setUp() public override virtual {
         super.setUp();
+
+        /*** Step 1: Set up environment and deploy mocks ***/
 
         destination = getChain("base").createSelectFork(20187000);  // September 24, 2024
 
