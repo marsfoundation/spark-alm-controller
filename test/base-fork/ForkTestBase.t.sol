@@ -9,9 +9,18 @@ import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Moc
 
 import { Base } from "spark-address-registry/Base.sol";
 
-import { PSM3Deploy }       from "spark-psm/deploy/PSM3Deploy.sol";
-import { IPSM3 }            from "spark-psm/src/PSM3.sol";
-import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
+import { PSM3Deploy } from "spark-psm/deploy/PSM3Deploy.sol";
+import { IPSM3 }      from "spark-psm/src/PSM3.sol";
+
+import { CCTPForwarder } from "lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
+
+import { ForeignControllerDeploy } from "deploy/ControllerDeploy.sol";
+import { ControllerInstance }      from "deploy/ControllerInstance.sol";
+
+import { ForeignControllerInit,
+    MintRecipient,
+    RateLimitData
+} from "deploy/ControllerInit.sol";
 
 import { CCTPForwarder } from "lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
@@ -123,20 +132,36 @@ contract ForkTestBase is Test {
             oldController : address(0),  // Empty
             psm           : address(psmBase),
             cctpMessenger : CCTP_MESSENGER_BASE,
-            usdc          : USDC_BASE
+            usdc          : USDC_BASE,
+            usds          : address(usdsBase),
+            susds         : address(susdsBase)
         });
 
-        RateLimitData memory standardRateLimitData = RateLimitData({
+        RateLimitData memory standardUsdcRateLimitData = RateLimitData({
             maxAmount : 5_000_000e6,
             slope     : uint256(1_000_000e6) / 4 hours
         });
 
+        RateLimitData memory standardUsdsRateLimitData = RateLimitData({
+            maxAmount : 5_000_000e18,
+            slope     : uint256(1_000_000e18) / 4 hours
+        });
+
+        RateLimitData memory unlimitedRateLimitData = RateLimitData({
+            maxAmount : type(uint256).max,
+            slope     : 0
+        });
+
         ForeignControllerInit.InitRateLimitData memory rateLimitData
             = ForeignControllerInit.InitRateLimitData({
-                usdcDepositData          : standardRateLimitData,
-                usdcWithdrawData         : standardRateLimitData,
-                usdcToCctpData           : standardRateLimitData,
-                cctpToEthereumDomainData : standardRateLimitData
+                usdcDepositData          : standardUsdcRateLimitData,
+                usdcWithdrawData         : standardUsdcRateLimitData,
+                usdsDepositData          : standardUsdsRateLimitData,
+                usdsWithdrawData         : unlimitedRateLimitData,
+                susdsDepositData         : standardUsdsRateLimitData,
+                susdsWithdrawData        : unlimitedRateLimitData,
+                usdcToCctpData           : standardUsdcRateLimitData,
+                cctpToEthereumDomainData : standardUsdcRateLimitData
             });
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
