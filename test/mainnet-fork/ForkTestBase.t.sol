@@ -258,6 +258,9 @@ contract ForkTestBase is DssTest {
             mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         });
 
+        vm.prank(Ethereum.PAUSE_PROXY);
+        MainnetControllerInit.pauseProxyInit(Ethereum.PSM, controllerInst.almProxy);
+
         vm.startPrank(Ethereum.SPARK_PROXY);
         MainnetControllerInit.subDaoInitFull(
             addresses,
@@ -266,9 +269,6 @@ contract ForkTestBase is DssTest {
             mintRecipients
         );
         vm.stopPrank();
-
-        vm.prank(Ethereum.PAUSE_PROXY);
-        MainnetControllerInit.pauseProxyInit(Ethereum.PSM, controllerInst.almProxy);
 
         /*** Step 4: Label addresses ***/
 

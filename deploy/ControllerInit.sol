@@ -283,6 +283,10 @@ library ForeignControllerInit {
 
         _setRateLimitData(_makeKey(depositKey,  addresses.usdc), rateLimits, data.usdcDepositData,          "usdcDepositData");
         _setRateLimitData(_makeKey(withdrawKey, addresses.usdc), rateLimits, data.usdcWithdrawData,         "usdcWithdrawData");
+        _setRateLimitData(_makeKey(depositKey,  addresses.usdc), rateLimits, data.usdcDepositData,          "usdcDepositData");
+        _setRateLimitData(_makeKey(withdrawKey, addresses.usdc), rateLimits, data.usdcWithdrawData,         "usdcWithdrawData");
+        _setRateLimitData(_makeKey(depositKey,  addresses.usdc), rateLimits, data.usdcDepositData,          "usdcDepositData");
+        _setRateLimitData(_makeKey(withdrawKey, addresses.usdc), rateLimits, data.usdcWithdrawData,         "usdcWithdrawData");
         _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(),       rateLimits, data.usdcToCctpData,           "usdcToCctpData");
         _setRateLimitData(domainKeyEthereum,                     rateLimits, data.cctpToEthereumDomainData, "cctpToEthereumDomainData");
 
