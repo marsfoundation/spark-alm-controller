@@ -217,6 +217,8 @@ library ForeignControllerInit {
         address psm;
         address cctpMessenger;
         address usdc;
+        address usds;
+        address susds;
     }
 
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
@@ -224,6 +226,10 @@ library ForeignControllerInit {
     struct InitRateLimitData {
         RateLimitData usdcDepositData;
         RateLimitData usdcWithdrawData;
+        RateLimitData usdsDepositData;
+        RateLimitData usdsWithdrawData;
+        RateLimitData susdsDepositData;
+        RateLimitData susdsWithdrawData;
         RateLimitData usdcToCctpData;
         RateLimitData cctpToEthereumDomainData;
     }
@@ -281,14 +287,14 @@ library ForeignControllerInit {
             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
         );
 
-        _setRateLimitData(_makeKey(depositKey,  addresses.usdc), rateLimits, data.usdcDepositData,          "usdcDepositData");
-        _setRateLimitData(_makeKey(withdrawKey, addresses.usdc), rateLimits, data.usdcWithdrawData,         "usdcWithdrawData");
-        _setRateLimitData(_makeKey(depositKey,  addresses.usdc), rateLimits, data.usdcDepositData,          "usdcDepositData");
-        _setRateLimitData(_makeKey(withdrawKey, addresses.usdc), rateLimits, data.usdcWithdrawData,         "usdcWithdrawData");
-        _setRateLimitData(_makeKey(depositKey,  addresses.usdc), rateLimits, data.usdcDepositData,          "usdcDepositData");
-        _setRateLimitData(_makeKey(withdrawKey, addresses.usdc), rateLimits, data.usdcWithdrawData,         "usdcWithdrawData");
-        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(),       rateLimits, data.usdcToCctpData,           "usdcToCctpData");
-        _setRateLimitData(domainKeyEthereum,                     rateLimits, data.cctpToEthereumDomainData, "cctpToEthereumDomainData");
+        _setRateLimitData(_makeKey(depositKey,  addresses.usdc),  rateLimits, data.usdcDepositData,          "usdcDepositData",          6);
+        _setRateLimitData(_makeKey(withdrawKey, addresses.usdc),  rateLimits, data.usdcWithdrawData,         "usdcWithdrawData",         6);
+        _setRateLimitData(_makeKey(depositKey,  addresses.usds),  rateLimits, data.usdsDepositData,          "usdsDepositData",          18);
+        _setRateLimitData(_makeKey(withdrawKey, addresses.usds),  rateLimits, data.usdsWithdrawData,         "usdsWithdrawData",         18);
+        _setRateLimitData(_makeKey(depositKey,  addresses.susds), rateLimits, data.susdsDepositData,         "susdsDepositData",         18);
+        _setRateLimitData(_makeKey(withdrawKey, addresses.susds), rateLimits, data.susdsWithdrawData,        "susdsWithdrawData",        18);
+        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(),        rateLimits, data.usdcToCctpData,           "usdcToCctpData",           6);
+        _setRateLimitData(domainKeyEthereum,                      rateLimits, data.cctpToEthereumDomainData, "cctpToEthereumDomainData", 6);
 
         for (uint256 i = 0; i < mintRecipients.length; i++) {
             controller.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
@@ -303,7 +309,8 @@ library ForeignControllerInit {
         bytes32       key,
         IRateLimits   rateLimits,
         RateLimitData memory data,
-        string        memory name
+        string        memory name,
+        uint256       decimals
     )
         internal
     {
@@ -316,11 +323,11 @@ library ForeignControllerInit {
         }
         else {
             require(
-                data.maxAmount <= 1e18,
+                data.maxAmount <= 1e12 * (10 ** decimals),
                 string(abi.encodePacked("ForeignControllerInit/invalid-max-amount-precision-", name))
             );
             require(
-                data.slope <= uint256(1e18) / 1 hours,
+                data.slope <= 1e12 * (10 ** decimals) / 1 hours,
                 string(abi.encodePacked("ForeignControllerInit/invalid-slope-precision-", name))
             );
         }

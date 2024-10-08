@@ -223,20 +223,36 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
             oldController : address(0),  // Empty
             psm           : address(psmBase),
             cctpMessenger : CCTP_MESSENGER_BASE,
-            usdc          : USDC_BASE
+            usdc          : USDC_BASE,
+            usds          : address(usdsBase),
+            susds         : address(susdsBase)
         });
 
-        RateLimitData memory standardRateLimitData = RateLimitData({
+        RateLimitData memory standardUsdcRateLimitData = RateLimitData({
             maxAmount : 5_000_000e6,
             slope     : uint256(1_000_000e6) / 4 hours
         });
 
+        RateLimitData memory standardUsdsRateLimitData = RateLimitData({
+            maxAmount : 5_000_000e18,
+            slope     : uint256(1_000_000e18) / 4 hours
+        });
+
+        RateLimitData memory unlimitedRateLimitData = RateLimitData({
+            maxAmount : type(uint256).max,
+            slope     : 0
+        });
+
         ForeignControllerInit.InitRateLimitData memory rateLimitData
             = ForeignControllerInit.InitRateLimitData({
-                usdcDepositData          : standardRateLimitData,
-                usdcWithdrawData         : standardRateLimitData,
-                usdcToCctpData           : standardRateLimitData,
-                cctpToEthereumDomainData : standardRateLimitData
+                usdcDepositData          : standardUsdcRateLimitData,
+                usdcWithdrawData         : standardUsdcRateLimitData,
+                usdsDepositData          : standardUsdsRateLimitData,
+                usdsWithdrawData         : unlimitedRateLimitData,
+                susdsDepositData         : standardUsdsRateLimitData,
+                susdsWithdrawData        : unlimitedRateLimitData,
+                usdcToCctpData           : standardUsdcRateLimitData,
+                cctpToEthereumDomainData : standardUsdcRateLimitData
             });
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
