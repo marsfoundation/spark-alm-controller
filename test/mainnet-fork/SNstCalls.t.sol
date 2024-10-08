@@ -24,13 +24,13 @@ contract SUSDSTestBase is ForkTestBase {
 
         // Setting this value directly because susds.drip() fails in setUp with
         // StateChangeDuringStaticCall and it is unclear why, something related to foundry.
-        SUSDS_DRIP_AMOUNT = 65.974464865854020767e18;
+        SUSDS_DRIP_AMOUNT = 849.454677397481388011e18;
 
-        assertEq(SUSDS_CONVERTED_ASSETS, 1.001132854452150949e18);
-        assertEq(SUSDS_CONVERTED_SHARES, 0.998868427454844760e18);
+        assertEq(SUSDS_CONVERTED_ASSETS, 1.003430776383974596e18);
+        assertEq(SUSDS_CONVERTED_SHARES, 0.996580953599671364e18);
 
-        assertEq(SUSDS_TOTAL_ASSETS, 33_646_019.692009120031675306e18);
-        assertEq(SUSDS_TOTAL_SUPPLY, 33_607_946.779871889980091084e18);
+        assertEq(SUSDS_TOTAL_ASSETS, 485_597_342.757158870618550128e18);
+        assertEq(SUSDS_TOTAL_SUPPLY, 483_937_062.910395855928183397e18);
     }
 
 }
@@ -87,7 +87,7 @@ contract MainnetControllerDepositToSUSDSTests is SUSDSTestBase {
         assertEq(usds.allowance(address(almProxy), address(susds)), 0);
 
         assertEq(susds.totalSupply(),                SUSDS_TOTAL_SUPPLY + shares);
-        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18 - 1);  // Rounding
+        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18);
         assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
     }
 
@@ -131,7 +131,7 @@ contract MainnetControllerWithdrawFromSUSDSTests is SUSDSTestBase {
         assertEq(usds.allowance(address(almProxy), address(susds)),  0);
 
         assertEq(susds.totalSupply(),                SUSDS_TOTAL_SUPPLY + SUSDS_CONVERTED_SHARES);
-        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18 - 1);  // Rounding
+        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18);
         assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
 
         // Max available with rounding
@@ -193,7 +193,7 @@ contract MainnetControllerRedeemFromSUSDSTests is SUSDSTestBase {
         assertEq(usds.allowance(address(almProxy), address(susds)),  0);
 
         assertEq(susds.totalSupply(),                SUSDS_TOTAL_SUPPLY + SUSDS_CONVERTED_SHARES);
-        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18 - 1);  // Rounding
+        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18);
         assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
 
         vm.prank(relayer);

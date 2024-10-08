@@ -161,15 +161,15 @@ contract ForeignControllerDepositTests is ForeignControllerPSMSuccessTestBase {
         vm.prank(relayer);
         uint256 shares = foreignController.depositPSM(address(susdsBase), 100e18);
 
-        assertEq(shares, 125e18);
+        assertEq(shares, 100.343092065533568746e18);  // Sanity check conversion at fork block
 
         _assertState({
             token            : susdsBase,
             proxyBalance     : 0,
             psmBalance       : 100e18,
-            proxyShares      : 125e18,
-            totalShares      : 126e18,
-            totalAssets      : 126e18,
+            proxyShares      : shares,
+            totalShares      : 1e18 + shares,
+            totalAssets      : 1e18 + shares,
             rateLimitKey     : key,
             currentRateLimit : type(uint256).max
         });
@@ -296,15 +296,17 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
 
         deal(address(susdsBase), address(almProxy), 100e18);
         vm.prank(relayer);
-        foreignController.depositPSM(address(susdsBase), 100e18);
+        uint256 shares = foreignController.depositPSM(address(susdsBase), 100e18);
+
+        assertEq(shares, 100.343092065533568746e18);  // Sanity check conversion at fork block
 
         _assertState({
             token            : susdsBase,
             proxyBalance     : 0,
             psmBalance       : 100e18,
-            proxyShares      : 125e18,
-            totalShares      : 126e18,
-            totalAssets      : 126e18,
+            proxyShares      : shares,
+            totalShares      : 1e18 + shares,
+            totalAssets      : 1e18 + shares,
             rateLimitKey     : withdrawKey,
             currentRateLimit : type(uint256).max
         });
@@ -312,15 +314,15 @@ contract ForeignControllerWithdrawTests is ForeignControllerPSMSuccessTestBase {
         vm.prank(relayer);
         uint256 amountWithdrawn = foreignController.withdrawPSM(address(susdsBase), 100e18);
 
-        assertEq(amountWithdrawn, 100e18);
+        assertEq(amountWithdrawn, 100e18 - 1);  // Rounding
 
         _assertState({
             token            : susdsBase,
-            proxyBalance     : 100e18,
-            psmBalance       : 0,
+            proxyBalance     : 100e18 - 1,  // Rounding
+            psmBalance       : 1,           // Rounding
             proxyShares      : 0,
-            totalShares      : 1e18,  // From seeding USDS
-            totalAssets      : 1e18,  // From seeding USDS
+            totalShares      : 1e18,      // From seeding USDS
+            totalAssets      : 1e18 + 1,  // From seeding USDS, rounding
             rateLimitKey     : withdrawKey,
             currentRateLimit : type(uint256).max
         });

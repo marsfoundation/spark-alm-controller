@@ -153,6 +153,7 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
     address constant CCTP_MESSENGER_BASE = Base.CCTP_TOKEN_MESSENGER;
     address constant SPARK_EXECUTOR      = Base.SPARK_EXECUTOR;
+    address constant SSR_ORACLE          = Base.SSR_AUTH_ORACLE;
     address constant USDC_BASE           = Base.USDC;
 
     /**********************************************************************************************/
@@ -182,22 +183,18 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
         /*** Step 1: Set up environment and deploy mocks ***/
 
-        destination = getChain("base").createSelectFork(20187000);  // September 24, 2024
+        destination = getChain("base").createSelectFork(20782500);  // October 7, 2024
 
         usdsBase  = IERC20(address(new ERC20Mock()));
         susdsBase = IERC20(address(new ERC20Mock()));
         usdcBase  = IERC20(USDC_BASE);
-
-        rateProvider = new MockRateProvider();
-
-        rateProvider.__setConversionRate(1.25e27);  // TODO: Use live SSR oracle
 
         /*** Step 2: Deploy and configure PSM with a pocket ***/
 
         deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
 
         psmBase = IPSM3(PSM3Deploy.deploy(
-            SPARK_EXECUTOR, USDC_BASE, address(usdsBase), address(susdsBase), address(rateProvider)
+            SPARK_EXECUTOR, USDC_BASE, address(usdsBase), address(susdsBase), SSR_ORACLE
         ));
 
         vm.prank(SPARK_EXECUTOR);
@@ -428,7 +425,7 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
 
         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
-        _expectEthereumCCTPEmit(110_048, 1e6);
+        _expectEthereumCCTPEmit(114_803, 1e6);
 
         vm.prank(relayer);
         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
@@ -462,9 +459,9 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
         // Will split into 3 separate transactions at max 1m each
-        _expectEthereumCCTPEmit(110_048, 1_000_000e6);
-        _expectEthereumCCTPEmit(110_049, 1_000_000e6);
-        _expectEthereumCCTPEmit(110_050, 900_000e6);
+        _expectEthereumCCTPEmit(114_803, 1_000_000e6);
+        _expectEthereumCCTPEmit(114_804, 1_000_000e6);
+        _expectEthereumCCTPEmit(114_805, 900_000e6);
 
         vm.prank(relayer);
         mainnetController.transferUSDCToCCTP(2_900_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
@@ -534,7 +531,7 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
 
         assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
-        _expectBaseCCTPEmit(287_622, 1e6);
+        _expectBaseCCTPEmit(296_114, 1e6);
 
         vm.prank(relayer);
         foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
@@ -570,9 +567,9 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
         // Will split into three separate transactions at max 1m each
-        _expectBaseCCTPEmit(287_622, 1_000_000e6);
-        _expectBaseCCTPEmit(287_623, 1_000_000e6);
-        _expectBaseCCTPEmit(287_624, 600_000e6);
+        _expectBaseCCTPEmit(296_114, 1_000_000e6);
+        _expectBaseCCTPEmit(296_115, 1_000_000e6);
+        _expectBaseCCTPEmit(296_116, 600_000e6);
 
         vm.prank(relayer);
         foreignController.transferUSDCToCCTP(2_600_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);

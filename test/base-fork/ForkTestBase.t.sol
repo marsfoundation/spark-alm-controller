@@ -52,6 +52,7 @@ contract ForkTestBase is Test {
     address constant SPARK_EXECUTOR      = Base.SPARK_EXECUTOR;
     address constant CCTP_MESSENGER_BASE = Base.CCTP_TOKEN_MESSENGER;
     address constant USDC_BASE           = Base.USDC;
+    address constant SSR_ORACLE          = Base.SSR_AUTH_ORACLE;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
@@ -69,8 +70,6 @@ contract ForkTestBase is Test {
     IERC20 susdsBase;
     IERC20 usdcBase;
 
-    MockRateProvider rateProvider;
-
     IPSM3 psmBase;
 
     /**********************************************************************************************/
@@ -80,22 +79,18 @@ contract ForkTestBase is Test {
     function setUp() public virtual {
         /*** Step 1: Set up environment, deploy mock addresses ***/
 
-        vm.createSelectFork(getChain('base').rpcUrl, 20187000);  // August 8, 2024
+        vm.createSelectFork(getChain('base').rpcUrl, 20782500);  // October 8, 2024
 
         usdsBase  = IERC20(address(new ERC20Mock()));
         susdsBase = IERC20(address(new ERC20Mock()));
         usdcBase  = IERC20(USDC_BASE);
-
-        rateProvider = new MockRateProvider();
-
-        rateProvider.__setConversionRate(1.25e27);  // TODO: Use live SSR oracle
 
         /*** Step 2: Deploy and configure PSM with a pocket ***/
 
         deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
 
         psmBase = IPSM3(PSM3Deploy.deploy(
-            SPARK_EXECUTOR, USDC_BASE, address(usdsBase), address(susdsBase), address(rateProvider)
+            SPARK_EXECUTOR, USDC_BASE, address(usdsBase), address(susdsBase), SSR_ORACLE
         ));
 
         vm.prank(SPARK_EXECUTOR);

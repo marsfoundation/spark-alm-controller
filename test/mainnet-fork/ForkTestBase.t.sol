@@ -142,7 +142,7 @@ contract ForkTestBase is DssTest {
 
         /*** Step 1: Set up environment, cast addresses ***/
 
-        source = getChain("mainnet").createSelectFork(20819000);  //  September 24, 2024
+        source = getChain("mainnet").createSelectFork(20917850);  //  October 7, 2024
 
         dss = MCD.loadFromChainlog(LOG);
 
