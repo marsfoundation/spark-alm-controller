@@ -7,10 +7,12 @@ import "test/base-fork/ForkTestBase.t.sol";
 
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
-import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
-import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
+import { ControllerInstance }      from "deploy/ControllerInstance.sol";
+import { ForeignControllerDeploy } from "deploy/ControllerDeploy.sol";
 
-import { ForeignControllerInit, RateLimitData, MintRecipient } from "../../deploy/ControllerInit.sol";
+import { ForeignControllerInit, RateLimitData, MintRecipient } from "deploy/ControllerInit.sol";
+
+import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
 
 // Necessary to get error message assertions to work
 contract LibraryWrapper {
@@ -25,6 +27,7 @@ contract LibraryWrapper {
     {
         ForeignControllerInit.init(params, controllerInst, data, mintRecipients);
     }
+
 }
 
 contract ForeignControllerDeployAndInitTestBase is ForkTestBase {
@@ -38,7 +41,7 @@ contract ForeignControllerDeployAndInitTestBase is ForkTestBase {
         )
     {
         addresses = ForeignControllerInit.AddressParams({
-            admin         : admin,
+            admin         : SPARK_EXECUTOR,
             freezer       : freezer,
             relayer       : relayer,
             oldController : address(0),  // Empty
@@ -102,7 +105,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         super.setUp();
 
         controllerInst = ForeignControllerDeploy.deployFull(
-            admin,
+            SPARK_EXECUTOR,
             address(psmBase),
             USDC_BASE,
             CCTP_MESSENGER_BASE
@@ -122,16 +125,16 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
         // Admin will be calling the library from its own address
-        vm.etch(admin, address(new LibraryWrapper()).code);
+        vm.etch(SPARK_EXECUTOR, address(new LibraryWrapper()).code);
 
-        wrapper = LibraryWrapper(admin);
+        wrapper = LibraryWrapper(SPARK_EXECUTOR);
     }
 
     function test_init_incorrectAdminAlmProxy() external {
         // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(admin);
+        vm.startPrank(SPARK_EXECUTOR);
         almProxy.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
-        almProxy.revokeRole(DEFAULT_ADMIN_ROLE, admin);
+        almProxy.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR);
         vm.stopPrank();
 
         vm.expectRevert("ForeignControllerInit/incorrect-admin-almProxy");
@@ -140,9 +143,9 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
 
     function test_init_incorrectAdminRateLimits() external {
         // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(admin);
+        vm.startPrank(SPARK_EXECUTOR);
         rateLimits.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
-        rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, admin);
+        rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR);
         vm.stopPrank();
 
         vm.expectRevert("ForeignControllerInit/incorrect-admin-rateLimits");
@@ -151,9 +154,9 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
 
     function test_init_incorrectAdminController() external {
         // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(admin);
+        vm.startPrank(SPARK_EXECUTOR);
         foreignController.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
-        foreignController.revokeRole(DEFAULT_ADMIN_ROLE, admin);
+        foreignController.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR);
         vm.stopPrank();
 
         vm.expectRevert("ForeignControllerInit/incorrect-admin-controller");
@@ -162,7 +165,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
 
     function test_init_incorrectAlmProxy() external {
         // Deploy new address that will not EVM revert on OZ ACL check
-        controllerInst.almProxy = address(new ALMProxy(admin));
+        controllerInst.almProxy = address(new ALMProxy(SPARK_EXECUTOR));
 
         vm.expectRevert("ForeignControllerInit/incorrect-almProxy");
         wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
@@ -170,7 +173,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
 
     function test_init_incorrectRateLimits() external {
         // Deploy new address that will not EVM revert on OZ ACL check
-        controllerInst.rateLimits = address(new RateLimits(admin));
+        controllerInst.rateLimits = address(new RateLimits(SPARK_EXECUTOR));
 
         vm.expectRevert("ForeignControllerInit/incorrect-rateLimits");
         wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
@@ -199,7 +202,7 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
 
     function test_init_controllerInactive() external {
         // Cheating to set this outside of init scripts so that the controller can be frozen
-        vm.startPrank(admin);
+        vm.prank(SPARK_EXECUTOR);
         foreignController.grantRole(FREEZER, freezer);
 
         vm.startPrank(freezer);
@@ -401,7 +404,7 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
         // Perform new deployments against existing fork environment
 
         ControllerInstance memory controllerInst = ForeignControllerDeploy.deployFull(
-            admin,
+            SPARK_EXECUTOR,
             address(psmBase),
             USDC_BASE,
             CCTP_MESSENGER_BASE
@@ -413,9 +416,9 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
         foreignController = ForeignController(controllerInst.controller);
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
-        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),          true);
-        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),        true);
-        assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR),          true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR),        true);
+        assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR), true);
 
         assertEq(address(foreignController.proxy()),      controllerInst.almProxy);
         assertEq(address(foreignController.rateLimits()), controllerInst.rateLimits);
@@ -434,7 +437,7 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
             MintRecipient[]                         memory mintRecipients
         ) = _getDefaultParams();
 
-        vm.startPrank(admin);
+        vm.startPrank(SPARK_EXECUTOR);
         ForeignControllerInit.init(
             addresses,
             controllerInst,
@@ -478,7 +481,7 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
 
     function test_init_transferAclToNewController() public {
         ControllerInstance memory controllerInst = ForeignControllerDeploy.deployFull(
-            admin,
+            SPARK_EXECUTOR,
             address(psmBase),
             USDC_BASE,
             CCTP_MESSENGER_BASE
@@ -490,7 +493,7 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
             MintRecipient[]                         memory mintRecipients
         ) = _getDefaultParams();
 
-        vm.startPrank(admin);
+        vm.startPrank(SPARK_EXECUTOR);
         ForeignControllerInit.init(
             addresses,
             controllerInst,
@@ -501,7 +504,7 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
 
         // Example of how an upgrade would work
         address newController = ForeignControllerDeploy.deployController(
-            admin,
+            SPARK_EXECUTOR,
             controllerInst.almProxy,
             controllerInst.rateLimits,
             address(psmBase),
@@ -526,7 +529,7 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
 
-        vm.startPrank(admin);
+        vm.startPrank(SPARK_EXECUTOR);
         ForeignControllerInit.init(
             addresses,
             controllerInst,

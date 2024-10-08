@@ -14,10 +14,6 @@ import {
     MintRecipient
 } from "../../deploy/ControllerInit.sol";
 
-// TODO: Refactor to use live contracts
-// TODO: Declare Inst structs to emulate mainnet
-// NOTE: Allocation should be deployed prior to Controller
-
 // Necessary to get error message assertions to work
 contract LibraryWrapper {
 
@@ -65,19 +61,19 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
         )
     {
         addresses = MainnetControllerInit.AddressParams({
-            admin         : SPARK_PROXY,
+            admin         : Ethereum.SPARK_PROXY,
             freezer       : freezer,
             relayer       : relayer,
             oldController : address(0),
-            psm           : PSM,
-            vault         : ilkInst.vault,
-            buffer        : ilkInst.buffer,
-            cctpMessenger : CCTP_MESSENGER,
-            dai           : address(dai),
-            daiUsds       : address(daiUsds),
-            usdc          : USDC,
-            usds          : address(usds),
-            susds         : address(susds)
+            psm           : Ethereum.PSM,
+            vault         : vault,
+            buffer        : buffer,
+            cctpMessenger : Ethereum.CCTP_TOKEN_MESSENGER,
+            dai           : Ethereum.DAI,
+            daiUsds       : Ethereum.DAI_USDS,
+            usdc          : Ethereum.USDC,
+            usds          : Ethereum.USDS,
+            susds         : Ethereum.SUSDS
         });
 
         RateLimitData memory usdsMintData = RateLimitData({
@@ -134,11 +130,11 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
 
         controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
-            ilkInst.vault,
+            vault,
             PSM,
-            usdsInst.daiUsds,
+            DAI_USDS,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         MintRecipient[] memory mintRecipients_ = new MintRecipient[](1);
@@ -441,11 +437,11 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
-            ilkInst.vault,
+            vault,
             PSM,
-            usdsInst.daiUsds,
+            DAI_USDS,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
@@ -460,12 +456,12 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         assertEq(address(mainnetController.proxy()),      controllerInst.almProxy);
         assertEq(address(mainnetController.rateLimits()), controllerInst.rateLimits);
-        assertEq(address(mainnetController.vault()),      ilkInst.vault);
-        assertEq(address(mainnetController.buffer()),     ilkInst.buffer);
+        assertEq(address(mainnetController.vault()),      vault);
+        assertEq(address(mainnetController.buffer()),     buffer);
         assertEq(address(mainnetController.psm()),        PSM);
-        assertEq(address(mainnetController.daiUsds()),    usdsInst.daiUsds);
+        assertEq(address(mainnetController.daiUsds()),    DAI_USDS);
         assertEq(address(mainnetController.cctp()),       CCTP_MESSENGER);
-        assertEq(address(mainnetController.susds()),      susdsInst.sUsds);
+        assertEq(address(mainnetController.susds()),      address(susds));
         assertEq(address(mainnetController.dai()),        address(dai));
         assertEq(address(mainnetController.usdc()),       address(usdc));
         assertEq(address(mainnetController.usds()),       address(usds));
@@ -520,9 +516,9 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         );
 
-        assertEq(IVaultLike(ilkInst.vault).wards(controllerInst.almProxy), 1);
+        assertEq(IVaultLike(vault).wards(controllerInst.almProxy), 1);
 
-        assertEq(usds.allowance(ilkInst.buffer, controllerInst.almProxy), type(uint256).max);
+        assertEq(usds.allowance(buffer, controllerInst.almProxy), type(uint256).max);
 
         // Perform Maker initialization (from PAUSE_PROXY during spell)
 
@@ -540,11 +536,11 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
-            ilkInst.vault,
+            vault,
             PSM,
-            usdsInst.daiUsds,
+            DAI_USDS,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
@@ -604,11 +600,11 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
-            ilkInst.vault,
+            vault,
             PSM,
-            usdsInst.daiUsds,
+            DAI_USDS,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         (
@@ -632,11 +628,11 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             SPARK_PROXY,
             controllerInst.almProxy,
             controllerInst.rateLimits,
-            ilkInst.vault,
+            vault,
             PSM,
-            usdsInst.daiUsds,
+            DAI_USDS,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment

@@ -7,12 +7,22 @@ import { IERC20 } from "lib/forge-std/src/interfaces/IERC20.sol";
 
 import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 
+import { Base } from "spark-address-registry/Base.sol";
+
 import { PSM3Deploy }       from "spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }            from "spark-psm/src/PSM3.sol";
 import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
 
 import { CCTPBridgeTesting } from "xchain-helpers/src/testing/bridges/CCTPBridgeTesting.sol";
 import { CCTPForwarder }     from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
+
+import { ForeignControllerDeploy } from "deploy/ControllerDeploy.sol";
+import { ControllerInstance }      from "deploy/ControllerInstance.sol";
+
+import { ForeignControllerInit,
+    MintRecipient,
+    RateLimitData
+} from "deploy/ControllerInit.sol";
 
 import { ALMProxy }          from "src/ALMProxy.sol";
 import { ForeignController } from "src/ForeignController.sol";
@@ -131,14 +141,20 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
     using DomainHelpers     for *;
     using CCTPBridgeTesting for Bridge;
 
-    address admin = makeAddr("admin");
+    /**********************************************************************************************/
+    /*** Constants/state variables                                                              ***/
+    /**********************************************************************************************/
+
+    address pocket = makeAddr("pocket");
 
     /**********************************************************************************************/
     /*** Base addresses                                                                         ***/
     /**********************************************************************************************/
 
-    address CCTP_MESSENGER_BASE = 0x1682Ae6375C4E4A97e4B583BC394c861A46D8962;
-    address USDC_BASE           = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
+    address constant CCTP_MESSENGER_BASE = Base.CCTP_TOKEN_MESSENGER;
+    address constant SPARK_EXECUTOR      = Base.SPARK_EXECUTOR;
+    address constant SSR_ORACLE          = Base.SSR_AUTH_ORACLE;
+    address constant USDC_BASE           = Base.USDC;
 
     /**********************************************************************************************/
     /*** ALM system deployments                                                                 ***/
@@ -165,59 +181,73 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
     function setUp() public override virtual {
         super.setUp();
 
-        destination = getChain("base").createSelectFork(20187000);  // September 24, 2024
+        /*** Step 1: Set up environment and deploy mocks ***/
+
+        destination = getChain("base").createSelectFork(20782500);  // October 7, 2024
 
         usdsBase  = IERC20(address(new ERC20Mock()));
         susdsBase = IERC20(address(new ERC20Mock()));
         usdcBase  = IERC20(USDC_BASE);
 
-        rateProvider = new MockRateProvider();
-
-        rateProvider.__setConversionRate(1.25e27);
+        /*** Step 2: Deploy and configure PSM with a pocket ***/
 
         deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
 
         psmBase = IPSM3(PSM3Deploy.deploy(
-            admin, USDC_BASE, address(usdsBase), address(susdsBase), address(rateProvider)
+            SPARK_EXECUTOR, USDC_BASE, address(usdsBase), address(susdsBase), SSR_ORACLE
         ));
 
-        foreignAlmProxy   = new ALMProxy(admin);
-        foreignRateLimits = new RateLimits(admin);
+        vm.prank(SPARK_EXECUTOR);
+        psmBase.setPocket(pocket);
 
-        foreignController = new ForeignController({
-            admin_      : admin,
-            proxy_      : address(foreignAlmProxy),
-            rateLimits_ : address(foreignRateLimits),
-            psm_        : address(psmBase),
-            usdc_       : USDC_BASE,
-            cctp_       : CCTP_MESSENGER_BASE
+        vm.prank(pocket);
+        usdcBase.approve(address(psmBase), type(uint256).max);
+
+        /*** Step 3: Deploy and configure ALM system ***/
+
+        ControllerInstance memory controllerInst = ForeignControllerDeploy.deployFull({
+            admin : SPARK_EXECUTOR,
+            psm   : address(psmBase),
+            usdc  : USDC_BASE,
+            cctp  : CCTP_MESSENGER_BASE
         });
 
-        // NOTE: FREEZER, RELAYER, and CONTROLLER are taken from super.setUp()
+        foreignAlmProxy   = ALMProxy(payable(controllerInst.almProxy));
+        foreignRateLimits = RateLimits(controllerInst.rateLimits);
+        foreignController = ForeignController(controllerInst.controller);
 
-        vm.startPrank(admin);
+        ForeignControllerInit.AddressParams memory addresses = ForeignControllerInit.AddressParams({
+            admin         : SPARK_EXECUTOR,
+            freezer       : freezer,
+            relayer       : relayer,
+            oldController : address(0),  // Empty
+            psm           : address(psmBase),
+            cctpMessenger : CCTP_MESSENGER_BASE,
+            usdc          : USDC_BASE
+        });
 
-        foreignController.grantRole(FREEZER, freezer);
-        foreignController.grantRole(RELAYER, relayer);
+        RateLimitData memory standardRateLimitData = RateLimitData({
+            maxAmount : 5_000_000e6,
+            slope     : uint256(1_000_000e6) / 4 hours
+        });
 
-        foreignController.setMintRecipient(
-            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-            bytes32(uint256(uint160(address(almProxy))))
-        );
+        ForeignControllerInit.InitRateLimitData memory rateLimitData
+            = ForeignControllerInit.InitRateLimitData({
+                usdcDepositData          : standardRateLimitData,
+                usdcWithdrawData         : standardRateLimitData,
+                usdcToCctpData           : standardRateLimitData,
+                cctpToEthereumDomainData : standardRateLimitData
+            });
 
-        foreignAlmProxy.grantRole(CONTROLLER, address(foreignController));
+        MintRecipient[] memory mintRecipients = new MintRecipient[](1);
 
-        foreignRateLimits.grantRole(CONTROLLER, address(foreignController));
+        mintRecipients[0] = MintRecipient({
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            mintRecipient : bytes32(uint256(uint160(address(almProxy))))
+        });
 
-        bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
-            foreignController.LIMIT_USDC_TO_DOMAIN(),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
-        );
-
-        // Set up rate limits
-        foreignRateLimits.setRateLimitData(domainKeyEthereum,                      5_000_000e6, uint256(1_000_000e6) / 4 hours);
-        foreignRateLimits.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), 5_000_000e6, uint256(1_000_000e6) / 4 hours);
-
+        vm.startPrank(SPARK_EXECUTOR);
+        ForeignControllerInit.init(addresses, controllerInst, rateLimitData, mintRecipients);
         vm.stopPrank();
 
         USDC_BASE_SUPPLY = usdcBase.totalSupply();
@@ -263,7 +293,7 @@ contract ForeignControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPT
     }
 
     function test_transferUSDCToCCTP_cctpRateLimitedBoundary() external {
-        vm.startPrank(admin);
+        vm.startPrank(SPARK_EXECUTOR);
 
         // Set this so second modifier will be passed in success case
         foreignRateLimits.setUnlimitedRateLimitData(
@@ -294,7 +324,7 @@ contract ForeignControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPT
     }
 
     function test_transferUSDCToCCTP_domainRateLimitedBoundary() external {
-        vm.startPrank(admin);
+        vm.startPrank(SPARK_EXECUTOR);
 
         // Set this so first modifier will be passed in success case
         foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
@@ -328,7 +358,7 @@ contract ForeignControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPT
 
     function test_transferUSDCToCCTP_invalidMintRecipient() external {
         // Configure to pass modifiers
-        vm.startPrank(admin);
+        vm.startPrank(SPARK_EXECUTOR);
 
         foreignRateLimits.setUnlimitedRateLimitData(
             RateLimitHelpers.makeDomainKey(
@@ -380,7 +410,7 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
 
         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
-        _expectEthereumCCTPEmit(110_048, 1e6);
+        _expectEthereumCCTPEmit(114_803, 1e6);
 
         vm.prank(relayer);
         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
@@ -414,9 +444,9 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
         // Will split into 3 separate transactions at max 1m each
-        _expectEthereumCCTPEmit(110_048, 1_000_000e6);
-        _expectEthereumCCTPEmit(110_049, 1_000_000e6);
-        _expectEthereumCCTPEmit(110_050, 900_000e6);
+        _expectEthereumCCTPEmit(114_803, 1_000_000e6);
+        _expectEthereumCCTPEmit(114_804, 1_000_000e6);
+        _expectEthereumCCTPEmit(114_805, 900_000e6);
 
         vm.prank(relayer);
         mainnetController.transferUSDCToCCTP(2_900_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
@@ -486,7 +516,7 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
 
         assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
-        _expectBaseCCTPEmit(287_622, 1e6);
+        _expectBaseCCTPEmit(296_114, 1e6);
 
         vm.prank(relayer);
         foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
@@ -522,9 +552,9 @@ contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
         assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
         // Will split into three separate transactions at max 1m each
-        _expectBaseCCTPEmit(287_622, 1_000_000e6);
-        _expectBaseCCTPEmit(287_623, 1_000_000e6);
-        _expectBaseCCTPEmit(287_624, 600_000e6);
+        _expectBaseCCTPEmit(296_114, 1_000_000e6);
+        _expectBaseCCTPEmit(296_115, 1_000_000e6);
+        _expectBaseCCTPEmit(296_116, 600_000e6);
 
         vm.prank(relayer);
         foreignController.transferUSDCToCCTP(2_600_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
