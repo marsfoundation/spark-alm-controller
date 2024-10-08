@@ -126,32 +126,17 @@ contract ForkTestBase is Test {
             usdc          : USDC_BASE
         });
 
-        RateLimitData memory usdcDepositData = RateLimitData({
-            maxAmount : 5_000_000e6,
-            slope     : uint256(1_000_000e6) / 4 hours
-        });
-
-        RateLimitData memory usdcWithdrawData = RateLimitData({
-            maxAmount : 5_000_000e6,
-            slope     : uint256(1_000_000e6) / 4 hours
-        });
-
-        RateLimitData memory usdcToCctpData = RateLimitData({
-            maxAmount : 5_000_000e6,
-            slope     : uint256(1_000_000e6) / 4 hours
-        });
-
-        RateLimitData memory cctpToEthereumDomainData = RateLimitData({
+        RateLimitData memory standardRateLimitData = RateLimitData({
             maxAmount : 5_000_000e6,
             slope     : uint256(1_000_000e6) / 4 hours
         });
 
         ForeignControllerInit.InitRateLimitData memory rateLimitData
             = ForeignControllerInit.InitRateLimitData({
-                usdcDepositData          : usdcDepositData,
-                usdcWithdrawData         : usdcWithdrawData,
-                usdcToCctpData           : usdcToCctpData,
-                cctpToEthereumDomainData : cctpToEthereumDomainData
+                usdcDepositData          : standardRateLimitData,
+                usdcWithdrawData         : standardRateLimitData,
+                usdcToCctpData           : standardRateLimitData,
+                cctpToEthereumDomainData : standardRateLimitData
             });
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);

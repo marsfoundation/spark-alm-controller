@@ -228,17 +228,7 @@ contract ForkTestBase is DssTest {
             slope     : uint256(1_000_000e18) / 4 hours
         });
 
-        RateLimitData memory usdcToUsdsData = RateLimitData({
-            maxAmount : 5_000_000e6,
-            slope     : uint256(1_000_000e6) / 4 hours
-        });
-
-        RateLimitData memory usdcToCctpData = RateLimitData({
-            maxAmount : 5_000_000e6,
-            slope     : uint256(1_000_000e6) / 4 hours
-        });
-
-        RateLimitData memory cctpToBaseDomainData = RateLimitData({
+        RateLimitData memory standardUsdcData = RateLimitData({
             maxAmount : 5_000_000e6,
             slope     : uint256(1_000_000e6) / 4 hours
         });
@@ -246,9 +236,9 @@ contract ForkTestBase is DssTest {
         MainnetControllerInit.InitRateLimitData memory rateLimitData
             = MainnetControllerInit.InitRateLimitData({
                 usdsMintData         : usdsMintData,
-                usdcToUsdsData       : usdcToUsdsData,
-                usdcToCctpData       : usdcToCctpData,
-                cctpToBaseDomainData : cctpToBaseDomainData
+                usdcToUsdsData       : standardUsdcData,
+                usdcToCctpData       : standardUsdcData,
+                cctpToBaseDomainData : standardUsdcData
             });
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
