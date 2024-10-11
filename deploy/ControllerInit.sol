@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import { IAccessControl } from "lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
-
 import { CCTPForwarder } from "lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
 import { ForeignController } from "src/ForeignController.sol";
@@ -18,15 +16,11 @@ interface IBufferLike {
     function approve(address, address, uint256) external;
 }
 
-interface IForeignControllerLike is IAccessControl {
-    function FREEZER() external view returns (bytes32);
-    function LIMIT_PSM_DEPOSIT() external view returns (bytes32);
-    function LIMIT_PSM_WITHDRAW() external view returns (bytes32);
-    function RELAYER() external view returns (bytes32);
-}
-
 interface IPSMLike {
     function kiss(address) external;
+}
+
+interface IPSM3Like {
     function totalAssets() external view returns (uint256);
     function totalShares() external view returns (uint256);
 }
@@ -65,7 +59,7 @@ library MainnetControllerInit {
 
     struct InitRateLimitData {
         RateLimitData usdsMintData;
-        RateLimitData usdcToUsdsData;
+        RateLimitData usdsToUsdcData;
         RateLimitData usdcToCctpData;
         RateLimitData cctpToBaseDomainData;
     }
@@ -127,9 +121,11 @@ library MainnetControllerInit {
         );
 
         _setRateLimitData(controller.LIMIT_USDS_MINT(),    rateLimits, data.usdsMintData,         "usdsMintData",         18);
-        _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, data.usdcToUsdsData,       "usdcToUsdsData",       6);
+        _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, data.usdsToUsdcData,       "usdsToUsdcData",       6);
         _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, data.usdcToCctpData,       "usdcToCctpData",       6);
         _setRateLimitData(domainKeyBase,                   rateLimits, data.cctpToBaseDomainData, "cctpToBaseDomainData", 6);
+
+        // Step 4: Configure the mint recipients on other domains
 
         for (uint256 i = 0; i < mintRecipients.length; i++) {
             controller.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
@@ -261,8 +257,8 @@ library ForeignControllerInit {
 
         require(addresses.oldController != address(controller), "ForeignControllerInit/old-controller-is-new-controller");
 
-        require(IPSMLike(addresses.psm).totalAssets() >= 1e18, "ForeignControllerInit/psm-totalAssets-not-seeded");
-        require(IPSMLike(addresses.psm).totalShares() >= 1e18, "ForeignControllerInit/psm-totalShares-not-seeded");
+        require(IPSM3Like(addresses.psm).totalAssets() >= 1e18, "ForeignControllerInit/psm-totalAssets-not-seeded");
+        require(IPSM3Like(addresses.psm).totalShares() >= 1e18, "ForeignControllerInit/psm-totalShares-not-seeded");
 
         // Step 1: Configure ACL permissions for controller and almProxy
 
@@ -295,6 +291,8 @@ library ForeignControllerInit {
         _setRateLimitData(_makeKey(withdrawKey, addresses.susds), rateLimits, data.susdsWithdrawData,        "susdsWithdrawData",        18);
         _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(),        rateLimits, data.usdcToCctpData,           "usdcToCctpData",           6);
         _setRateLimitData(domainKeyEthereum,                      rateLimits, data.cctpToEthereumDomainData, "cctpToEthereumDomainData", 6);
+
+        // Step 3: Configure the mint recipients on other domains
 
         for (uint256 i = 0; i < mintRecipients.length; i++) {
             controller.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);

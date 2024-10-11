@@ -236,7 +236,7 @@ contract ForkTestBase is DssTest {
         MainnetControllerInit.InitRateLimitData memory rateLimitData
             = MainnetControllerInit.InitRateLimitData({
                 usdsMintData         : usdsMintData,
-                usdcToUsdsData       : standardUsdcData,
+                usdsToUsdcData       : standardUsdcData,
                 usdcToCctpData       : standardUsdcData,
                 cctpToBaseDomainData : standardUsdcData
             });

@@ -81,7 +81,7 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
             slope     : uint256(1_000_000e18) / 4 hours
         });
 
-        RateLimitData memory usdcToUsdsData = RateLimitData({
+        RateLimitData memory usdsToUsdcData = RateLimitData({
             maxAmount : 2_000_000e6,
             slope     : uint256(2_000_000e6) / 4 hours
         });
@@ -98,7 +98,7 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
 
         rateLimitData = MainnetControllerInit.InitRateLimitData({
             usdsMintData         : usdsMintData,
-            usdcToUsdsData       : usdcToUsdsData,
+            usdsToUsdcData       : usdsToUsdcData,
             usdcToCctpData       : usdcToCctpData,
             cctpToBaseDomainData : cctpToBaseDomainData
         });
@@ -298,10 +298,10 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     }
 
     function test_init_incorrectUsdcToUsdsData_unlimitedBoundary() external {
-        rateLimitData.usdcToUsdsData.maxAmount = type(uint256).max;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdcToUsdsData"));
+        rateLimitData.usdsToUsdcData.maxAmount = type(uint256).max;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdsToUsdcData"));
 
-        rateLimitData.usdcToUsdsData.slope = 0;
+        rateLimitData.usdsToUsdcData.slope = 0;
         _checkBothInitsSucceed();
     }
 
@@ -334,10 +334,10 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     }
 
     function test_init_incorrectUsdcToUsdsData_maxAmountPrecisionBoundary() external {
-        rateLimitData.usdcToUsdsData.maxAmount = 1e12 * 1e6 + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdcToUsdsData"));
+        rateLimitData.usdsToUsdcData.maxAmount = 1e12 * 1e6 + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdsToUsdcData"));
 
-        rateLimitData.usdcToUsdsData.maxAmount = 1e12 * 1e6;
+        rateLimitData.usdsToUsdcData.maxAmount = 1e12 * 1e6;
         _checkBothInitsSucceed();
     }
 
@@ -370,10 +370,10 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     }
 
     function test_init_incorrectUsdcToUsdsData_slopePrecisionBoundary() external {
-        rateLimitData.usdcToUsdsData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdcToUsdsData"));
+        rateLimitData.usdsToUsdcData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdsToUsdcData"));
 
-        rateLimitData.usdcToUsdsData.slope = uint256(1e12 * 1e6) / 1 hours;
+        rateLimitData.usdsToUsdcData.slope = uint256(1e12 * 1e6) / 1 hours;
         _checkBothInitsSucceed();
     }
 
@@ -502,7 +502,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         );
 
         _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimitData.usdsMintData);
-        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdcToUsdsData);
+        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdsToUsdcData);
         _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
         _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
 
@@ -580,7 +580,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         );
 
         _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimitData.usdsMintData);
-        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdcToUsdsData);
+        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdsToUsdcData);
         _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
         _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
 
