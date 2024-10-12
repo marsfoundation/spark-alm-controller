@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import { AllocatorIlkInstance } from "lib/dss-allocator/deploy/AllocatorInstances.sol";
-
-import { IAccessControl } from "lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
-
 import { CCTPForwarder } from "lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
 import { ForeignController } from "src/ForeignController.sol";
@@ -20,15 +16,13 @@ interface IBufferLike {
     function approve(address, address, uint256) external;
 }
 
-interface IForeignControllerLike is IAccessControl {
-    function FREEZER() external view returns (bytes32);
-    function LIMIT_PSM_DEPOSIT() external view returns (bytes32);
-    function LIMIT_PSM_WITHDRAW() external view returns (bytes32);
-    function RELAYER() external view returns (bytes32);
-}
-
 interface IPSMLike {
     function kiss(address) external;
+}
+
+interface IPSM3Like {
+    function totalAssets() external view returns (uint256);
+    function totalShares() external view returns (uint256);
 }
 
 interface IVaultLike {
@@ -40,6 +34,11 @@ struct RateLimitData {
     uint256 slope;
 }
 
+struct MintRecipient {
+    uint32  domain;
+    bytes32 mintRecipient;
+}
+
 library MainnetControllerInit {
 
     struct AddressParams {
@@ -48,6 +47,8 @@ library MainnetControllerInit {
         address relayer;
         address oldController;
         address psm;
+        address vault;
+        address buffer;
         address cctpMessenger;
         address dai;
         address daiUsds;
@@ -58,7 +59,7 @@ library MainnetControllerInit {
 
     struct InitRateLimitData {
         RateLimitData usdsMintData;
-        RateLimitData usdcToUsdsData;
+        RateLimitData usdsToUsdcData;
         RateLimitData usdcToCctpData;
         RateLimitData cctpToBaseDomainData;
     }
@@ -66,10 +67,10 @@ library MainnetControllerInit {
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     function subDaoInitController(
-        AddressParams        memory params,
-        ControllerInstance   memory controllerInst,
-        AllocatorIlkInstance memory ilkInst,
-        InitRateLimitData    memory data
+        AddressParams      memory addresses,
+        ControllerInstance memory controllerInst,
+        InitRateLimitData  memory data,
+        MintRecipient[]    memory mintRecipients
     )
         internal
     {
@@ -80,34 +81,36 @@ library MainnetControllerInit {
 
         // Step 1: Perform sanity checks
 
-        require(controller.hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true, "MainnetControllerInit/incorrect-admin-controller");
+        require(controller.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin) == true, "MainnetControllerInit/incorrect-admin-controller");
 
         require(address(controller.proxy())      == controllerInst.almProxy,   "MainnetControllerInit/incorrect-almProxy");
         require(address(controller.rateLimits()) == controllerInst.rateLimits, "MainnetControllerInit/incorrect-rateLimits");
-        require(address(controller.vault())      == ilkInst.vault,             "MainnetControllerInit/incorrect-vault");
-        require(address(controller.buffer())     == ilkInst.buffer,            "MainnetControllerInit/incorrect-buffer");
-        require(address(controller.psm())        == params.psm,                "MainnetControllerInit/incorrect-psm");
-        require(address(controller.daiUsds())    == params.daiUsds,            "MainnetControllerInit/incorrect-daiUsds");
-        require(address(controller.cctp())       == params.cctpMessenger,      "MainnetControllerInit/incorrect-cctpMessenger");
-        require(address(controller.susds())      == params.susds,              "MainnetControllerInit/incorrect-susds");
-        require(address(controller.dai())        == params.dai,                "MainnetControllerInit/incorrect-dai");
-        require(address(controller.usdc())       == params.usdc,               "MainnetControllerInit/incorrect-usdc");
-        require(address(controller.usds())       == params.usds,               "MainnetControllerInit/incorrect-usds");
+        require(address(controller.vault())      == addresses.vault,           "MainnetControllerInit/incorrect-vault");
+        require(address(controller.buffer())     == addresses.buffer,          "MainnetControllerInit/incorrect-buffer");
+        require(address(controller.psm())        == addresses.psm,             "MainnetControllerInit/incorrect-psm");
+        require(address(controller.daiUsds())    == addresses.daiUsds,         "MainnetControllerInit/incorrect-daiUsds");
+        require(address(controller.cctp())       == addresses.cctpMessenger,   "MainnetControllerInit/incorrect-cctpMessenger");
+        require(address(controller.susds())      == addresses.susds,           "MainnetControllerInit/incorrect-susds");
+        require(address(controller.dai())        == addresses.dai,             "MainnetControllerInit/incorrect-dai");
+        require(address(controller.usdc())       == addresses.usdc,            "MainnetControllerInit/incorrect-usdc");
+        require(address(controller.usds())       == addresses.usds,            "MainnetControllerInit/incorrect-usds");
 
         require(controller.psmTo18ConversionFactor() == 1e12, "MainnetControllerInit/incorrect-psmTo18ConversionFactor");
         require(controller.active()                  == true, "MainnetControllerInit/controller-not-active");
 
+        require(addresses.oldController != address(controller), "MainnetControllerInit/old-controller-is-new-controller");
+
         // Step 2: Configure ACL permissions for controller and almProxy
 
-        controller.grantRole(controller.FREEZER(), params.freezer);
-        controller.grantRole(controller.RELAYER(), params.relayer);
+        controller.grantRole(controller.FREEZER(), addresses.freezer);
+        controller.grantRole(controller.RELAYER(), addresses.relayer);
 
         almProxy.grantRole(almProxy.CONTROLLER(), address(controller));
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
 
-        if (params.oldController != address(0)) {
-            almProxy.revokeRole(almProxy.CONTROLLER(), params.oldController);
-            rateLimits.revokeRole(rateLimits.CONTROLLER(), params.oldController);
+        if (addresses.oldController != address(0)) {
+            almProxy.revokeRole(almProxy.CONTROLLER(), addresses.oldController);
+            rateLimits.revokeRole(rateLimits.CONTROLLER(), addresses.oldController);
         }
 
         // Step 3: Configure all rate limits for controller, using Base as only domain
@@ -118,28 +121,34 @@ library MainnetControllerInit {
         );
 
         _setRateLimitData(controller.LIMIT_USDS_MINT(),    rateLimits, data.usdsMintData,         "usdsMintData",         18);
-        _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, data.usdcToUsdsData,       "usdcToUsdsData",       6);
+        _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, data.usdsToUsdcData,       "usdsToUsdcData",       6);
         _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, data.usdcToCctpData,       "usdcToCctpData",       6);
         _setRateLimitData(domainKeyBase,                   rateLimits, data.cctpToBaseDomainData, "cctpToBaseDomainData", 6);
+
+        // Step 4: Configure the mint recipients on other domains
+
+        for (uint256 i = 0; i < mintRecipients.length; i++) {
+            controller.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
+        }
     }
 
     function subDaoInitFull(
-        AddressParams        memory params,
-        ControllerInstance   memory controllerInst,
-        AllocatorIlkInstance memory ilkInst,
-        InitRateLimitData    memory data
+        AddressParams      memory addresses,
+        ControllerInstance memory controllerInst,
+        InitRateLimitData  memory data,
+        MintRecipient[]    memory mintRecipients
     )
         internal
     {
         // Step 1: Perform initial sanity checks
 
         require(
-            IALMProxy(controllerInst.almProxy).hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true,
+            IALMProxy(controllerInst.almProxy).hasRole(DEFAULT_ADMIN_ROLE, addresses.admin) == true,
             "MainnetControllerInit/incorrect-admin-almProxy"
         );
 
         require(
-            IRateLimits(controllerInst.rateLimits).hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true,
+            IRateLimits(controllerInst.rateLimits).hasRole(DEFAULT_ADMIN_ROLE, addresses.admin) == true,
             "MainnetControllerInit/incorrect-admin-rateLimits"
         );
 
@@ -147,16 +156,16 @@ library MainnetControllerInit {
         //         and almProxy and rate limits.
 
         subDaoInitController(
-            params,
+            addresses,
             controllerInst,
-            ilkInst,
-            data
+            data,
+            mintRecipients
         );
 
         // Step 3: Configure almProxy within the allocation system
 
-        IVaultLike(ilkInst.vault).rely(controllerInst.almProxy);
-        IBufferLike(ilkInst.buffer).approve(params.usds, controllerInst.almProxy, type(uint256).max);
+        IVaultLike(addresses.vault).rely(controllerInst.almProxy);
+        IBufferLike(addresses.buffer).approve(addresses.usds, controllerInst.almProxy, type(uint256).max);
     }
 
     function pauseProxyInit(address psm, address almProxy) internal {
@@ -213,14 +222,19 @@ library ForeignControllerInit {
     struct InitRateLimitData {
         RateLimitData usdcDepositData;
         RateLimitData usdcWithdrawData;
+        RateLimitData usdsDepositData;
+        RateLimitData usdsWithdrawData;
+        RateLimitData susdsDepositData;
+        RateLimitData susdsWithdrawData;
         RateLimitData usdcToCctpData;
         RateLimitData cctpToEthereumDomainData;
     }
 
     function init(
-        AddressParams      memory params,
+        AddressParams      memory addresses,
         ControllerInstance memory controllerInst,
-        InitRateLimitData  memory data
+        InitRateLimitData  memory data,
+        MintRecipient[]    memory mintRecipients
     )
         internal
     {
@@ -229,29 +243,35 @@ library ForeignControllerInit {
 
         ForeignController controller = ForeignController(controllerInst.controller);
 
-        require(almProxy.hasRole(DEFAULT_ADMIN_ROLE, params.admin)   == true, "ForeignControllerInit/incorrect-admin-almProxy");
-        require(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true, "ForeignControllerInit/incorrect-admin-rateLimits");
-        require(controller.hasRole(DEFAULT_ADMIN_ROLE, params.admin) == true, "ForeignControllerInit/incorrect-admin-controller");
+        require(almProxy.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin)   == true, "ForeignControllerInit/incorrect-admin-almProxy");
+        require(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin) == true, "ForeignControllerInit/incorrect-admin-rateLimits");
+        require(controller.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin) == true, "ForeignControllerInit/incorrect-admin-controller");
 
         require(address(controller.proxy())      == controllerInst.almProxy,   "ForeignControllerInit/incorrect-almProxy");
         require(address(controller.rateLimits()) == controllerInst.rateLimits, "ForeignControllerInit/incorrect-rateLimits");
-        require(address(controller.psm())        == params.psm,                "ForeignControllerInit/incorrect-psm");
-        require(address(controller.usdc())       == params.usdc,               "ForeignControllerInit/incorrect-usdc");
-        require(address(controller.cctp())       == params.cctpMessenger,      "ForeignControllerInit/incorrect-cctp");
+        require(address(controller.psm())        == addresses.psm,             "ForeignControllerInit/incorrect-psm");
+        require(address(controller.usdc())       == addresses.usdc,            "ForeignControllerInit/incorrect-usdc");
+        require(address(controller.cctp())       == addresses.cctpMessenger,   "ForeignControllerInit/incorrect-cctp");
+
+        require(controller.active() == true, "ForeignControllerInit/controller-not-active");
+
+        require(addresses.oldController != address(controller), "ForeignControllerInit/old-controller-is-new-controller");
+
+        require(IPSM3Like(addresses.psm).totalAssets() >= 1e18, "ForeignControllerInit/psm-totalAssets-not-seeded");
+        require(IPSM3Like(addresses.psm).totalShares() >= 1e18, "ForeignControllerInit/psm-totalShares-not-seeded");
 
         // Step 1: Configure ACL permissions for controller and almProxy
 
-        controller.grantRole(controller.FREEZER(), params.freezer);
-        controller.grantRole(controller.RELAYER(), params.relayer);
+        controller.grantRole(controller.FREEZER(), addresses.freezer);
+        controller.grantRole(controller.RELAYER(), addresses.relayer);
 
         almProxy.grantRole(almProxy.CONTROLLER(), address(controller));
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
 
-        if (params.oldController != address(0)) {
-            almProxy.revokeRole(almProxy.CONTROLLER(), params.oldController);
-            rateLimits.revokeRole(rateLimits.CONTROLLER(), params.oldController);
+        if (addresses.oldController != address(0)) {
+            almProxy.revokeRole(almProxy.CONTROLLER(), addresses.oldController);
+            rateLimits.revokeRole(rateLimits.CONTROLLER(), addresses.oldController);
         }
-
 
         // Step 2: Configure all rate limits for controller
 
@@ -263,10 +283,20 @@ library ForeignControllerInit {
             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
         );
 
-        _setRateLimitData(_makeKey(depositKey,  params.usdc), rateLimits, data.usdcDepositData,          "usdcDepositData");
-        _setRateLimitData(_makeKey(withdrawKey, params.usdc), rateLimits, data.usdcWithdrawData,         "usdcWithdrawData");
-        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(),    rateLimits, data.usdcToCctpData,           "usdcToCctpData");
-        _setRateLimitData(domainKeyEthereum,                  rateLimits, data.cctpToEthereumDomainData, "cctpToEthereumDomainData");
+        _setRateLimitData(_makeKey(depositKey,  addresses.usdc),  rateLimits, data.usdcDepositData,          "usdcDepositData",          6);
+        _setRateLimitData(_makeKey(withdrawKey, addresses.usdc),  rateLimits, data.usdcWithdrawData,         "usdcWithdrawData",         6);
+        _setRateLimitData(_makeKey(depositKey,  addresses.usds),  rateLimits, data.usdsDepositData,          "usdsDepositData",          18);
+        _setRateLimitData(_makeKey(withdrawKey, addresses.usds),  rateLimits, data.usdsWithdrawData,         "usdsWithdrawData",         18);
+        _setRateLimitData(_makeKey(depositKey,  addresses.susds), rateLimits, data.susdsDepositData,         "susdsDepositData",         18);
+        _setRateLimitData(_makeKey(withdrawKey, addresses.susds), rateLimits, data.susdsWithdrawData,        "susdsWithdrawData",        18);
+        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(),        rateLimits, data.usdcToCctpData,           "usdcToCctpData",           6);
+        _setRateLimitData(domainKeyEthereum,                      rateLimits, data.cctpToEthereumDomainData, "cctpToEthereumDomainData", 6);
+
+        // Step 3: Configure the mint recipients on other domains
+
+        for (uint256 i = 0; i < mintRecipients.length; i++) {
+            controller.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
+        }
     }
 
     function _makeKey(bytes32 actionKey, address asset) internal pure returns (bytes32) {
@@ -277,7 +307,8 @@ library ForeignControllerInit {
         bytes32       key,
         IRateLimits   rateLimits,
         RateLimitData memory data,
-        string        memory name
+        string        memory name,
+        uint256       decimals
     )
         internal
     {
@@ -290,11 +321,11 @@ library ForeignControllerInit {
         }
         else {
             require(
-                data.maxAmount <= 1e18,
+                data.maxAmount <= 1e12 * (10 ** decimals),
                 string(abi.encodePacked("ForeignControllerInit/invalid-max-amount-precision-", name))
             );
             require(
-                data.slope <= uint256(1e18) / 1 hours,
+                data.slope <= 1e12 * (10 ** decimals) / 1 hours,
                 string(abi.encodePacked("ForeignControllerInit/invalid-slope-precision-", name))
             );
         }

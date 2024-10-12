@@ -8,11 +8,11 @@ import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 
-import { MainnetControllerInit, RateLimitData } from "../../deploy/ControllerInit.sol";
-
-// TODO: Refactor to use live contracts
-// TODO: Declare Inst structs to emulate mainnet
-// NOTE: Allocation should be deployed prior to Controller
+import {
+    MainnetControllerInit,
+    RateLimitData,
+    MintRecipient
+} from "../../deploy/ControllerInit.sol";
 
 // Necessary to get error message assertions to work
 contract LibraryWrapper {
@@ -20,32 +20,32 @@ contract LibraryWrapper {
     function subDaoInitController(
         MainnetControllerInit.AddressParams     memory params,
         ControllerInstance                      memory controllerInst,
-        AllocatorIlkInstance                    memory ilkInst,
-        MainnetControllerInit.InitRateLimitData memory rateLimitData
+        MainnetControllerInit.InitRateLimitData memory rateLimitData,
+        MintRecipient[]                         memory mintRecipients
     )
         external
     {
         MainnetControllerInit.subDaoInitController(
             params,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 
     function subDaoInitFull(
         MainnetControllerInit.AddressParams     memory params,
         ControllerInstance                      memory controllerInst,
-        AllocatorIlkInstance                    memory ilkInst,
-        MainnetControllerInit.InitRateLimitData memory rateLimitData
+        MainnetControllerInit.InitRateLimitData memory rateLimitData,
+        MintRecipient[]                         memory mintRecipients
     )
         external
     {
         MainnetControllerInit.subDaoInitFull(
             params,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 
@@ -54,23 +54,26 @@ contract LibraryWrapper {
 contract MainnetControllerDeployInitTestBase is ForkTestBase {
 
     function _getDefaultParams()
-        internal view returns (
+        internal returns (
             MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData
+            MainnetControllerInit.InitRateLimitData memory rateLimitData,
+            MintRecipient[]                         memory mintRecipients
         )
     {
         addresses = MainnetControllerInit.AddressParams({
-            admin         : SPARK_PROXY,
+            admin         : Ethereum.SPARK_PROXY,
             freezer       : freezer,
             relayer       : relayer,
             oldController : address(0),
-            psm           : PSM,
-            cctpMessenger : CCTP_MESSENGER,
-            dai           : address(dai),
-            daiUsds       : address(daiUsds),
-            usdc          : USDC,
-            usds          : address(usds),
-            susds         : address(susds)
+            psm           : Ethereum.PSM,
+            vault         : vault,
+            buffer        : buffer,
+            cctpMessenger : Ethereum.CCTP_TOKEN_MESSENGER,
+            dai           : Ethereum.DAI,
+            daiUsds       : Ethereum.DAI_USDS,
+            usdc          : Ethereum.USDC,
+            usds          : Ethereum.USDS,
+            susds         : Ethereum.SUSDS
         });
 
         RateLimitData memory usdsMintData = RateLimitData({
@@ -78,7 +81,7 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
             slope     : uint256(1_000_000e18) / 4 hours
         });
 
-        RateLimitData memory usdcToUsdsData = RateLimitData({
+        RateLimitData memory usdsToUsdcData = RateLimitData({
             maxAmount : 2_000_000e6,
             slope     : uint256(2_000_000e6) / 4 hours
         });
@@ -95,9 +98,16 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
 
         rateLimitData = MainnetControllerInit.InitRateLimitData({
             usdsMintData         : usdsMintData,
-            usdcToUsdsData       : usdcToUsdsData,
+            usdsToUsdcData       : usdsToUsdcData,
             usdcToCctpData       : usdcToCctpData,
             cctpToBaseDomainData : cctpToBaseDomainData
+        });
+
+        mintRecipients = new MintRecipient[](1);
+
+        mintRecipients[0] = MintRecipient({
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         });
     }
 
@@ -113,20 +123,26 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
 
     MainnetControllerInit.AddressParams     addresses;
     MainnetControllerInit.InitRateLimitData rateLimitData;
+    MintRecipient[]                         mintRecipients;
 
     function setUp() public override {
         super.setUp();
 
         controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
-            ilkInst.vault,
+            vault,
             PSM,
-            usdsInst.daiUsds,
+            DAI_USDS,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
-        ( addresses, rateLimitData ) = _getDefaultParams();
+        MintRecipient[] memory mintRecipients_ = new MintRecipient[](1);
+
+        ( addresses, rateLimitData, mintRecipients_ ) = _getDefaultParams();
+
+        // NOTE: This would need to be refactored to a for loop if more than one recipient
+        mintRecipients.push(mintRecipients_[0]);
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
 
@@ -156,8 +172,8 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 
@@ -172,8 +188,8 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 
@@ -206,12 +222,12 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     }
 
     function test_init_incorrectVault() external {
-        ilkInst.vault = mismatchAddress;
+        addresses.vault = mismatchAddress;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-vault"));
     }
 
     function test_init_incorrectBuffer() external {
-        ilkInst.buffer = mismatchAddress;
+        addresses.buffer = mismatchAddress;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-buffer"));
     }
 
@@ -250,7 +266,24 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-usds"));
     }
 
-    // TODO: Skipping conversion factor test and active test, can add later if needed
+    function test_init_controllerInactive() external {
+        // Cheating to set this outside of init scripts so that the controller can be frozen
+        vm.startPrank(SPARK_PROXY);
+        mainnetController.grantRole(FREEZER, freezer);
+
+        vm.startPrank(freezer);
+        mainnetController.freeze();
+        vm.stopPrank();
+
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/controller-not-active"));
+    }
+
+    function test_init_oldControllerIsNewController() external {
+        addresses.oldController = controllerInst.controller;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-is-new-controller"));
+    }
+
+    // TODO: Skipping conversion factor test, can add later if needed
 
     /**********************************************************************************************/
     /*** Unlimited `maxAmount` rate limit boundary tests                                        ***/
@@ -265,10 +298,10 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     }
 
     function test_init_incorrectUsdcToUsdsData_unlimitedBoundary() external {
-        rateLimitData.usdcToUsdsData.maxAmount = type(uint256).max;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdcToUsdsData"));
+        rateLimitData.usdsToUsdcData.maxAmount = type(uint256).max;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdsToUsdcData"));
 
-        rateLimitData.usdcToUsdsData.slope = 0;
+        rateLimitData.usdsToUsdcData.slope = 0;
         _checkBothInitsSucceed();
     }
 
@@ -301,10 +334,10 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     }
 
     function test_init_incorrectUsdcToUsdsData_maxAmountPrecisionBoundary() external {
-        rateLimitData.usdcToUsdsData.maxAmount = 1e12 * 1e6 + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdcToUsdsData"));
+        rateLimitData.usdsToUsdcData.maxAmount = 1e12 * 1e6 + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdsToUsdcData"));
 
-        rateLimitData.usdcToUsdsData.maxAmount = 1e12 * 1e6;
+        rateLimitData.usdsToUsdcData.maxAmount = 1e12 * 1e6;
         _checkBothInitsSucceed();
     }
 
@@ -337,10 +370,10 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     }
 
     function test_init_incorrectUsdcToUsdsData_slopePrecisionBoundary() external {
-        rateLimitData.usdcToUsdsData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdcToUsdsData"));
+        rateLimitData.usdsToUsdcData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdsToUsdcData"));
 
-        rateLimitData.usdcToUsdsData.slope = uint256(1e12 * 1e6) / 1 hours;
+        rateLimitData.usdsToUsdcData.slope = uint256(1e12 * 1e6) / 1 hours;
         _checkBothInitsSucceed();
     }
 
@@ -367,16 +400,16 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitController(
             addresses,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
 
         vm.expectRevert(expectedError);
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 
@@ -384,15 +417,15 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper.subDaoInitController(
             addresses,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
 
         wrapper.subDaoInitFull(
             addresses,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
     }
 }
@@ -404,11 +437,11 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
-            ilkInst.vault,
+            vault,
             PSM,
-            usdsInst.daiUsds,
+            DAI_USDS,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
@@ -423,12 +456,12 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         assertEq(address(mainnetController.proxy()),      controllerInst.almProxy);
         assertEq(address(mainnetController.rateLimits()), controllerInst.rateLimits);
-        assertEq(address(mainnetController.vault()),      ilkInst.vault);
-        assertEq(address(mainnetController.buffer()),     ilkInst.buffer);
+        assertEq(address(mainnetController.vault()),      vault);
+        assertEq(address(mainnetController.buffer()),     buffer);
         assertEq(address(mainnetController.psm()),        PSM);
-        assertEq(address(mainnetController.daiUsds()),    usdsInst.daiUsds);
+        assertEq(address(mainnetController.daiUsds()),    DAI_USDS);
         assertEq(address(mainnetController.cctp()),       CCTP_MESSENGER);
-        assertEq(address(mainnetController.susds()),      susdsInst.sUsds);
+        assertEq(address(mainnetController.susds()),      address(susds));
         assertEq(address(mainnetController.dai()),        address(dai));
         assertEq(address(mainnetController.usdc()),       address(usdc));
         assertEq(address(mainnetController.usds()),       address(usds));
@@ -441,15 +474,16 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         (
             MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData
+            MainnetControllerInit.InitRateLimitData memory rateLimitData,
+            MintRecipient[]                         memory mintRecipients
         ) = _getDefaultParams();
 
         vm.startPrank(SPARK_PROXY);
         MainnetControllerInit.subDaoInitFull(
             addresses,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
         vm.stopPrank();
 
@@ -468,13 +502,23 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         );
 
         _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimitData.usdsMintData);
-        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdcToUsdsData);
+        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdsToUsdcData);
         _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
         _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
 
-        assertEq(IVaultLike(ilkInst.vault).wards(controllerInst.almProxy), 1);
+        assertEq(
+            mainnetController.mintRecipients(mintRecipients[0].domain),
+            mintRecipients[0].mintRecipient
+        );
 
-        assertEq(usds.allowance(ilkInst.buffer, controllerInst.almProxy), type(uint256).max);
+        assertEq(
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
+        );
+
+        assertEq(IVaultLike(vault).wards(controllerInst.almProxy), 1);
+
+        assertEq(usds.allowance(buffer, controllerInst.almProxy), type(uint256).max);
 
         // Perform Maker initialization (from PAUSE_PROXY during spell)
 
@@ -492,11 +536,11 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
-            ilkInst.vault,
+            vault,
             PSM,
-            usdsInst.daiUsds,
+            DAI_USDS,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
@@ -507,7 +551,8 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         (
             MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData
+            MainnetControllerInit.InitRateLimitData memory rateLimitData,
+            MintRecipient[]                         memory mintRecipients
         ) = _getDefaultParams();
 
         // Perform ONLY controller initialization, setting rate limits and updating ACL
@@ -517,8 +562,8 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         MainnetControllerInit.subDaoInitController(
             addresses,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
         vm.stopPrank();
 
@@ -535,9 +580,19 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         );
 
         _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimitData.usdsMintData);
-        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdcToUsdsData);
+        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdsToUsdcData);
         _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
         _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
+
+        assertEq(
+            mainnetController.mintRecipients(mintRecipients[0].domain),
+            mintRecipients[0].mintRecipient
+        );
+
+        assertEq(
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
+        );
     }
 
     function test_init_transferAclToNewController() public {
@@ -545,24 +600,25 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
 
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
             SPARK_PROXY,
-            ilkInst.vault,
+            vault,
             PSM,
-            usdsInst.daiUsds,
+            DAI_USDS,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         (
             MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData
+            MainnetControllerInit.InitRateLimitData memory rateLimitData,
+            MintRecipient[]                         memory mintRecipients
         ) = _getDefaultParams();
 
         vm.startPrank(SPARK_PROXY);
         MainnetControllerInit.subDaoInitController(
             addresses,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
         vm.stopPrank();
 
@@ -572,11 +628,11 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             SPARK_PROXY,
             controllerInst.almProxy,
             controllerInst.rateLimits,
-            ilkInst.vault,
+            vault,
             PSM,
-            usdsInst.daiUsds,
+            DAI_USDS,
             CCTP_MESSENGER,
-            susdsInst.sUsds
+            address(susds)
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
@@ -601,8 +657,8 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         MainnetControllerInit.subDaoInitController(
             addresses,
             controllerInst,
-            ilkInst,
-            rateLimitData
+            rateLimitData,
+            mintRecipients
         );
         vm.stopPrank();
 

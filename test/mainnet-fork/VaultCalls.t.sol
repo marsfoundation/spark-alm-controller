@@ -27,14 +27,14 @@ contract MainnetControllerMintUSDSTests is ForkTestBase {
         ( uint256 ink, uint256 art ) = dss.vat.urns(ilk, vault);
         ( uint256 Art,,,, )          = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(usdsJoin), 0);
+        assertEq(dss.vat.dai(USDS_JOIN), VAT_DAI_USDS_JOIN);
 
         assertEq(Art, 0);
         assertEq(ink, INK);
         assertEq(art, 0);
 
         assertEq(usds.balanceOf(address(almProxy)), 0);
-        assertEq(usds.totalSupply(),                0);
+        assertEq(usds.totalSupply(),                USDS_SUPPLY);
 
         vm.prank(relayer);
         mainnetController.mintUSDS(1e18);
@@ -42,14 +42,14 @@ contract MainnetControllerMintUSDSTests is ForkTestBase {
         ( ink, art ) = dss.vat.urns(ilk, vault);
         ( Art,,,, )  = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(usdsJoin), 1e45);
+        assertEq(dss.vat.dai(USDS_JOIN), VAT_DAI_USDS_JOIN + 1e45);
 
         assertEq(Art, 1e18);
         assertEq(ink, INK);
         assertEq(art, 1e18);
 
         assertEq(usds.balanceOf(address(almProxy)), 1e18);
-        assertEq(usds.totalSupply(),                1e18);
+        assertEq(usds.totalSupply(),                USDS_SUPPLY + 1e18);
     }
 
     function test_mintUSDS_rateLimited() external {
@@ -110,14 +110,14 @@ contract MainnetControllerBurnUSDSTests is ForkTestBase {
         ( uint256 ink, uint256 art ) = dss.vat.urns(ilk, vault);
         ( uint256 Art,,,, )          = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(address(usdsJoin)), 1e45);
+        assertEq(dss.vat.dai(USDS_JOIN), VAT_DAI_USDS_JOIN + 1e45);
 
         assertEq(Art, 1e18);
         assertEq(ink, INK);
         assertEq(art, 1e18);
 
         assertEq(usds.balanceOf(address(almProxy)), 1e18);
-        assertEq(usds.totalSupply(),                1e18);
+        assertEq(usds.totalSupply(),                USDS_SUPPLY + 1e18);
 
         vm.prank(relayer);
         mainnetController.burnUSDS(1e18);
@@ -125,14 +125,14 @@ contract MainnetControllerBurnUSDSTests is ForkTestBase {
         ( ink, art ) = dss.vat.urns(ilk, vault);
         ( Art,,,, )  = dss.vat.ilks(ilk);
 
-        assertEq(dss.vat.dai(address(usdsJoin)), 0);
+        assertEq(dss.vat.dai(USDS_JOIN), VAT_DAI_USDS_JOIN);
 
         assertEq(Art, 0);
         assertEq(ink, INK);
         assertEq(art, 0);
 
         assertEq(usds.balanceOf(address(almProxy)), 0);
-        assertEq(usds.totalSupply(),                0);
+        assertEq(usds.totalSupply(),                USDS_SUPPLY);
     }
 
     function test_burnUSDS_rateLimited() external {
