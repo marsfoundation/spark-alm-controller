@@ -15,7 +15,7 @@ contract UsdsJoin is Ownable {
         usds = IERC20(usds_);
     }
 
-    function join(address usr, uint256 wad) external onlyOwner {
+    function join(address, uint256 wad) external onlyOwner {
         usds.transferFrom(msg.sender, address(this), wad);
     }
 

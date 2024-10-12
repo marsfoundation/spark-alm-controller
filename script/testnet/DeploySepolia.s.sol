@@ -33,7 +33,8 @@ import {
 import {
     MainnetControllerInit,
     ForeignControllerInit,
-    RateLimitData
+    RateLimitData,
+    MintRecipient
 } from "deploy/ControllerInit.sol";
 
 import { PSM3 } from "lib/spark-psm/src/PSM3.sol";
@@ -110,7 +111,7 @@ contract DeploySepolia is Script {
         susds = new SUsds(address(usds));
 
         // Init MCD contracts
-        vat        = new Vat();
+        vat        = new Vat(mainnet.admin);
         usdsJoin   = new UsdsJoin(mainnet.admin, address(vat), address(usds));
         daiUsds    = new DaiUsds(mainnet.admin, address(dai), address(usds));
         jug        = new Jug();
@@ -200,13 +201,18 @@ contract DeploySepolia is Script {
             slope:     0
         });
 
+        // Configure this after Base ALM Proxy is deployed
+        MintRecipient[] memory mintRecipients = new MintRecipient[](0);
+
         MainnetControllerInit.subDaoInitFull({
-            params: MainnetControllerInit.AddressParams({
-                admin:   mainnet.admin,
+            addresses: MainnetControllerInit.AddressParams({
+                admin: mainnet.admin,
                 freezer: makeAddr("freezer"),
                 relayer: safe,
                 oldController: address(0),
                 psm: address(psm),
+                vault: address(allocatorIlkInstance.vault),
+                buffer: address(allocatorIlkInstance.buffer),
                 cctpMessenger: CCTP_TOKEN_MESSENGER_MAINNET,
                 dai: address(dai),
                 daiUsds: address(daiUsds),
@@ -215,13 +221,13 @@ contract DeploySepolia is Script {
                 susds: address(susds)
             }),
             controllerInst: instance,
-            ilkInst: allocatorIlkInstance,
             data: MainnetControllerInit.InitRateLimitData({
                 usdsMintData: rateLimitData18,
-                usdcToUsdsData: rateLimitData6,
+                usdsToUsdcData: rateLimitData6,
                 usdcToCctpData: unlimitedRateLimit,
                 cctpToBaseDomainData: rateLimitData6
-            })
+            }),
+            mintRecipients: mintRecipients
         });
 
         // Custom contract permission changes (not relevant for production deploy)
@@ -282,6 +288,10 @@ contract DeploySepolia is Script {
             cctp:  CCTP_TOKEN_MESSENGER_BASE
         });
 
+        RateLimitData memory rateLimitData18 = RateLimitData({
+            maxAmount: USDC_UNIT_SIZE * 1e12 * 5,
+            slope:     USDC_UNIT_SIZE * 1e12 / 4 hours
+        });
         RateLimitData memory rateLimitData6 = RateLimitData({
             maxAmount: USDC_UNIT_SIZE * 5,
             slope:     USDC_UNIT_SIZE / 4 hours
@@ -291,9 +301,15 @@ contract DeploySepolia is Script {
             slope:     0
         });
 
+        MintRecipient[] memory mintRecipients = new MintRecipient[](1);
+        mintRecipients[0] = MintRecipient({
+            domain:        CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            mintRecipient: bytes32(uint256(uint160(mainnetController.almProxy)))
+        });
+
         ForeignControllerInit.init({
-            params: ForeignControllerInit.AddressParams({
-                admin:   base.admin,
+            addresses: ForeignControllerInit.AddressParams({
+                admin: base.admin,
                 freezer: makeAddr("freezer"),
                 relayer: safe,
                 oldController: address(0),
@@ -307,13 +323,15 @@ contract DeploySepolia is Script {
             data: ForeignControllerInit.InitRateLimitData({
                 usdcDepositData: rateLimitData6,
                 usdcWithdrawData: rateLimitData6,
+                usdsDepositData: rateLimitData18,
+                usdsWithdrawData: rateLimitData18,
+                susdsDepositData: rateLimitData18,
+                susdsWithdrawData: rateLimitData18,
                 usdcToCctpData: unlimitedRateLimit,
                 cctpToEthereumDomainData: rateLimitData6
-            })
+            }),
+            mintRecipients: mintRecipients
         });
-
-        // FIXME - remove this when done in deployer scripts
-        ForeignController(instance.controller).setMintRecipient(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM, bytes32(uint256(uint160(mainnetController.almProxy))));
 
         vm.stopBroadcast();
 
@@ -321,7 +339,7 @@ contract DeploySepolia is Script {
         
         vm.startBroadcast();
 
-        // FIXME - remove this when done in deployer scripts
+        // Doing this after the fact because we have the address now
         MainnetController(mainnetController.controller).setMintRecipient(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE, bytes32(uint256(uint160(instance.almProxy))));
 
         vm.stopBroadcast();
