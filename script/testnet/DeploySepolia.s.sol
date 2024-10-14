@@ -131,22 +131,22 @@ contract DeploySepolia is Script {
         vm.selectFork(mainnet.forkId);
 
         // Pre-requirements check
-        require(usdc.balanceOf(deployer) >= USDC_UNIT_SIZE * 10, "USDC balance too low");
+        require(usdc.balanceOf(deployer) >= USDC_UNIT_SIZE * 10,   "USDC balance too low");
         require(USDC_UNIT_SIZE * 1000 <= usdc.balanceOf(deployer), "Unit size too large (don't want to run out of USDC)");
 
         vm.startBroadcast();
 
         // Init tokens
-        dai = new MockERC20("DAI", "DAI", 18);
-        usds = new MockERC20("USDS", "USDS", 18);
+        dai   = new MockERC20("DAI", "DAI", 18);
+        usds  = new MockERC20("USDS", "USDS", 18);
         susds = new SUsds(address(usds));
 
         // Init MCD contracts
-        vat        = new Vat(mainnet.admin);
-        usdsJoin   = new UsdsJoin(mainnet.admin, address(vat), address(usds));
-        daiUsds    = new DaiUsds(mainnet.admin, address(dai), address(usds));
-        jug        = new Jug();
-        psm        = new PSM(mainnet.admin, address(usdc), address(dai));
+        vat      = new Vat(mainnet.admin);
+        usdsJoin = new UsdsJoin(mainnet.admin, address(vat), address(usds));
+        daiUsds  = new DaiUsds(mainnet.admin, address(dai), address(usds));
+        jug      = new Jug();
+        psm      = new PSM(mainnet.admin, address(usdc), address(dai));
 
         // Mint some USDS into the join contract
         usds.mint(address(usdsJoin), USDS_UNIT_SIZE);
@@ -161,9 +161,9 @@ contract DeploySepolia is Script {
 
         vm.stopBroadcast();
 
-        ScriptTools.exportContract(mainnet.name, "usdc", address(usdc));
-        ScriptTools.exportContract(mainnet.name, "dai", address(dai));
-        ScriptTools.exportContract(mainnet.name, "usds", address(usds));
+        ScriptTools.exportContract(mainnet.name, "usdc",  address(usdc));
+        ScriptTools.exportContract(mainnet.name, "dai",   address(dai));
+        ScriptTools.exportContract(mainnet.name, "usds",  address(usds));
         ScriptTools.exportContract(mainnet.name, "sUsds", address(susds));
     }
 
@@ -187,6 +187,7 @@ contract DeploySepolia is Script {
         VaultLike(allocatorIlkInstance.vault).file("jug", address(jug));
         BufferLike(allocatorIlkInstance.buffer).approve(address(usds), allocatorIlkInstance.vault, type(uint256).max);
         RolesLike(allocatorSharedInstance.roles).setIlkAdmin(ilk, mainnet.admin);
+
         ScriptTools.switchOwner(allocatorIlkInstance.vault,  allocatorIlkInstance.owner, mainnet.admin);
         ScriptTools.switchOwner(allocatorIlkInstance.buffer, allocatorIlkInstance.owner, mainnet.admin);
 
@@ -210,26 +211,26 @@ contract DeploySepolia is Script {
         address safe = _setupSafe(mainnet.admin);
 
         ControllerInstance memory instance = mainnetController = MainnetControllerDeploy.deployFull({
-            admin:   mainnet.admin,
-            vault:   address(allocatorIlkInstance.vault),
-            psm:     address(psm),
-            daiUsds: address(daiUsds),
-            cctp:    CCTP_TOKEN_MESSENGER_MAINNET,
-            susds:   address(susds)
+            admin   : mainnet.admin,
+            vault   : address(allocatorIlkInstance.vault),
+            psm     : address(psm),
+            daiUsds : address(daiUsds),
+            cctp    : CCTP_TOKEN_MESSENGER_MAINNET,
+            susds   : address(susds)
         });
 
         // Still constrained by the USDC_UNIT_SIZE
         RateLimitData memory rateLimitData18 = RateLimitData({
-            maxAmount: USDC_UNIT_SIZE * 1e12 * 5,
-            slope:     USDC_UNIT_SIZE * 1e12 / 4 hours
+            maxAmount : USDC_UNIT_SIZE * 1e12 * 5,
+            slope     : USDC_UNIT_SIZE * 1e12 / 4 hours
         });
         RateLimitData memory rateLimitData6 = RateLimitData({
-            maxAmount: USDC_UNIT_SIZE * 5,
-            slope:     USDC_UNIT_SIZE / 4 hours
+            maxAmount : USDC_UNIT_SIZE * 5,
+            slope     : USDC_UNIT_SIZE / 4 hours
         });
         RateLimitData memory unlimitedRateLimit = RateLimitData({
-            maxAmount: type(uint256).max,
-            slope:     0
+            maxAmount : type(uint256).max,
+            slope     : 0
         });
 
         // Configure this after Base ALM Proxy is deployed
@@ -237,26 +238,26 @@ contract DeploySepolia is Script {
 
         MainnetControllerInit.subDaoInitFull({
             addresses: MainnetControllerInit.AddressParams({
-                admin: mainnet.admin,
-                freezer: makeAddr("freezer"),
-                relayer: safe,
-                oldController: address(0),
-                psm: address(psm),
-                vault: address(allocatorIlkInstance.vault),
-                buffer: address(allocatorIlkInstance.buffer),
-                cctpMessenger: CCTP_TOKEN_MESSENGER_MAINNET,
-                dai: address(dai),
-                daiUsds: address(daiUsds),
-                usdc: address(usdc),
-                usds: address(usds),
-                susds: address(susds)
+                admin         : mainnet.admin,
+                freezer       : makeAddr("freezer"),
+                relayer       : safe,
+                oldController : address(0),
+                psm           : address(psm),
+                vault         : address(allocatorIlkInstance.vault),
+                buffer        : address(allocatorIlkInstance.buffer),
+                cctpMessenger : CCTP_TOKEN_MESSENGER_MAINNET,
+                dai           : address(dai),
+                daiUsds       : address(daiUsds),
+                usdc          : address(usdc),
+                usds          : address(usds),
+                susds         : address(susds)
             }),
             controllerInst: instance,
             data: MainnetControllerInit.InitRateLimitData({
-                usdsMintData: rateLimitData18,
-                usdsToUsdcData: rateLimitData6,
-                usdcToCctpData: unlimitedRateLimit,
-                cctpToBaseDomainData: rateLimitData6
+                usdsMintData         : rateLimitData18,
+                usdsToUsdcData       : rateLimitData6,
+                usdcToCctpData       : unlimitedRateLimit,
+                cctpToBaseDomainData : rateLimitData6
             }),
             mintRecipients: mintRecipients
         });
@@ -278,7 +279,7 @@ contract DeploySepolia is Script {
 
         vm.startBroadcast();
 
-        usdsBase = new MockERC20("USDS", "USDS", 18);
+        usdsBase  = new MockERC20("USDS",  "USDS",  18);
         susdsBase = new MockERC20("sUSDS", "sUSDS", 18);
 
         psmBase = new PSM3(
@@ -313,53 +314,53 @@ contract DeploySepolia is Script {
         address safe = _setupSafe(base.admin);
 
         ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
-            admin: base.admin,
-            psm:   address(psmBase),
-            usdc:  USDC_BASE,
-            cctp:  CCTP_TOKEN_MESSENGER_BASE
+            admin : base.admin,
+            psm   : address(psmBase),
+            usdc  : USDC_BASE,
+            cctp  : CCTP_TOKEN_MESSENGER_BASE
         });
 
         RateLimitData memory rateLimitData18 = RateLimitData({
-            maxAmount: USDC_UNIT_SIZE * 1e12 * 5,
-            slope:     USDC_UNIT_SIZE * 1e12 / 4 hours
+            maxAmount : USDC_UNIT_SIZE * 1e12 * 5,
+            slope     : USDC_UNIT_SIZE * 1e12 / 4 hours
         });
         RateLimitData memory rateLimitData6 = RateLimitData({
-            maxAmount: USDC_UNIT_SIZE * 5,
-            slope:     USDC_UNIT_SIZE / 4 hours
+            maxAmount : USDC_UNIT_SIZE * 5,
+            slope     : USDC_UNIT_SIZE / 4 hours
         });
         RateLimitData memory unlimitedRateLimit = RateLimitData({
-            maxAmount: type(uint256).max,
-            slope:     0
+            maxAmount : type(uint256).max,
+            slope     : 0
         });
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
         mintRecipients[0] = MintRecipient({
-            domain:        CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-            mintRecipient: bytes32(uint256(uint160(mainnetController.almProxy)))
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            mintRecipient : bytes32(uint256(uint160(mainnetController.almProxy)))
         });
 
         ForeignControllerInit.init({
             addresses: ForeignControllerInit.AddressParams({
-                admin: base.admin,
-                freezer: makeAddr("freezer"),
-                relayer: safe,
-                oldController: address(0),
-                psm: address(psmBase),
-                cctpMessenger: CCTP_TOKEN_MESSENGER_BASE,
-                usdc: USDC_BASE,
-                usds: USDC_BASE,
-                susds: USDC_BASE
+                admin         : base.admin,
+                freezer       : makeAddr("freezer"),
+                relayer       : safe,
+                oldController : address(0),
+                psm           : address(psmBase),
+                cctpMessenger : CCTP_TOKEN_MESSENGER_BASE,
+                usdc          : USDC_BASE,
+                usds          : USDC_BASE,
+                susds         : USDC_BASE
             }),
             controllerInst: instance,
             data: ForeignControllerInit.InitRateLimitData({
-                usdcDepositData: rateLimitData6,
-                usdcWithdrawData: rateLimitData6,
-                usdsDepositData: rateLimitData18,
-                usdsWithdrawData: rateLimitData18,
-                susdsDepositData: rateLimitData18,
-                susdsWithdrawData: rateLimitData18,
-                usdcToCctpData: unlimitedRateLimit,
-                cctpToEthereumDomainData: rateLimitData6
+                usdcDepositData          : rateLimitData6,
+                usdcWithdrawData         : rateLimitData6,
+                usdsDepositData          : rateLimitData18,
+                usdsWithdrawData         : rateLimitData18,
+                susdsDepositData         : rateLimitData18,
+                susdsWithdrawData        : rateLimitData18,
+                usdcToCctpData           : unlimitedRateLimit,
+                cctpToEthereumDomainData : rateLimitData6
             }),
             mintRecipients: mintRecipients
         });
@@ -371,7 +372,10 @@ contract DeploySepolia is Script {
         vm.startBroadcast();
 
         // Doing this after the fact because we have the address now
-        MainnetController(mainnetController.controller).setMintRecipient(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE, bytes32(uint256(uint160(instance.almProxy))));
+        MainnetController(mainnetController.controller).setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(uint256(uint160(instance.almProxy)))
+        );
 
         vm.stopBroadcast();
 
@@ -382,29 +386,29 @@ contract DeploySepolia is Script {
     }
 
     function run() public {
-        vm.setEnv("FOUNDRY_ROOT_CHAINID", "11155111");
+        vm.setEnv("FOUNDRY_ROOT_CHAINID",             "11155111");
         vm.setEnv("FOUNDRY_EXPORTS_OVERWRITE_LATEST", "true");
 
         deployer = msg.sender;
         ilk      = "ALLOCATOR-SPARK-1";
 
         setChain("sepolia_base", ChainData({
-            rpcUrl: "https://base-sepolia-rpc.publicnode.com",
-            chainId: 84532,
-            name: "Sepolia Base Testnet"
+            rpcUrl  : "https://base-sepolia-rpc.publicnode.com",
+            chainId : 84532,
+            name    : "Sepolia Base Testnet"
         }));
 
         mainnet = Domain({
-            name:   "mainnet",
-            config: ScriptTools.loadConfig("mainnet"),
-            forkId: vm.createFork(getChain("sepolia").rpcUrl),
-            admin:  deployer
+            name   : "mainnet",
+            config : ScriptTools.loadConfig("mainnet"),
+            forkId : vm.createFork(getChain("sepolia").rpcUrl),
+            admin  : deployer
         });
         base = Domain({
-            name:   "base",
-            config: ScriptTools.loadConfig("base"),
-            forkId: vm.createFork(getChain("sepolia_base").rpcUrl),
-            admin:  deployer
+            name   : "base",
+            config : ScriptTools.loadConfig("base"),
+            forkId : vm.createFork(getChain("sepolia_base").rpcUrl),
+            admin  : deployer
         });
 
         _setUpMCDMocks();
@@ -414,12 +418,10 @@ contract DeploySepolia is Script {
         _setUpBaseALMController();
 
         ScriptTools.exportContract(mainnet.name, "admin", deployer);
-        ScriptTools.exportContract(base.name, "admin", deployer);
+        ScriptTools.exportContract(base.name,    "admin", deployer);
     }
 
-    function _setUpSafe(
-        address relayerAddress
-    ) internal returns (address) {
+    function _setUpSafe(address relayerAddress) internal returns (address) {
         SafeProxyFactory factory = SafeProxyFactory(SAFE_FACTORY);
 
         address[] memory owners = new address[](1);
@@ -434,6 +436,7 @@ contract DeploySepolia is Script {
             address(0),
             0,
             payable(address(0))));
+
         return address(factory.createProxyWithNonce(SAFE_SINGLETON, initData, 0));
     }
 
