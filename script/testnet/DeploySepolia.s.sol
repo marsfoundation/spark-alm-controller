@@ -6,8 +6,6 @@ import { IERC20 }           from "forge-std/interfaces/IERC20.sol";
 import { ScriptTools }      from "lib/dss-test/src/ScriptTools.sol";
 import { MockERC20 }        from "erc20-helpers/MockERC20.sol";
 import { CCTPForwarder }    from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
-import { Safe }             from "lib/safe-smart-account/contracts/Safe.sol";
-import { SafeProxyFactory } from "lib/safe-smart-account/contracts/proxies/SafeProxyFactory.sol";
 
 import {
     AllocatorDeploy,
@@ -60,8 +58,8 @@ contract DeploySepolia is Script {
     address constant CCTP_TOKEN_MESSENGER_BASE = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
     address constant USDC = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
     address constant USDC_BASE = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
-    address constant SAFE_FACTORY = 0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67;
-    address constant SAFE_SINGLETON = 0x41675C099F32341bf84BFc5382aF534df5C7461a;
+    address constant SAFE_MAINNET = 0x22fB6fe2B9aA289D26724eCBD5a679751A4508b5;
+    address constant SAFE_BASE = 0x22fB6fe2B9aA289D26724eCBD5a679751A4508b5;
 
     uint256 constant USDC_UNIT_SIZE = 1000e6;        // Ballpark sizing of rate limits, tokens in PSMs, etc
     uint256 constant USDS_UNIT_SIZE = 1_000_000e18;  // Ballpark sizing of USDS to put in the join contracts, PSMs, etc
@@ -181,8 +179,6 @@ contract DeploySepolia is Script {
         
         vm.startBroadcast();
 
-        address safe = _setupSafe(mainnet.admin);
-
         ControllerInstance memory instance = mainnetController = MainnetControllerDeploy.deployFull({
             admin:   mainnet.admin,
             vault:   address(allocatorIlkInstance.vault),
@@ -213,7 +209,7 @@ contract DeploySepolia is Script {
             addresses: MainnetControllerInit.AddressParams({
                 admin: mainnet.admin,
                 freezer: makeAddr("freezer"),
-                relayer: safe,
+                relayer: SAFE_MAINNET,
                 oldController: address(0),
                 psm: address(psm),
                 vault: address(allocatorIlkInstance.vault),
@@ -241,7 +237,7 @@ contract DeploySepolia is Script {
 
         vm.stopBroadcast();
 
-        ScriptTools.exportContract(mainnet.name, "safe",       safe);
+        ScriptTools.exportContract(mainnet.name, "safe",       SAFE_MAINNET);
         ScriptTools.exportContract(mainnet.name, "almProxy",   instance.almProxy);
         ScriptTools.exportContract(mainnet.name, "controller", instance.controller);
         ScriptTools.exportContract(mainnet.name, "rateLimits", instance.rateLimits);
@@ -284,8 +280,6 @@ contract DeploySepolia is Script {
         
         vm.startBroadcast();
 
-        address safe = _setupSafe(base.admin);
-
         ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
             admin: base.admin,
             psm:   address(psmBase),
@@ -316,7 +310,7 @@ contract DeploySepolia is Script {
             addresses: ForeignControllerInit.AddressParams({
                 admin: base.admin,
                 freezer: makeAddr("freezer"),
-                relayer: safe,
+                relayer: SAFE_BASE,
                 oldController: address(0),
                 psm: address(psmBase),
                 cctpMessenger: CCTP_TOKEN_MESSENGER_BASE,
@@ -349,7 +343,7 @@ contract DeploySepolia is Script {
 
         vm.stopBroadcast();
 
-        ScriptTools.exportContract(base.name, "safe",       safe);
+        ScriptTools.exportContract(base.name, "safe",       SAFE_BASE);
         ScriptTools.exportContract(base.name, "almProxy",   instance.almProxy);
         ScriptTools.exportContract(base.name, "controller", instance.controller);
         ScriptTools.exportContract(base.name, "rateLimits", instance.rateLimits);
@@ -389,26 +383,6 @@ contract DeploySepolia is Script {
 
         ScriptTools.exportContract(mainnet.name, "admin", deployer);
         ScriptTools.exportContract(base.name, "admin", deployer);
-    }
-
-    function _setupSafe(
-        address relayerAddress
-    ) internal returns (address) {
-        SafeProxyFactory factory = SafeProxyFactory(SAFE_FACTORY);
-
-        address[] memory owners = new address[](1);
-        owners[0] = relayerAddress;
-
-        bytes memory initData = abi.encodeCall(Safe.setup, (
-            owners,
-            1,
-            address(0),
-            "",
-            address(0),
-            address(0),
-            0,
-            payable(address(0))));
-        return address(factory.createProxyWithNonce(SAFE_SINGLETON, initData, 0));
     }
 
 }
