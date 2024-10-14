@@ -64,12 +64,55 @@ struct Domain {
 
 contract DeploySepolia is Script {
 
+    /**********************************************************************************************/
+    /*** Existing addresses                                                                     ***/
+    /**********************************************************************************************/
+
+    address constant CCTP_TOKEN_MESSENGER_BASE    = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
     address constant CCTP_TOKEN_MESSENGER_MAINNET = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
-    address constant CCTP_TOKEN_MESSENGER_BASE = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
-    address constant USDC = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
-    address constant USDC_BASE = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
-    address constant SAFE_FACTORY = 0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67;
-    address constant SAFE_SINGLETON = 0x41675C099F32341bf84BFc5382aF534df5C7461a;
+    address constant SAFE_FACTORY                 = 0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67;
+    address constant SAFE_SINGLETON               = 0x41675C099F32341bf84BFc5382aF534df5C7461a;
+    address constant USDC                         = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
+    address constant USDC_BASE                    = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+
+    IERC20 constant usdc     = IERC20(USDC);
+    IERC20 constant usdcBase = IERC20(USDC_BASE);
+
+    /**********************************************************************************************/
+    /*** Mainnet dependency deployments                                                         ***/
+    /**********************************************************************************************/
+
+    MockERC20 dai;
+    MockERC20 usds;
+    SUsds     susds;
+
+    DaiUsds  daiUsds;
+    Jug      jug;
+    PSM      psm;
+    UsdsJoin usdsJoin;
+    Vat      vat;
+
+    /**********************************************************************************************/
+    /*** Mainnet allocation/ALM system deployments                                              ***/
+    /**********************************************************************************************/
+
+    AllocatorIlkInstance    allocatorIlkInstance;
+    AllocatorSharedInstance allocatorSharedInstance;
+
+    ControllerInstance mainnetController;
+
+    /**********************************************************************************************/
+    /*** Base dependency deployments                                                            ***/
+    /**********************************************************************************************/
+
+    MockERC20 usdsBase;
+    MockERC20 susdsBase;
+
+    PSM3 psmBase;
+
+    /**********************************************************************************************/
+    /*** Deployment constants/variables                                                         ***/
+    /**********************************************************************************************/
 
     uint256 constant USDC_UNIT_SIZE = 1000e6;        // Ballpark sizing of rate limits, tokens in PSMs, etc
     uint256 constant USDS_UNIT_SIZE = 1_000_000e18;  // Ballpark sizing of USDS to put in the join contracts, PSMs, etc
@@ -80,31 +123,11 @@ contract DeploySepolia is Script {
     Domain mainnet;
     Domain base;
 
-    // Mainnet contracts
-    MockERC20 dai;
-    MockERC20 usds;
-    SUsds susds;
-    IERC20 usdc = IERC20(USDC);
+    /**********************************************************************************************/
+    /*** Helper functions                                                                       ***/
+    /**********************************************************************************************/
 
-    Vat vat;
-    UsdsJoin usdsJoin;
-    DaiUsds daiUsds;
-    Jug jug;
-    PSM psm;
-
-    AllocatorSharedInstance allocatorSharedInstance;
-    AllocatorIlkInstance    allocatorIlkInstance;
-
-    ControllerInstance mainnetController;
-
-    // Base contracts
-    IERC20 usdcBase = IERC20(USDC_BASE);
-    MockERC20 usdsBase;
-    MockERC20 susdsBase;
-
-    PSM3 psmBase;
-
-    function setupMCDMocks() internal {
+    function _setUpMCDMocks() internal {
         vm.selectFork(mainnet.forkId);
 
         // Pre-requirements check
@@ -144,7 +167,7 @@ contract DeploySepolia is Script {
         ScriptTools.exportContract(mainnet.name, "sUsds", address(susds));
     }
 
-    function setupAllocationSystem() internal {
+    function _setUpAllocationSystem() internal {
         vm.selectFork(mainnet.forkId);
 
         vm.startBroadcast();
@@ -179,7 +202,7 @@ contract DeploySepolia is Script {
         ScriptTools.exportContract(mainnet.name, "allocatorBuffer",   allocatorIlkInstance.buffer);
     }
 
-    function setupALMController() internal {
+    function _setUpALMController() internal {
         vm.selectFork(mainnet.forkId);
 
         vm.startBroadcast();
@@ -250,7 +273,7 @@ contract DeploySepolia is Script {
         ScriptTools.exportContract(mainnet.name, "rateLimits", instance.rateLimits);
     }
 
-    function setupBasePSM() public {
+    function _setUpBasePSM() public {
         vm.selectFork(base.forkId);
 
         vm.startBroadcast();
@@ -282,7 +305,7 @@ contract DeploySepolia is Script {
         ScriptTools.exportContract(base.name, "psm", address(psmBase));
     }
 
-    function setupBaseALMController() public {
+    function _setUpBaseALMController() public {
         vm.selectFork(base.forkId);
 
         vm.startBroadcast();
@@ -384,17 +407,17 @@ contract DeploySepolia is Script {
             admin:  deployer
         });
 
-        setupMCDMocks();
-        setupAllocationSystem();
-        setupALMController();
-        setupBasePSM();
-        setupBaseALMController();
+        _setUpMCDMocks();
+        _setUpAllocationSystem();
+        _setUpALMController();
+        _setUpBasePSM();
+        _setUpBaseALMController();
 
         ScriptTools.exportContract(mainnet.name, "admin", deployer);
         ScriptTools.exportContract(base.name, "admin", deployer);
     }
 
-    function _setupSafe(
+    function _setUpSafe(
         address relayerAddress
     ) internal returns (address) {
         SafeProxyFactory factory = SafeProxyFactory(SAFE_FACTORY);
