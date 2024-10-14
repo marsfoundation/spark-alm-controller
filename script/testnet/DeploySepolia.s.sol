@@ -134,6 +134,11 @@ contract DeploySepolia is Script {
         ScriptTools.exportContract(mainnet.name, "dai", address(dai));
         ScriptTools.exportContract(mainnet.name, "usds", address(usds));
         ScriptTools.exportContract(mainnet.name, "sUsds", address(susds));
+        ScriptTools.exportContract(mainnet.name, "vat", address(vat));
+        ScriptTools.exportContract(mainnet.name, "usdsJoin", address(usdsJoin));
+        ScriptTools.exportContract(mainnet.name, "daiUsds", address(daiUsds));
+        ScriptTools.exportContract(mainnet.name, "jug", address(jug));
+        ScriptTools.exportContract(mainnet.name, "psm", address(psm));
     }
 
     function setupAllocationSystem() internal {
