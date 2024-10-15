@@ -5,19 +5,19 @@ import {
     AllocatorDeploy,
     AllocatorIlkInstance,
     AllocatorSharedInstance
-} from "lib/dss-allocator/deploy/AllocatorDeploy.sol";
+} from "dss-allocator/deploy/AllocatorDeploy.sol";
 
 import {
     BufferLike,
     RegistryLike,
     RolesLike,
     VaultLike
-} from "lib/dss-allocator/deploy/AllocatorInit.sol";
+} from "dss-allocator/deploy/AllocatorInit.sol";
 
-import { AllocatorBuffer } from "lib/dss-allocator/src/AllocatorBuffer.sol";
-import { AllocatorVault }  from "lib/dss-allocator/src/AllocatorVault.sol";
+import { AllocatorBuffer } from "dss-allocator/src/AllocatorBuffer.sol";
+import { AllocatorVault }  from "dss-allocator/src/AllocatorVault.sol";
 
-import { ScriptTools } from "lib/dss-test/src/ScriptTools.sol";
+import { ScriptTools } from "dss-test/ScriptTools.sol";
 
 import { MockERC20 } from "erc20-helpers/MockERC20.sol";
 
@@ -26,7 +26,7 @@ import { Script } from "forge-std/Script.sol";
 
 import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
-import { PSM3 } from "lib/spark-psm/src/PSM3.sol";
+import { PSM3 } from "spark-psm/src/PSM3.sol";
 
 import {
     ControllerInstance,
@@ -97,7 +97,7 @@ contract DeploySepolia is Script {
     AllocatorIlkInstance    allocatorIlkInstance;
     AllocatorSharedInstance allocatorSharedInstance;
 
-    ControllerInstance mainnetController;
+    ControllerInstance mainnetControllerInstance;
 
     /**********************************************************************************************/
     /*** Base dependency deployments                                                            ***/
@@ -228,14 +228,15 @@ contract DeploySepolia is Script {
 
         // Step 1: Deploy ALM controller
 
-        ControllerInstance memory instance = mainnetController = MainnetControllerDeploy.deployFull({
-            admin   : mainnet.admin,
-            vault   : address(allocatorIlkInstance.vault),
-            psm     : address(psm),
-            daiUsds : address(daiUsds),
-            cctp    : CCTP_TOKEN_MESSENGER_MAINNET,
-            susds   : address(susds)
-        });
+        ControllerInstance memory instance = mainnetControllerInstance
+            = MainnetControllerDeploy.deployFull({
+                admin   : mainnet.admin,
+                vault   : address(allocatorIlkInstance.vault),
+                psm     : address(psm),
+                daiUsds : address(daiUsds),
+                cctp    : CCTP_TOKEN_MESSENGER_MAINNET,
+                susds   : address(susds)
+            });
 
         // Step 2: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
 
@@ -369,7 +370,7 @@ contract DeploySepolia is Script {
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
         mintRecipients[0] = MintRecipient({
             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-            mintRecipient : bytes32(uint256(uint160(mainnetController.almProxy)))
+            mintRecipient : bytes32(uint256(uint160(mainnetControllerInstance.almProxy)))
         });
 
         ForeignControllerInit.init({
