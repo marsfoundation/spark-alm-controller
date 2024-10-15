@@ -24,9 +24,6 @@ import { MockERC20 } from "erc20-helpers/MockERC20.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { Script } from "forge-std/Script.sol";
 
-import { Safe }             from "lib/safe-smart-account/contracts/Safe.sol";
-import { SafeProxyFactory } from "lib/safe-smart-account/contracts/proxies/SafeProxyFactory.sol";
-
 import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
 import { PSM3 } from "lib/spark-psm/src/PSM3.sol";
@@ -70,10 +67,11 @@ contract DeploySepolia is Script {
 
     address constant CCTP_TOKEN_MESSENGER_BASE    = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
     address constant CCTP_TOKEN_MESSENGER_MAINNET = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
-    address constant SAFE_FACTORY                 = 0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67;
-    address constant SAFE_SINGLETON               = 0x41675C099F32341bf84BFc5382aF534df5C7461a;
-    address constant USDC                         = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
-    address constant USDC_BASE                    = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+
+    address constant SAFE_MAINNET = 0x22fB6fe2B9aA289D26724eCBD5a679751A4508b5;
+    address constant SAFE_BASE    = 0x22fB6fe2B9aA289D26724eCBD5a679751A4508b5;
+    address constant USDC         = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
+    address constant USDC_BASE    = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
 
     IERC20 constant usdc     = IERC20(USDC);
     IERC20 constant usdcBase = IERC20(USDC_BASE);
@@ -228,11 +226,7 @@ contract DeploySepolia is Script {
 
         vm.startBroadcast();
 
-        // Step 1: Deploy ALM controller SAFE with 1:1 as the admin
-
-        address safe = _setUpSafe(mainnet.admin);
-
-        // Step 2: Deploy ALM controller
+        // Step 1: Deploy ALM controller
 
         ControllerInstance memory instance = mainnetController = MainnetControllerDeploy.deployFull({
             admin   : mainnet.admin,
@@ -243,7 +237,7 @@ contract DeploySepolia is Script {
             susds   : address(susds)
         });
 
-        // Step 3: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
+        // Step 2: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
 
         // Still constrained by the USDC_UNIT_SIZE
         RateLimitData memory rateLimitData18 = RateLimitData({
@@ -266,7 +260,7 @@ contract DeploySepolia is Script {
             addresses: MainnetControllerInit.AddressParams({
                 admin         : mainnet.admin,
                 freezer       : makeAddr("freezer"),
-                relayer       : safe,
+                relayer       : SAFE_MAINNET,
                 oldController : address(0),
                 psm           : address(psm),
                 vault         : address(allocatorIlkInstance.vault),
@@ -288,7 +282,7 @@ contract DeploySepolia is Script {
             mintRecipients: mintRecipients
         });
 
-        // Step 4: Transfer ownership of mocked addresses to the ALM proxy
+        // Step 3: Transfer ownership of mocked addresses to the ALM proxy
 
         // Custom contract permission changes (not relevant for production deploy)
         daiUsds.transferOwnership(instance.almProxy);
@@ -296,9 +290,9 @@ contract DeploySepolia is Script {
 
         vm.stopBroadcast();
 
-        // Step 5: Export all deployed addresses
+        // Step 4: Export all deployed addresses
 
-        ScriptTools.exportContract(mainnet.name, "safe",       safe);
+        ScriptTools.exportContract(mainnet.name, "safe",       SAFE_MAINNET);
         ScriptTools.exportContract(mainnet.name, "almProxy",   instance.almProxy);
         ScriptTools.exportContract(mainnet.name, "controller", instance.controller);
         ScriptTools.exportContract(mainnet.name, "rateLimits", instance.rateLimits);
@@ -347,11 +341,7 @@ contract DeploySepolia is Script {
 
         vm.startBroadcast();
 
-        // Step 1: Deploy ALM controller SAFE with 1:1 as the admin
-
-        address safe = _setUpSafe(base.admin);
-
-        // Step 2: Deploy ALM controller
+        // Step 1: Deploy ALM controller
 
         ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
             admin : base.admin,
@@ -360,7 +350,7 @@ contract DeploySepolia is Script {
             cctp  : CCTP_TOKEN_MESSENGER_BASE
         });
 
-        // Step 3: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
+        // Step 2: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
 
         // Still constrained by the USDC_UNIT_SIZE
         RateLimitData memory rateLimitData18 = RateLimitData({
@@ -386,7 +376,7 @@ contract DeploySepolia is Script {
             addresses: ForeignControllerInit.AddressParams({
                 admin         : base.admin,
                 freezer       : makeAddr("freezer"),
-                relayer       : safe,
+                relayer       : SAFE_BASE,
                 oldController : address(0),
                 psm           : address(psmBase),
                 cctpMessenger : CCTP_TOKEN_MESSENGER_BASE,
@@ -410,9 +400,9 @@ contract DeploySepolia is Script {
 
         vm.stopBroadcast();
 
-        // Step 5: Export all deployed addresses
+        // Step 3: Export all deployed addresses
 
-        ScriptTools.exportContract(base.name, "safe",       safe);
+        ScriptTools.exportContract(base.name, "safe",       SAFE_BASE);
         ScriptTools.exportContract(base.name, "almProxy",   instance.almProxy);
         ScriptTools.exportContract(base.name, "controller", instance.controller);
         ScriptTools.exportContract(base.name, "rateLimits", instance.rateLimits);
@@ -466,26 +456,6 @@ contract DeploySepolia is Script {
 
         ScriptTools.exportContract(mainnet.name, "admin", deployer);
         ScriptTools.exportContract(base.name,    "admin", deployer);
-    }
-
-    function _setUpSafe(address relayerAddress) internal returns (address) {
-        SafeProxyFactory factory = SafeProxyFactory(SAFE_FACTORY);
-
-        address[] memory owners = new address[](1);
-        owners[0] = relayerAddress;
-
-        bytes memory initData = abi.encodeCall(Safe.setup, (
-            owners,
-            1,
-            address(0),
-            "",
-            address(0),
-            address(0),
-            0,
-            payable(address(0))
-        ));
-
-        return address(factory.createProxyWithNonce(SAFE_SINGLETON, initData, 0));
     }
 
 }
