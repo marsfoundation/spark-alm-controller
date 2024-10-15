@@ -35,5 +35,3 @@ contract DeployEthereumStaging is StagingDeploymentBase {
     }
 
 }
-
-
