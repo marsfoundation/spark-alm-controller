@@ -97,6 +97,7 @@ contract DeploySepolia is Script {
     AllocatorIlkInstance    allocatorIlkInstance;
     AllocatorSharedInstance allocatorSharedInstance;
 
+    ControllerInstance baseControllerInstance;
     ControllerInstance mainnetControllerInstance;
 
     /**********************************************************************************************/
@@ -109,14 +110,14 @@ contract DeploySepolia is Script {
     PSM3 psmBase;
 
     /**********************************************************************************************/
-    /*** Deployment constants/variables                                                         ***/
+    /*** Deployment-specific variables                                                          ***/
     /**********************************************************************************************/
-
-    uint256 constant USDC_UNIT_SIZE = 1000e6;        // Ballpark sizing of rate limits, tokens in PSMs, etc
-    uint256 constant USDS_UNIT_SIZE = 1_000_000e18;  // Ballpark sizing of USDS to put in the join contracts, PSMs, etc
 
     address deployer;
     bytes32 ilk;
+
+    uint256 USDC_UNIT_SIZE;
+    uint256 USDS_UNIT_SIZE;
 
     Domain mainnet;
     Domain base;
@@ -344,12 +345,13 @@ contract DeploySepolia is Script {
 
         // Step 1: Deploy ALM controller
 
-        ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
-            admin : base.admin,
-            psm   : address(psmBase),
-            usdc  : USDC_BASE,
-            cctp  : CCTP_TOKEN_MESSENGER_BASE
-        });
+        ControllerInstance memory instance = baseControllerInstance
+            = ForeignControllerDeploy.deployFull({
+                admin : base.admin,
+                psm   : address(psmBase),
+                usdc  : USDC_BASE,
+                cctp  : CCTP_TOKEN_MESSENGER_BASE
+            });
 
         // Step 2: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
 
@@ -414,9 +416,9 @@ contract DeploySepolia is Script {
 
         vm.startBroadcast();
 
-        MainnetController(mainnet.controller).setMintRecipient(
+        MainnetController(mainnetControllerInstance.controller).setMintRecipient(
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            bytes32(uint256(uint160(base.almProxy)))
+            bytes32(uint256(uint160(baseControllerInstance.almProxy)))
         );
 
         vm.stopBroadcast();
@@ -428,6 +430,9 @@ contract DeploySepolia is Script {
 
         deployer = msg.sender;
         ilk      = "ALLOCATOR-SPARK-1";
+
+        USDC_UNIT_SIZE = 1000e6;        // Ballpark sizing of rate limits, tokens in PSMs, etc
+        USDS_UNIT_SIZE = 1_000_000e18;  // Ballpark sizing of USDS to put in the join contracts, PSMs, etc
 
         setChain("sepolia_base", ChainData({
             rpcUrl  : "https://base-sepolia-rpc.publicnode.com",
