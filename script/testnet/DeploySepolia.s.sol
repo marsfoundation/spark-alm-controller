@@ -133,7 +133,7 @@ contract DeploySepolia is Script {
         // Step 1: Perform sanity checks
 
         require(usdc.balanceOf(deployer) >= USDC_UNIT_SIZE * 10,   "USDC balance too low");
-        require(USDC_UNIT_SIZE * 1000 <= usdc.balanceOf(deployer), "Unit size too large (don't want to run out of USDC)");
+        require(usdc.balanceOf(deployer) <= USDC_UNIT_SIZE * 1000, "Unit size too large (don't want to run out of USDC)");
 
         vm.startBroadcast();
 
