@@ -26,7 +26,8 @@ import { Script } from "forge-std/Script.sol";
 
 import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
-import { PSM3 } from "spark-psm/src/PSM3.sol";
+import { PSM3Deploy } from "spark-psm/deploy/PSM3Deploy.sol";
+import { PSM3 }       from "spark-psm/src/PSM3.sol";
 
 import {
     ControllerInstance,
@@ -152,7 +153,7 @@ contract DeploySepolia is Script {
 
         // Step 4: Seed relevant contracts with tokens
 
-        // Mint some USDS into the join contract
+        // Mint USDS into the join contract
         usds.mint(address(usdsJoin), USDS_UNIT_SIZE);
 
         // Fill the psm with dai and usdc
@@ -310,25 +311,16 @@ contract DeploySepolia is Script {
         usdsBase  = new MockERC20("USDS",  "USDS",  18);
         susdsBase = new MockERC20("sUSDS", "sUSDS", 18);
 
-        psmBase = new PSM3(
-            base.admin,
-            address(usdcBase),
-            address(usdsBase),
-            address(susdsBase),
-            address(new RateProvider())
-        );
+        // Mint enough for seeded deposit
+        usdsBase.mint(deployer,  1e18);
 
-        // Step 2: Seed the PSM with USDS and sUSDS
-
-        // Fill the PSM with USDS and sUSDS amounts
-        usdsBase.mint(deployer,  USDS_UNIT_SIZE);
-        susdsBase.mint(deployer, USDS_UNIT_SIZE);
-
-        usdsBase.approve(address(psmBase),  type(uint256).max);
-        susdsBase.approve(address(psmBase), type(uint256).max);
-
-        psmBase.deposit(address(usdsBase),  deployer, USDS_UNIT_SIZE);
-        psmBase.deposit(address(susdsBase), deployer, USDS_UNIT_SIZE);
+        psmBase = PSM3(PSM3Deploy.deploy({
+            owner        : deployer,
+            usdc         : address(usdcBase),
+            usds         : address(usdsBase),
+            susds        : address(susdsBase),
+            rateProvider : address(new RateProvider())
+        }));
 
         vm.stopBroadcast();
 
@@ -403,7 +395,12 @@ contract DeploySepolia is Script {
 
         vm.stopBroadcast();
 
-        // Step 3: Export all deployed addresses
+        // Step 3: Seed ALM Proxy with initial amounts of USDS and sUSDS
+
+        usdsBase.mint(instance.almProxy,  USDS_UNIT_SIZE);
+        susdsBase.mint(instance.almProxy, USDS_UNIT_SIZE);
+
+        // Step 4: Export all deployed addresses
 
         ScriptTools.exportContract(base.name, "safe",       SAFE_BASE);
         ScriptTools.exportContract(base.name, "almProxy",   instance.almProxy);
