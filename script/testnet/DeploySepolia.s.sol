@@ -130,23 +130,28 @@ contract DeploySepolia is Script {
     function _setUpMCDMocks() internal {
         vm.selectFork(mainnet.forkId);
 
-        // Pre-requirements check
+        // Step 1: Perform sanity checks
+
         require(usdc.balanceOf(deployer) >= USDC_UNIT_SIZE * 10,   "USDC balance too low");
         require(USDC_UNIT_SIZE * 1000 <= usdc.balanceOf(deployer), "Unit size too large (don't want to run out of USDC)");
 
         vm.startBroadcast();
 
-        // Init tokens
+        // Step 2: Deploy token contracts
+
         dai   = new MockERC20("DAI", "DAI", 18);
         usds  = new MockERC20("USDS", "USDS", 18);
         susds = new SUsds(address(usds));
 
-        // Init MCD contracts
+        // Step 3: Deploy mocked MCD contracts
+
         vat      = new Vat(mainnet.admin);
         usdsJoin = new UsdsJoin(mainnet.admin, address(vat), address(usds));
         daiUsds  = new DaiUsds(mainnet.admin, address(dai), address(usds));
         jug      = new Jug();
         psm      = new PSM(mainnet.admin, address(usdc), address(dai));
+
+        // Step 4: Seed relevant contracts with tokens
 
         // Mint some USDS into the join contract
         usds.mint(address(usdsJoin), USDS_UNIT_SIZE);
@@ -155,22 +160,32 @@ contract DeploySepolia is Script {
         usdc.transfer(address(psm), USDC_UNIT_SIZE * 10);
         dai.mint(address(psm), USDS_UNIT_SIZE);
 
-        // Fill the DaiUsds join contract
+        // Fill the DaiUsds contract with both tokens
         dai.mint(address(daiUsds), USDS_UNIT_SIZE);
         usds.mint(address(daiUsds), USDS_UNIT_SIZE);
 
         vm.stopBroadcast();
 
-        ScriptTools.exportContract(mainnet.name, "usdc",  address(usdc));
+        // Step 5: Export all deployed addresses
+
         ScriptTools.exportContract(mainnet.name, "dai",   address(dai));
-        ScriptTools.exportContract(mainnet.name, "usds",  address(usds));
         ScriptTools.exportContract(mainnet.name, "sUsds", address(susds));
+        ScriptTools.exportContract(mainnet.name, "usdc",  address(usdc));
+        ScriptTools.exportContract(mainnet.name, "usds",  address(usds));
+
+        ScriptTools.exportContract(mainnet.name, "daiUsds",  address(daiUsds));
+        ScriptTools.exportContract(mainnet.name, "jug",      address(jug));
+        ScriptTools.exportContract(mainnet.name, "psm",      address(psm));
+        ScriptTools.exportContract(mainnet.name, "usdsJoin", address(usdsJoin));
+        ScriptTools.exportContract(mainnet.name, "vat",      address(vat));
     }
 
     function _setUpAllocationSystem() internal {
         vm.selectFork(mainnet.forkId);
 
         vm.startBroadcast();
+
+        // Step 1: Deploy allocation system
 
         allocatorSharedInstance = AllocatorDeploy.deployShared(deployer, mainnet.admin);
         allocatorIlkInstance    = AllocatorDeploy.deployIlk(
@@ -181,12 +196,14 @@ contract DeploySepolia is Script {
             address(usdsJoin)
         );
 
-        // Pull out relevant config from the AllocatorInit script
-        // We don't want to execute it all because of our mocked MCD environment
+        // Step 2: Perform partial initialization (not using library because of mocked MCD)
+
         RegistryLike(allocatorSharedInstance.registry).file(ilk, "buffer", allocatorIlkInstance.buffer);
         VaultLike(allocatorIlkInstance.vault).file("jug", address(jug));
         BufferLike(allocatorIlkInstance.buffer).approve(address(usds), allocatorIlkInstance.vault, type(uint256).max);
         RolesLike(allocatorSharedInstance.roles).setIlkAdmin(ilk, mainnet.admin);
+
+        // Step 3: Move ownership of both the vault and buffer to the admin, transfer mock USDS join ownership
 
         ScriptTools.switchOwner(allocatorIlkInstance.vault,  allocatorIlkInstance.owner, mainnet.admin);
         ScriptTools.switchOwner(allocatorIlkInstance.buffer, allocatorIlkInstance.owner, mainnet.admin);
@@ -196,11 +213,14 @@ contract DeploySepolia is Script {
 
         vm.stopBroadcast();
 
+        // Step 5: Export all deployed addresses
+
         ScriptTools.exportContract(mainnet.name, "allocatorOracle",   allocatorSharedInstance.oracle);
-        ScriptTools.exportContract(mainnet.name, "allocatorRoles",    allocatorSharedInstance.roles);
         ScriptTools.exportContract(mainnet.name, "allocatorRegistry", allocatorSharedInstance.registry);
-        ScriptTools.exportContract(mainnet.name, "allocatorVault",    allocatorIlkInstance.vault);
-        ScriptTools.exportContract(mainnet.name, "allocatorBuffer",   allocatorIlkInstance.buffer);
+        ScriptTools.exportContract(mainnet.name, "allocatorRoles",    allocatorSharedInstance.roles);
+
+        ScriptTools.exportContract(mainnet.name, "allocatorBuffer", allocatorIlkInstance.buffer);
+        ScriptTools.exportContract(mainnet.name, "allocatorVault",  allocatorIlkInstance.vault);
     }
 
     function _setUpALMController() internal {
@@ -208,7 +228,11 @@ contract DeploySepolia is Script {
 
         vm.startBroadcast();
 
-        address safe = _setupSafe(mainnet.admin);
+        // Step 1: Deploy ALM controller SAFE with 1:1 as the admin
+
+        address safe = _setUpSafe(mainnet.admin);
+
+        // Step 2: Deploy ALM controller
 
         ControllerInstance memory instance = mainnetController = MainnetControllerDeploy.deployFull({
             admin   : mainnet.admin,
@@ -218,6 +242,8 @@ contract DeploySepolia is Script {
             cctp    : CCTP_TOKEN_MESSENGER_MAINNET,
             susds   : address(susds)
         });
+
+        // Step 3: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
 
         // Still constrained by the USDC_UNIT_SIZE
         RateLimitData memory rateLimitData18 = RateLimitData({
@@ -262,11 +288,15 @@ contract DeploySepolia is Script {
             mintRecipients: mintRecipients
         });
 
+        // Step 4: Transfer ownership of mocked addresses to the ALM proxy
+
         // Custom contract permission changes (not relevant for production deploy)
         daiUsds.transferOwnership(instance.almProxy);
         psm.transferOwnership(instance.almProxy);
 
         vm.stopBroadcast();
+
+        // Step 5: Export all deployed addresses
 
         ScriptTools.exportContract(mainnet.name, "safe",       safe);
         ScriptTools.exportContract(mainnet.name, "almProxy",   instance.almProxy);
@@ -279,6 +309,8 @@ contract DeploySepolia is Script {
 
         vm.startBroadcast();
 
+        // Step 1: Deploy mocked contracts
+
         usdsBase  = new MockERC20("USDS",  "USDS",  18);
         susdsBase = new MockERC20("sUSDS", "sUSDS", 18);
 
@@ -290,20 +322,24 @@ contract DeploySepolia is Script {
             address(new RateProvider())
         );
 
+        // Step 2: Seed the PSM with USDS and sUSDS
+
         // Fill the PSM with USDS and sUSDS amounts
-        usdsBase.mint(deployer, USDS_UNIT_SIZE);
+        usdsBase.mint(deployer,  USDS_UNIT_SIZE);
         susdsBase.mint(deployer, USDS_UNIT_SIZE);
-        usdsBase.approve(address(psmBase), type(uint256).max);
+
+        usdsBase.approve(address(psmBase),  type(uint256).max);
         susdsBase.approve(address(psmBase), type(uint256).max);
-        psmBase.deposit(address(usdsBase), deployer, USDS_UNIT_SIZE);
+
+        psmBase.deposit(address(usdsBase),  deployer, USDS_UNIT_SIZE);
         psmBase.deposit(address(susdsBase), deployer, USDS_UNIT_SIZE);
 
         vm.stopBroadcast();
 
-        ScriptTools.exportContract(base.name, "usds", address(usdsBase));
+        ScriptTools.exportContract(base.name, "usds",  address(usdsBase));
         ScriptTools.exportContract(base.name, "sUsds", address(susdsBase));
-        ScriptTools.exportContract(base.name, "usdc", address(usdcBase));
-        ScriptTools.exportContract(base.name, "psm", address(psmBase));
+        ScriptTools.exportContract(base.name, "usdc",  address(usdcBase));
+        ScriptTools.exportContract(base.name, "psm",   address(psmBase));
     }
 
     function _setUpBaseALMController() public {
@@ -311,7 +347,11 @@ contract DeploySepolia is Script {
 
         vm.startBroadcast();
 
-        address safe = _setupSafe(base.admin);
+        // Step 1: Deploy ALM controller SAFE with 1:1 as the admin
+
+        address safe = _setUpSafe(base.admin);
+
+        // Step 2: Deploy ALM controller
 
         ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
             admin : base.admin,
@@ -320,6 +360,9 @@ contract DeploySepolia is Script {
             cctp  : CCTP_TOKEN_MESSENGER_BASE
         });
 
+        // Step 3: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
+
+        // Still constrained by the USDC_UNIT_SIZE
         RateLimitData memory rateLimitData18 = RateLimitData({
             maxAmount : USDC_UNIT_SIZE * 1e12 * 5,
             slope     : USDC_UNIT_SIZE * 1e12 / 4 hours
@@ -367,22 +410,25 @@ contract DeploySepolia is Script {
 
         vm.stopBroadcast();
 
-        vm.selectFork(mainnet.forkId);
-
-        vm.startBroadcast();
-
-        // Doing this after the fact because we have the address now
-        MainnetController(mainnetController.controller).setMintRecipient(
-            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            bytes32(uint256(uint160(instance.almProxy)))
-        );
-
-        vm.stopBroadcast();
+        // Step 5: Export all deployed addresses
 
         ScriptTools.exportContract(base.name, "safe",       safe);
         ScriptTools.exportContract(base.name, "almProxy",   instance.almProxy);
         ScriptTools.exportContract(base.name, "controller", instance.controller);
         ScriptTools.exportContract(base.name, "rateLimits", instance.rateLimits);
+    }
+
+    function _setBaseMintRecipient() internal {
+        vm.selectFork(mainnet.forkId);
+
+        vm.startBroadcast();
+
+        MainnetController(mainnet.controller).setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(uint256(uint160(base.almProxy)))
+        );
+
+        vm.stopBroadcast();
     }
 
     function run() public {
@@ -416,6 +462,7 @@ contract DeploySepolia is Script {
         _setUpALMController();
         _setUpBasePSM();
         _setUpBaseALMController();
+        _setBaseMintRecipient();
 
         ScriptTools.exportContract(mainnet.name, "admin", deployer);
         ScriptTools.exportContract(base.name,    "admin", deployer);
@@ -435,7 +482,8 @@ contract DeploySepolia is Script {
             address(0),
             address(0),
             0,
-            payable(address(0))));
+            payable(address(0))
+        ));
 
         return address(factory.createProxyWithNonce(SAFE_SINGLETON, initData, 0));
     }
