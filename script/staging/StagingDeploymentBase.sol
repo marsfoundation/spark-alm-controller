@@ -159,7 +159,7 @@ contract StagingDeploymentBase is Script {
     function _setUpMocks() internal {
         require(IERC20(USDC).balanceOf(deployer) >= USDC_UNIT_SIZE * 10, "USDC balance too low");
 
-        dai   = address(new MockERC20("DAI", "DAI", 18));
+        dai   = address(new MockERC20("DAI",  "DAI",  18));
         usds  = address(new MockERC20("USDS", "USDS", 18));
         susds = address(new MockSUsds(usds));
 
@@ -237,14 +237,14 @@ contract StagingDeploymentBase is Script {
         BufferLike(buffer).approve(usds, vault, type(uint256).max);
         RolesLike(roles).setIlkAdmin(ilk, mainnet.admin);
 
-        // Step 3: Move ownership of both the vault and buffer to the admin, transfer mock USDS join ownership
+        // Step 3: Move ownership of both the vault and buffer to the admin
 
         ScriptTools.switchOwner(vault,  allocatorIlkInstance.owner, mainnet.admin);
         ScriptTools.switchOwner(buffer, allocatorIlkInstance.owner, mainnet.admin);
 
         vm.stopBroadcast();
 
-        // Step 5: Export all deployed addresses
+        // Step 4: Export all deployed addresses
 
         ScriptTools.exportContract(mainnet.name, "allocatorOracle",   oracle);
         ScriptTools.exportContract(mainnet.name, "allocatorRegistry", registry);
@@ -399,11 +399,11 @@ contract StagingDeploymentBase is Script {
                 freezer       : makeAddr("freezer"),
                 relayer       : SAFE_BASE,
                 oldController : address(0),
-                psm           : address(psmBase),
+                psm           : psmBase,
                 cctpMessenger : CCTP_TOKEN_MESSENGER_BASE,
                 usdc          : USDC_BASE,
-                usds          : USDC_BASE,
-                susds         : USDC_BASE
+                usds          : usdsBase,
+                susds         : susdsBase
             }),
             controllerInst: instance,
             data: ForeignControllerInit.InitRateLimitData({
@@ -423,8 +423,8 @@ contract StagingDeploymentBase is Script {
 
         // Step 3: Seed ALM Proxy with initial amounts of USDS and sUSDS
 
-        MockERC20(usdsBase).mint(instance.almProxy,  USDS_UNIT_SIZE);
-        MockERC20(susdsBase).mint(instance.almProxy, USDS_UNIT_SIZE);
+        MockERC20(usdsBase).mint(baseAlmProxy,  USDS_UNIT_SIZE);
+        MockERC20(susdsBase).mint(baseAlmProxy, USDS_UNIT_SIZE);
 
         // Step 4: Export all deployed addresses
 
