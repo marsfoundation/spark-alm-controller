@@ -19,7 +19,7 @@ contract DeploySepoliaStaging is StagingDeploymentBase {
         deployer = msg.sender;
 
         setChain("sepolia_base", ChainData({
-            rpcUrl  : "https://base-sepolia-rpc.publicnode.com",
+            rpcUrl  : vm.envOr("SEPOLIA_BASE_RPC_URL", string("https://base-sepolia-rpc.publicnode.com")),
             chainId : 84532,
             name    : "Sepolia Base Testnet"
         }));
