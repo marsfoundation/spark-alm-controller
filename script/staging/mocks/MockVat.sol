@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
-contract Vat is Ownable {
+contract MockVat is Ownable {
 
     uint256 public ilkLine;
 

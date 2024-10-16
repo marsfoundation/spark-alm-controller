@@ -45,14 +45,13 @@ import {
     RateLimitData
 } from "deploy/ControllerInit.sol";
 
-import { DaiUsds }  from "../common/DaiUsds.sol";
-import { Jug }      from "../common/Jug.sol";
-import { UsdsJoin } from "../common/UsdsJoin.sol";
-import { Vat }      from "../common/Vat.sol";
-
-import { PSM }          from "./PSM.sol";
-import { RateProvider } from "./RateProvider.sol";
-import { SUsds }        from "./SUsds.sol";
+import { MockDaiUsds }      from "./mocks/MockDaiUsds.sol";
+import { MockJug }          from "./mocks/MockJug.sol";
+import { MockPSM }          from "./mocks/MockPSM.sol";
+import { MockRateProvider } from "./mocks/MockRateProvider.sol";
+import { MockSUsds }        from "./mocks/MockSUsds.sol";
+import { MockUsdsJoin }     from "./mocks/MockUsdsJoin.sol";
+import { MockVat }          from "./mocks/MockVat.sol";
 
 struct Domain {
     string  name;
@@ -82,18 +81,18 @@ contract StagingDeploymentBase is Script {
     IERC20 usdcBase;
 
     /**********************************************************************************************/
-    /*** Mainnet dependency deployments                                                         ***/
+    /*** Mainnet mock deployments                                                         ***/
     /**********************************************************************************************/
 
     MockERC20 dai;
     MockERC20 usds;
-    SUsds     susds;
+    MockSUsds susds;
 
-    DaiUsds  daiUsds;
-    Jug      jug;
-    PSM      psm;
-    UsdsJoin usdsJoin;
-    Vat      vat;
+    MockDaiUsds  daiUsds;
+    MockJug      jug;
+    MockPSM      psm;
+    MockUsdsJoin usdsJoin;
+    MockVat      vat;
 
     /**********************************************************************************************/
     /*** Mainnet allocation/ALM system deployments                                              ***/
@@ -144,15 +143,15 @@ contract StagingDeploymentBase is Script {
 
         dai   = new MockERC20("DAI", "DAI", 18);
         usds  = new MockERC20("USDS", "USDS", 18);
-        susds = new SUsds(address(usds));
+        susds = new MockSUsds(address(usds));
 
         // Step 3: Deploy mocked MCD contracts
 
-        vat      = new Vat(mainnet.admin);
-        usdsJoin = new UsdsJoin(mainnet.admin, address(vat), address(usds));
-        daiUsds  = new DaiUsds(mainnet.admin, address(dai), address(usds));
-        jug      = new Jug();
-        psm      = new PSM(mainnet.admin, address(usdc), address(dai));
+        vat      = new MockVat(mainnet.admin);
+        usdsJoin = new MockUsdsJoin(mainnet.admin, address(vat), address(usds));
+        daiUsds  = new MockDaiUsds(mainnet.admin, address(dai), address(usds));
+        jug      = new MockJug();
+        psm      = new MockPSM(mainnet.admin, address(usdc), address(dai));
 
         // Step 4: Seed relevant contracts with tokens
 
@@ -322,7 +321,7 @@ contract StagingDeploymentBase is Script {
             usdc         : address(usdcBase),
             usds         : address(usdsBase),
             susds        : address(susdsBase),
-            rateProvider : address(new RateProvider())
+            rateProvider : address(new MockRateProvider())
         }));
 
         vm.stopBroadcast();

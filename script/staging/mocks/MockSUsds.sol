@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import { MockERC20 } from "erc20-helpers/MockERC20.sol";
 
-contract SUsds is MockERC20 {
+contract MockSUsds is MockERC20 {
 
     address public usds;
 
