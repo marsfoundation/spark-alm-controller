@@ -25,10 +25,9 @@ import { IERC20 }  from "forge-std/interfaces/IERC20.sol";
 import { Script }  from "forge-std/Script.sol";
 import { stdJson } from "forge-std/StdJson.sol";
 
-import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
-
 import { PSM3Deploy } from "spark-psm/deploy/PSM3Deploy.sol";
-import { PSM3 }       from "spark-psm/src/PSM3.sol";
+
+import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
 import {
     ControllerInstance,
@@ -77,22 +76,20 @@ contract StagingDeploymentBase is Script {
     address USDC;
     address USDC_BASE;
 
-    IERC20 usdc;
-    IERC20 usdcBase;
-
     /**********************************************************************************************/
-    /*** Mainnet mock deployments                                                         ***/
+    /*** Mainnet dependency deployments                                                         ***/
     /**********************************************************************************************/
 
-    MockERC20 dai;
-    MockERC20 usds;
-    MockSUsds susds;
+    address dai;
+    address daiUsds;
+    address psm;
+    address susds;
+    address usds;
 
-    MockDaiUsds  daiUsds;
-    MockJug      jug;
-    MockPSM      psm;
-    MockUsdsJoin usdsJoin;
-    MockVat      vat;
+    // Mocked MCD contracts
+    address jug;
+    address usdsJoin;
+    address vat;
 
     /**********************************************************************************************/
     /*** Mainnet allocation/ALM system deployments                                              ***/
@@ -108,10 +105,10 @@ contract StagingDeploymentBase is Script {
     /*** Base dependency deployments                                                            ***/
     /**********************************************************************************************/
 
-    MockERC20 usdsBase;
-    MockERC20 susdsBase;
+    address usdsBase;
+    address susdsBase;
 
-    PSM3 psmBase;
+    address psmBase;
 
     /**********************************************************************************************/
     /*** Deployment-specific variables                                                          ***/
@@ -130,56 +127,71 @@ contract StagingDeploymentBase is Script {
     /*** Helper functions                                                                       ***/
     /**********************************************************************************************/
 
+    function _setUpExternalContracts(bool useMocks) internal {
+        // if (useMocks) _setUpMocks();
+
+        // else _useDeployedContracts();
+
+        // ScriptTools.exportContract(mainnet.name, "dai",     dai);
+        // ScriptTools.exportContract(mainnet.name, "sUsds",   susds);
+        // ScriptTools.exportContract(mainnet.name, "usdc",    USDC);
+        // ScriptTools.exportContract(mainnet.name, "usds",    usds);
+        // ScriptTools.exportContract(mainnet.name, "daiUsds", daiUsds);
+        // ScriptTools.exportContract(mainnet.name, "psm",     psm);
+    }
+
+    function _setUpMocks() internal {
+        // IERC20 usdc = IERC20(USDC);
+
+        // usdc.balanceOf(deployer);
+        // require(IERC20(USDC).balanceOf(deployer) >= USDC_UNIT_SIZE * 10, "USDC balance too low");
+
+        // dai   = address(new MockERC20("DAI", "DAI", 18));
+        // usds  = address(new MockERC20("USDS", "USDS", 18));
+        // susds = address(new MockSUsds(usds));
+
+        // daiUsds = address(new MockDaiUsds(mainnet.admin, dai, usds));
+        // psm     = address(new MockPSM(mainnet.admin, USDC, dai));
+
+        // // Mint USDS into the join contract
+        // MockERC20(usds).mint(usdsJoin, USDS_UNIT_SIZE);
+
+        // // Fill the psm with dai and usdc
+        // IERC20(USDC).transfer(psm, USDC_UNIT_SIZE * 10);
+        // MockERC20(dai).mint(psm, USDS_UNIT_SIZE);
+
+        // // Fill the DaiUsds contract with both tokens
+        // MockERC20(dai).mint(daiUsds, USDS_UNIT_SIZE);
+        // MockERC20(usds).mint(daiUsds, USDS_UNIT_SIZE);
+    }
+
+    function _useDeployedContracts() internal {
+        dai     = mainnet.config.readAddress(".dai");
+        usds    = mainnet.config.readAddress(".usds");
+        susds   = mainnet.config.readAddress(".susds");
+        daiUsds = mainnet.config.readAddress(".daiUsds");
+        psm     = mainnet.config.readAddress(".psm");
+
+        require(IERC20(usds).balanceOf(deployer) >= USDS_UNIT_SIZE, "USDS balance too low");
+
+        // Transfer USDS into the join contract
+        IERC20(usds).transfer(usdsJoin, USDS_UNIT_SIZE);
+    }
+
     function _setUpMCDMocks() internal {
         vm.selectFork(mainnet.forkId);
 
-        // Step 1: Perform sanity checks
-
-        require(usdc.balanceOf(deployer) >= USDC_UNIT_SIZE * 10,   "USDC balance too low");
-
         vm.startBroadcast();
 
-        // Step 2: Deploy token contracts
-
-        dai   = new MockERC20("DAI", "DAI", 18);
-        usds  = new MockERC20("USDS", "USDS", 18);
-        susds = new MockSUsds(address(usds));
-
-        // Step 3: Deploy mocked MCD contracts
-
-        vat      = new MockVat(mainnet.admin);
-        usdsJoin = new MockUsdsJoin(mainnet.admin, address(vat), address(usds));
-        daiUsds  = new MockDaiUsds(mainnet.admin, address(dai), address(usds));
-        jug      = new MockJug();
-        psm      = new MockPSM(mainnet.admin, address(usdc), address(dai));
-
-        // Step 4: Seed relevant contracts with tokens
-
-        // Mint USDS into the join contract
-        usds.mint(address(usdsJoin), USDS_UNIT_SIZE);
-
-        // Fill the psm with dai and usdc
-        usdc.transfer(address(psm), USDC_UNIT_SIZE * 10);
-        dai.mint(address(psm), USDS_UNIT_SIZE);
-
-        // Fill the DaiUsds contract with both tokens
-        dai.mint(address(daiUsds), USDS_UNIT_SIZE);
-        usds.mint(address(daiUsds), USDS_UNIT_SIZE);
+        vat      = address(new MockVat(mainnet.admin));
+        usdsJoin = address(new MockUsdsJoin(mainnet.admin, vat, usds));
+        jug      = address(new MockJug());
 
         vm.stopBroadcast();
 
-        // Step 5: Export all deployed addresses
-
-        ScriptTools.exportContract(mainnet.name, "dai",   address(dai));
-        ScriptTools.exportContract(mainnet.name, "sUsds", address(susds));
-        ScriptTools.exportContract(mainnet.name, "usdc",  address(usdc));
-        ScriptTools.exportContract(mainnet.name, "usds",  address(usds));
-
-        ScriptTools.exportContract(mainnet.name, "daiUsds",  address(daiUsds));
-        ScriptTools.exportContract(mainnet.name, "jug",      address(jug));
-        ScriptTools.exportContract(mainnet.name, "psm",      address(psm));
-        ScriptTools.exportContract(mainnet.name, "usdsJoin", address(usdsJoin));
-        ScriptTools.exportContract(mainnet.name, "vat",      address(vat));
+        ScriptTools.exportContract(mainnet.name, "jug",      jug);
+        ScriptTools.exportContract(mainnet.name, "usdsJoin", usdsJoin);
+        ScriptTools.exportContract(mainnet.name, "vat",      vat);
     }
 
     function _setUpAllocationSystem() internal {
@@ -195,23 +207,20 @@ contract StagingDeploymentBase is Script {
             mainnet.admin,
             allocatorSharedInstance.roles,
             ilk,
-            address(usdsJoin)
+            usdsJoin
         );
 
         // Step 2: Perform partial initialization (not using library because of mocked MCD)
 
         RegistryLike(allocatorSharedInstance.registry).file(ilk, "buffer", allocatorIlkInstance.buffer);
-        VaultLike(allocatorIlkInstance.vault).file("jug", address(jug));
-        BufferLike(allocatorIlkInstance.buffer).approve(address(usds), allocatorIlkInstance.vault, type(uint256).max);
+        VaultLike(allocatorIlkInstance.vault).file("jug", jug);
+        BufferLike(allocatorIlkInstance.buffer).approve(usds, allocatorIlkInstance.vault, type(uint256).max);
         RolesLike(allocatorSharedInstance.roles).setIlkAdmin(ilk, mainnet.admin);
 
         // Step 3: Move ownership of both the vault and buffer to the admin, transfer mock USDS join ownership
 
         ScriptTools.switchOwner(allocatorIlkInstance.vault,  allocatorIlkInstance.owner, mainnet.admin);
         ScriptTools.switchOwner(allocatorIlkInstance.buffer, allocatorIlkInstance.owner, mainnet.admin);
-
-        // Custom contract permission changes (not relevant for production deploy)
-        usdsJoin.transferOwnership(allocatorIlkInstance.vault);
 
         vm.stopBroadcast();
 
@@ -235,11 +244,11 @@ contract StagingDeploymentBase is Script {
         ControllerInstance memory instance = mainnetControllerInstance
             = MainnetControllerDeploy.deployFull({
                 admin   : mainnet.admin,
-                vault   : address(allocatorIlkInstance.vault),
-                psm     : address(psm),
-                daiUsds : address(daiUsds),
+                vault   : allocatorIlkInstance.vault,
+                psm     : psm,
+                daiUsds : daiUsds,
                 cctp    : CCTP_TOKEN_MESSENGER_MAINNET,
-                susds   : address(susds)
+                susds   : susds
             });
 
         // Step 2: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
@@ -267,15 +276,15 @@ contract StagingDeploymentBase is Script {
                 freezer       : makeAddr("freezer"),
                 relayer       : SAFE_MAINNET,
                 oldController : address(0),
-                psm           : address(psm),
-                vault         : address(allocatorIlkInstance.vault),
-                buffer        : address(allocatorIlkInstance.buffer),
+                psm           : psm,
+                vault         : allocatorIlkInstance.vault,
+                buffer        : allocatorIlkInstance.buffer,
                 cctpMessenger : CCTP_TOKEN_MESSENGER_MAINNET,
-                dai           : address(dai),
-                daiUsds       : address(daiUsds),
-                usdc          : address(usdc),
-                usds          : address(usds),
-                susds         : address(susds)
+                dai           : dai,
+                daiUsds       : daiUsds,
+                usdc          : USDC,
+                usds          : usds,
+                susds         : susds
             }),
             controllerInst: instance,
             data: MainnetControllerInit.InitRateLimitData({
@@ -286,12 +295,6 @@ contract StagingDeploymentBase is Script {
             }),
             mintRecipients: mintRecipients
         });
-
-        // Step 3: Transfer ownership of mocked addresses to the ALM proxy
-
-        // Custom contract permission changes (not relevant for production deploy)
-        daiUsds.transferOwnership(instance.almProxy);
-        psm.transferOwnership(instance.almProxy);
 
         vm.stopBroadcast();
 
@@ -310,26 +313,26 @@ contract StagingDeploymentBase is Script {
 
         // Step 1: Deploy mocked contracts
 
-        usdsBase  = new MockERC20("USDS",  "USDS",  18);
-        susdsBase = new MockERC20("sUSDS", "sUSDS", 18);
+        usdsBase  = address(new MockERC20("USDS",  "USDS",  18));
+        susdsBase = address(new MockERC20("sUSDS", "sUSDS", 18));
 
         // Mint enough for seeded deposit
-        usdsBase.mint(deployer,  1e18);
+        MockERC20(usdsBase).mint(deployer,  1e18);
 
-        psmBase = PSM3(PSM3Deploy.deploy({
+        psmBase = PSM3Deploy.deploy({
             owner        : deployer,
-            usdc         : address(usdcBase),
-            usds         : address(usdsBase),
-            susds        : address(susdsBase),
+            usdc         : USDC_BASE,
+            usds         : usdsBase,
+            susds        : susdsBase,
             rateProvider : address(new MockRateProvider())
-        }));
+        });
 
         vm.stopBroadcast();
 
-        ScriptTools.exportContract(base.name, "usds",  address(usdsBase));
-        ScriptTools.exportContract(base.name, "sUsds", address(susdsBase));
-        ScriptTools.exportContract(base.name, "usdc",  address(usdcBase));
-        ScriptTools.exportContract(base.name, "psm",   address(psmBase));
+        ScriptTools.exportContract(base.name, "usds",  usdsBase);
+        ScriptTools.exportContract(base.name, "sUsds", susdsBase);
+        ScriptTools.exportContract(base.name, "usdc",  USDC_BASE);
+        ScriptTools.exportContract(base.name, "psm",   psmBase);
     }
 
     function _setUpBaseALMController() public {
@@ -399,8 +402,8 @@ contract StagingDeploymentBase is Script {
 
         // Step 3: Seed ALM Proxy with initial amounts of USDS and sUSDS
 
-        usdsBase.mint(instance.almProxy,  USDS_UNIT_SIZE);
-        susdsBase.mint(instance.almProxy, USDS_UNIT_SIZE);
+        MockERC20(usdsBase).mint(instance.almProxy,  USDS_UNIT_SIZE);
+        MockERC20(susdsBase).mint(instance.almProxy, USDS_UNIT_SIZE);
 
         // Step 4: Export all deployed addresses
 
@@ -423,7 +426,18 @@ contract StagingDeploymentBase is Script {
         vm.stopBroadcast();
     }
 
-    function _runFullDeployment() internal {
+    function _transferOwnershipOfMocks() internal {
+        vm.selectFork(mainnet.forkId);
+        vm.startBroadcast();
+
+        MockDaiUsds(daiUsds).transferOwnership(mainnetControllerInstance.almProxy);
+        MockPSM(psm).transferOwnership(mainnetControllerInstance.almProxy);
+        MockUsdsJoin(usdsJoin).transferOwnership(allocatorIlkInstance.vault);
+
+        vm.stopBroadcast();
+    }
+
+    function _runFullDeployment(bool useMocks) internal {
         // Step 1: Load general configuration
 
         string memory common = ScriptTools.loadConfig("common");
@@ -446,20 +460,22 @@ contract StagingDeploymentBase is Script {
         SAFE_BASE = base.config.readAddress(".safe");
         USDC_BASE = base.config.readAddress(".usdc");
 
-        usdc     = IERC20(USDC);
-        usdcBase = IERC20(USDC_BASE);
+        IERC20(USDC).balanceOf(address(0));
 
         // Step 3: Run deployment scripts after setting storage variables
 
-        _setUpMCDMocks();
-        _setUpAllocationSystem();
-        _setUpALMController();
-        _setUpBasePSM();
-        _setUpBaseALMController();
-        _setBaseMintRecipient();
+        // _setUpExternalContracts(useMocks);
+        // _setUpMCDMocks();
+        // _setUpAllocationSystem();
+        // _setUpALMController();
+        // _setUpBasePSM();
+        // _setUpBaseALMController();
+        // _setBaseMintRecipient();
 
-        ScriptTools.exportContract(mainnet.name, "admin", deployer);
-        ScriptTools.exportContract(base.name,    "admin", deployer);
+        // if (useMocks) _transferOwnershipOfMocks();
+
+        // ScriptTools.exportContract(mainnet.name, "admin", deployer);
+        // ScriptTools.exportContract(base.name,    "admin", deployer);
     }
 
 }
