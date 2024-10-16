@@ -21,8 +21,9 @@ import { ScriptTools } from "dss-test/ScriptTools.sol";
 
 import { MockERC20 } from "erc20-helpers/MockERC20.sol";
 
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { Script } from "forge-std/Script.sol";
+import { IERC20 }  from "forge-std/interfaces/IERC20.sol";
+import { Script }  from "forge-std/Script.sol";
+import { stdJson } from "forge-std/StdJson.sol";
 
 import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
@@ -44,14 +45,13 @@ import {
     RateLimitData
 } from "deploy/ControllerInit.sol";
 
-import { DaiUsds }  from "../common/DaiUsds.sol";
-import { Jug }      from "../common/Jug.sol";
-import { UsdsJoin } from "../common/UsdsJoin.sol";
-import { Vat }      from "../common/Vat.sol";
-
-import { PSM }          from "./PSM.sol";
-import { RateProvider } from "./RateProvider.sol";
-import { SUsds }        from "./SUsds.sol";
+import { MockDaiUsds }      from "./mocks/MockDaiUsds.sol";
+import { MockJug }          from "./mocks/MockJug.sol";
+import { MockPSM }          from "./mocks/MockPSM.sol";
+import { MockRateProvider } from "./mocks/MockRateProvider.sol";
+import { MockSUsds }        from "./mocks/MockSUsds.sol";
+import { MockUsdsJoin }     from "./mocks/MockUsdsJoin.sol";
+import { MockVat }          from "./mocks/MockVat.sol";
 
 struct Domain {
     string  name;
@@ -60,36 +60,39 @@ struct Domain {
     address admin;
 }
 
-contract DeploySepolia is Script {
+contract StagingDeploymentBase is Script {
+
+    using stdJson     for string;
+    using ScriptTools for string;
 
     /**********************************************************************************************/
-    /*** Existing addresses                                                                     ***/
+    /*** Existing addresses (populated from JSON)                                               ***/
     /**********************************************************************************************/
 
-    address constant CCTP_TOKEN_MESSENGER_BASE    = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
-    address constant CCTP_TOKEN_MESSENGER_MAINNET = 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5;
+    address CCTP_TOKEN_MESSENGER_BASE;
+    address CCTP_TOKEN_MESSENGER_MAINNET;
 
-    address constant SAFE_MAINNET = 0x22fB6fe2B9aA289D26724eCBD5a679751A4508b5;
-    address constant SAFE_BASE    = 0x22fB6fe2B9aA289D26724eCBD5a679751A4508b5;
-    address constant USDC         = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
-    address constant USDC_BASE    = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+    address SAFE_MAINNET;
+    address SAFE_BASE;
+    address USDC;
+    address USDC_BASE;
 
-    IERC20 constant usdc     = IERC20(USDC);
-    IERC20 constant usdcBase = IERC20(USDC_BASE);
+    IERC20 usdc;
+    IERC20 usdcBase;
 
     /**********************************************************************************************/
-    /*** Mainnet dependency deployments                                                         ***/
+    /*** Mainnet mock deployments                                                         ***/
     /**********************************************************************************************/
 
     MockERC20 dai;
     MockERC20 usds;
-    SUsds     susds;
+    MockSUsds susds;
 
-    DaiUsds  daiUsds;
-    Jug      jug;
-    PSM      psm;
-    UsdsJoin usdsJoin;
-    Vat      vat;
+    MockDaiUsds  daiUsds;
+    MockJug      jug;
+    MockPSM      psm;
+    MockUsdsJoin usdsJoin;
+    MockVat      vat;
 
     /**********************************************************************************************/
     /*** Mainnet allocation/ALM system deployments                                              ***/
@@ -133,7 +136,6 @@ contract DeploySepolia is Script {
         // Step 1: Perform sanity checks
 
         require(usdc.balanceOf(deployer) >= USDC_UNIT_SIZE * 10,   "USDC balance too low");
-        require(usdc.balanceOf(deployer) <= USDC_UNIT_SIZE * 1000, "Unit size too large (don't want to run out of USDC)");
 
         vm.startBroadcast();
 
@@ -141,15 +143,15 @@ contract DeploySepolia is Script {
 
         dai   = new MockERC20("DAI", "DAI", 18);
         usds  = new MockERC20("USDS", "USDS", 18);
-        susds = new SUsds(address(usds));
+        susds = new MockSUsds(address(usds));
 
         // Step 3: Deploy mocked MCD contracts
 
-        vat      = new Vat(mainnet.admin);
-        usdsJoin = new UsdsJoin(mainnet.admin, address(vat), address(usds));
-        daiUsds  = new DaiUsds(mainnet.admin, address(dai), address(usds));
-        jug      = new Jug();
-        psm      = new PSM(mainnet.admin, address(usdc), address(dai));
+        vat      = new MockVat(mainnet.admin);
+        usdsJoin = new MockUsdsJoin(mainnet.admin, address(vat), address(usds));
+        daiUsds  = new MockDaiUsds(mainnet.admin, address(dai), address(usds));
+        jug      = new MockJug();
+        psm      = new MockPSM(mainnet.admin, address(usdc), address(dai));
 
         // Step 4: Seed relevant contracts with tokens
 
@@ -319,7 +321,7 @@ contract DeploySepolia is Script {
             usdc         : address(usdcBase),
             usds         : address(usdsBase),
             susds        : address(susdsBase),
-            rateProvider : address(new RateProvider())
+            rateProvider : address(new MockRateProvider())
         }));
 
         vm.stopBroadcast();
@@ -421,34 +423,33 @@ contract DeploySepolia is Script {
         vm.stopBroadcast();
     }
 
-    function run() public {
-        vm.setEnv("FOUNDRY_ROOT_CHAINID",             "11155111");
-        vm.setEnv("FOUNDRY_EXPORTS_OVERWRITE_LATEST", "true");
+    function _runFullDeployment() internal {
+        // Step 1: Load general configuration
 
-        deployer = msg.sender;
-        ilk      = "ALLOCATOR-SPARK-1";
+        string memory common = ScriptTools.loadConfig("common");
 
-        USDC_UNIT_SIZE = 1000e6;        // Ballpark sizing of rate limits, tokens in PSMs, etc
-        USDS_UNIT_SIZE = 1_000_000e18;  // Ballpark sizing of USDS to put in the join contracts, PSMs, etc
+        ilk = common.readString(".ilk").stringToBytes32();
 
-        setChain("sepolia_base", ChainData({
-            rpcUrl  : "https://base-sepolia-rpc.publicnode.com",
-            chainId : 84532,
-            name    : "Sepolia Base Testnet"
-        }));
+        // Ballpark sizing of rate limits, tokens in PSMs, etc
+        // Ballpark sizing of USDS to put in the join contracts, PSMs, etc
+        USDC_UNIT_SIZE = common.readUint(".usdcUnitSize") * 1e6;
+        USDS_UNIT_SIZE = common.readUint(".usdsUnitSize") * 1e18;
 
-        mainnet = Domain({
-            name   : "mainnet",
-            config : ScriptTools.loadConfig("mainnet"),
-            forkId : vm.createFork(getChain("sepolia").rpcUrl),
-            admin  : deployer
-        });
-        base = Domain({
-            name   : "base",
-            config : ScriptTools.loadConfig("base"),
-            forkId : vm.createFork(getChain("sepolia_base").rpcUrl),
-            admin  : deployer
-        });
+        // Step 2: Load domain-specific configurations
+
+        CCTP_TOKEN_MESSENGER_MAINNET = mainnet.config.readAddress(".cctpTokenMessenger");
+        CCTP_TOKEN_MESSENGER_BASE    = base.config.readAddress(".cctpTokenMessenger");
+
+        SAFE_MAINNET = mainnet.config.readAddress(".safe");
+        USDC         = mainnet.config.readAddress(".usdc");
+
+        SAFE_BASE = base.config.readAddress(".safe");
+        USDC_BASE = base.config.readAddress(".usdc");
+
+        usdc     = IERC20(USDC);
+        usdcBase = IERC20(USDC_BASE);
+
+        // Step 3: Run deployment scripts after setting storage variables
 
         _setUpMCDMocks();
         _setUpAllocationSystem();

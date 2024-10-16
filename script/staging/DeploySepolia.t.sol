@@ -71,7 +71,7 @@ contract DeploySepoliaTest is Test {
         vm.setEnv("FOUNDRY_ROOT_CHAINID", "11155111");
 
         setChain("sepolia_base", ChainData({
-            rpcUrl: "https://base-sepolia-rpc.publicnode.com",
+            rpcUrl: vm.envOr("SEPOLIA_BASE_RPC_URL", string("https://base-sepolia-rpc.publicnode.com")),
             chainId: 84532,
             name: "Sepolia Base Testnet"
         }));

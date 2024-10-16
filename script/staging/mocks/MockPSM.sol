@@ -5,7 +5,7 @@ import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
-contract PSM is Ownable {
+contract MockPSM is Ownable {
 
     IERC20 public immutable gem;
     IERC20 public immutable dai;
