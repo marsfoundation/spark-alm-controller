@@ -31,7 +31,7 @@ contract DeployEthereumStaging is StagingDeploymentBase {
             admin  : deployer
         });
 
-        _runFullDeployment({ useMocks: false });
+        _runFullDeployment({ useLiveContracts: true });
     }
 
 }
