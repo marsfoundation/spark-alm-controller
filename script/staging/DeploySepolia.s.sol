@@ -37,7 +37,7 @@ contract DeploySepoliaStaging is StagingDeploymentBase {
             admin  : deployer
         });
 
-        _runFullDeployment();
+        _runFullDeployment({ useLiveContracts: false });
     }
 
 }
