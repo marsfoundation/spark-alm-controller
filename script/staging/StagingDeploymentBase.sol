@@ -77,7 +77,7 @@ contract StagingDeploymentBase is Script {
     address USDC_BASE;
 
     /**********************************************************************************************/
-    /*** Mainnet mock deployments                                                         ***/
+    /*** Mainnet mock deployments                                                               ***/
     /**********************************************************************************************/
 
     address dai;
@@ -92,14 +92,25 @@ contract StagingDeploymentBase is Script {
     address vat;
 
     /**********************************************************************************************/
-    /*** Mainnet allocation/ALM system deployments                                              ***/
+    /*** Mainnet allocation system deployments                                                  ***/
     /**********************************************************************************************/
 
-    AllocatorIlkInstance    allocatorIlkInstance;
-    AllocatorSharedInstance allocatorSharedInstance;
+    address oracle;
+    address roles;
+    address registry;
 
-    ControllerInstance baseControllerInstance;
-    ControllerInstance mainnetControllerInstance;
+    address buffer;
+    address vault;
+
+    /**********************************************************************************************/
+    /*** ALM system deployments                                                                 ***/
+    /**********************************************************************************************/
+
+    address baseAlmProxy;
+    address baseController;
+
+    address mainnetAlmProxy;
+    address mainnetController;
 
     /**********************************************************************************************/
     /*** Base dependency deployments                                                            ***/
@@ -201,8 +212,10 @@ contract StagingDeploymentBase is Script {
 
         // Step 1: Deploy allocation system
 
-        allocatorSharedInstance = AllocatorDeploy.deployShared(deployer, mainnet.admin);
-        allocatorIlkInstance    = AllocatorDeploy.deployIlk(
+        AllocatorSharedInstance memory allocatorSharedInstance
+            = AllocatorDeploy.deployShared(deployer, mainnet.admin);
+
+        AllocatorIlkInstance memory allocatorIlkInstance = AllocatorDeploy.deployIlk(
             deployer,
             mainnet.admin,
             allocatorSharedInstance.roles,
@@ -210,28 +223,35 @@ contract StagingDeploymentBase is Script {
             usdsJoin
         );
 
+        oracle   = allocatorSharedInstance.oracle;
+        registry = allocatorSharedInstance.registry;
+        roles    = allocatorSharedInstance.roles;
+
+        buffer = allocatorIlkInstance.buffer;
+        vault  = allocatorIlkInstance.vault;
+
         // Step 2: Perform partial initialization (not using library because of mocked MCD)
 
-        RegistryLike(allocatorSharedInstance.registry).file(ilk, "buffer", allocatorIlkInstance.buffer);
-        VaultLike(allocatorIlkInstance.vault).file("jug", jug);
-        BufferLike(allocatorIlkInstance.buffer).approve(usds, allocatorIlkInstance.vault, type(uint256).max);
-        RolesLike(allocatorSharedInstance.roles).setIlkAdmin(ilk, mainnet.admin);
+        RegistryLike(registry).file(ilk, "buffer", buffer);
+        VaultLike(vault).file("jug", jug);
+        BufferLike(buffer).approve(usds, vault, type(uint256).max);
+        RolesLike(roles).setIlkAdmin(ilk, mainnet.admin);
 
         // Step 3: Move ownership of both the vault and buffer to the admin, transfer mock USDS join ownership
 
-        ScriptTools.switchOwner(allocatorIlkInstance.vault,  allocatorIlkInstance.owner, mainnet.admin);
-        ScriptTools.switchOwner(allocatorIlkInstance.buffer, allocatorIlkInstance.owner, mainnet.admin);
+        ScriptTools.switchOwner(vault,  allocatorIlkInstance.owner, mainnet.admin);
+        ScriptTools.switchOwner(buffer, allocatorIlkInstance.owner, mainnet.admin);
 
         vm.stopBroadcast();
 
         // Step 5: Export all deployed addresses
 
-        ScriptTools.exportContract(mainnet.name, "allocatorOracle",   allocatorSharedInstance.oracle);
-        ScriptTools.exportContract(mainnet.name, "allocatorRegistry", allocatorSharedInstance.registry);
-        ScriptTools.exportContract(mainnet.name, "allocatorRoles",    allocatorSharedInstance.roles);
+        ScriptTools.exportContract(mainnet.name, "allocatorOracle",   oracle);
+        ScriptTools.exportContract(mainnet.name, "allocatorRegistry", registry);
+        ScriptTools.exportContract(mainnet.name, "allocatorRoles",    roles);
 
-        ScriptTools.exportContract(mainnet.name, "allocatorBuffer", allocatorIlkInstance.buffer);
-        ScriptTools.exportContract(mainnet.name, "allocatorVault",  allocatorIlkInstance.vault);
+        ScriptTools.exportContract(mainnet.name, "allocatorBuffer", buffer);
+        ScriptTools.exportContract(mainnet.name, "allocatorVault",  vault);
     }
 
     function _setUpALMController() internal {
@@ -240,15 +260,17 @@ contract StagingDeploymentBase is Script {
 
         // Step 1: Deploy ALM controller
 
-        ControllerInstance memory instance = mainnetControllerInstance
-            = MainnetControllerDeploy.deployFull({
-                admin   : mainnet.admin,
-                vault   : allocatorIlkInstance.vault,
-                psm     : psm,
-                daiUsds : daiUsds,
-                cctp    : CCTP_TOKEN_MESSENGER_MAINNET,
-                susds   : susds
-            });
+        ControllerInstance memory instance = MainnetControllerDeploy.deployFull({
+            admin   : mainnet.admin,
+            vault   : vault,
+            psm     : psm,
+            daiUsds : daiUsds,
+            cctp    : CCTP_TOKEN_MESSENGER_MAINNET,
+            susds   : susds
+        });
+
+        mainnetAlmProxy   = instance.almProxy;
+        mainnetController = instance.controller;
 
         // Step 2: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
 
@@ -276,8 +298,8 @@ contract StagingDeploymentBase is Script {
                 relayer       : SAFE_MAINNET,
                 oldController : address(0),
                 psm           : psm,
-                vault         : allocatorIlkInstance.vault,
-                buffer        : allocatorIlkInstance.buffer,
+                vault         : vault,
+                buffer        : buffer,
                 cctpMessenger : CCTP_TOKEN_MESSENGER_MAINNET,
                 dai           : dai,
                 daiUsds       : daiUsds,
@@ -339,13 +361,15 @@ contract StagingDeploymentBase is Script {
 
         // Step 1: Deploy ALM controller
 
-        ControllerInstance memory instance = baseControllerInstance
-            = ForeignControllerDeploy.deployFull({
-                admin : base.admin,
-                psm   : address(psmBase),
-                usdc  : USDC_BASE,
-                cctp  : CCTP_TOKEN_MESSENGER_BASE
-            });
+        ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
+            admin : base.admin,
+            psm   : address(psmBase),
+            usdc  : USDC_BASE,
+            cctp  : CCTP_TOKEN_MESSENGER_BASE
+        });
+
+        baseAlmProxy   = instance.almProxy;
+        baseController = instance.controller;
 
         // Step 2: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
 
@@ -366,7 +390,7 @@ contract StagingDeploymentBase is Script {
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
         mintRecipients[0] = MintRecipient({
             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-            mintRecipient : bytes32(uint256(uint160(mainnetControllerInstance.almProxy)))
+            mintRecipient : bytes32(uint256(uint160(baseAlmProxy)))
         });
 
         ForeignControllerInit.init({
@@ -414,9 +438,9 @@ contract StagingDeploymentBase is Script {
         vm.selectFork(mainnet.forkId);
         vm.startBroadcast();
 
-        MainnetController(mainnetControllerInstance.controller).setMintRecipient(
+        MainnetController(mainnetController).setMintRecipient(
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            bytes32(uint256(uint160(baseControllerInstance.almProxy)))
+            bytes32(uint256(uint160(baseAlmProxy)))
         );
 
         vm.stopBroadcast();
@@ -426,9 +450,9 @@ contract StagingDeploymentBase is Script {
         vm.selectFork(mainnet.forkId);
         vm.startBroadcast();
 
-        MockDaiUsds(daiUsds).transferOwnership(mainnetControllerInstance.almProxy);
-        MockPSM(psm).transferOwnership(mainnetControllerInstance.almProxy);
-        MockUsdsJoin(usdsJoin).transferOwnership(allocatorIlkInstance.vault);
+        MockDaiUsds(daiUsds).transferOwnership(mainnetAlmProxy);
+        MockPSM(psm).transferOwnership(mainnetAlmProxy);
+        MockUsdsJoin(usdsJoin).transferOwnership(vault);
 
         vm.stopBroadcast();
     }
