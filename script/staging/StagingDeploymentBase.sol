@@ -331,8 +331,6 @@ contract StagingDeploymentBase is Script {
         vm.selectFork(base.forkId);
         vm.startBroadcast();
 
-        // Step 1: Deploy mocked contracts
-
         usdsBase  = address(new MockERC20("USDS",  "USDS",  18));
         susdsBase = address(new MockERC20("sUSDS", "sUSDS", 18));
 
