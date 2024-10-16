@@ -77,7 +77,7 @@ contract StagingDeploymentBase is Script {
     address USDC_BASE;
 
     /**********************************************************************************************/
-    /*** Mainnet dependency deployments                                                         ***/
+    /*** Mainnet mock deployments                                                         ***/
     /**********************************************************************************************/
 
     address dai;
@@ -146,9 +146,6 @@ contract StagingDeploymentBase is Script {
     }
 
     function _setUpMocks() internal {
-        IERC20 usdc = IERC20(USDC);
-
-        usdc.balanceOf(deployer);
         require(IERC20(USDC).balanceOf(deployer) >= USDC_UNIT_SIZE * 10, "USDC balance too low");
 
         dai   = address(new MockERC20("DAI", "DAI", 18));
