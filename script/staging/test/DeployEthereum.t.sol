@@ -29,6 +29,8 @@ contract DeployEthereumTest is Test {
     using DomainHelpers for *;
     using CCTPBridgeTesting for *;
 
+    bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
+
     address admin;
     address safeBase;  // Will be the same on all chains
     address safeMainnet;
@@ -102,6 +104,66 @@ contract DeployEthereumTest is Test {
         almProxyBase      = ALMProxy(payable(outputBase.readAddress(".almProxy")));
 
         mainnet.selectFork();
+    }
+
+    function test_mainnetConfiguration() public {
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),          true);
+        assertEq(mainnetController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),        true);
+
+        assertEq(address(mainnetController.proxy()),      outputMainnet.readAddress(".almProxy"));
+        assertEq(address(mainnetController.rateLimits()), outputMainnet.readAddress(".rateLimits"));
+        assertEq(address(mainnetController.vault()),      outputMainnet.readAddress(".allocatorVault"));
+        assertEq(address(mainnetController.buffer()),     outputMainnet.readAddress(".allocatorBuffer"));
+        assertEq(address(mainnetController.psm()),        outputMainnet.readAddress(".psm"));
+        assertEq(address(mainnetController.daiUsds()),    outputMainnet.readAddress(".daiUsds"));
+        assertEq(address(mainnetController.cctp()),       inputMainnet.readAddress(".cctpTokenMessenger"));
+        assertEq(address(mainnetController.susds()),      outputMainnet.readAddress(".sUsds"));  // TODO: Update casing
+        assertEq(address(mainnetController.dai()),        outputMainnet.readAddress(".dai"));
+        assertEq(address(mainnetController.usdc()),       outputMainnet.readAddress(".usdc"));
+        assertEq(address(mainnetController.usds()),       outputMainnet.readAddress(".usds"));
+
+        assertEq(mainnetController.psmTo18ConversionFactor(), 1e12);
+        assertEq(mainnetController.active(),                  true);
+
+        assertEq(mainnetController.hasRole(mainnetController.RELAYER(), safeMainnet), true);
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)), true);
+
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), true);
+
+        assertEq(
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            bytes32(uint256(uint160(outputBase.readAddress(".almProxy"))))
+        );
+
+        assertEq(allocatorVault.wards(address(almProxy)), 1);
+
+        assertEq(usds.allowance(address(allocatorBuffer), address(almProxy)), type(uint256).max);
+    }
+
+    function test_baseConfiguration() public {
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR),          true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR),        true);
+        assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR), true);
+
+        assertEq(address(foreignController.proxy()),      controllerInst.almProxy);
+        assertEq(address(foreignController.rateLimits()), controllerInst.rateLimits);
+        assertEq(address(foreignController.psm()),        address(psmBase));
+        assertEq(address(foreignController.usdc()),       USDC_BASE);
+        assertEq(address(foreignController.cctp()),       CCTP_MESSENGER_BASE);
+
+        assertEq(foreignController.hasRole(foreignController.FREEZER(), freezer), true);
+        assertEq(foreignController.hasRole(foreignController.RELAYER(), relayer), true);
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)), true);
+
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), true);
+
+        assertEq(
+            foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
+            bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
+        );
     }
 
     function test_mintUSDS() public {
