@@ -314,6 +314,10 @@ contract StagingDeploymentBase is Script {
             mintRecipients: mintRecipients
         });
 
+        // Step 3: Transfer ownership of mock usdsJoin to the vault (able to mint usds)
+
+        MockUsdsJoin(usdsJoin).transferOwnership(vault);
+
         vm.stopBroadcast();
 
         // Step 4: Export all deployed addresses
@@ -447,7 +451,6 @@ contract StagingDeploymentBase is Script {
 
         MockDaiUsds(daiUsds).transferOwnership(mainnetAlmProxy);
         MockPSM(psm).transferOwnership(mainnetAlmProxy);
-        MockUsdsJoin(usdsJoin).transferOwnership(vault);
 
         vm.stopBroadcast();
     }
