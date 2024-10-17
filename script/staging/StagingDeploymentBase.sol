@@ -51,6 +51,7 @@ import { MockRateProvider } from "./mocks/MockRateProvider.sol";
 import { MockSUsds }        from "./mocks/MockSUsds.sol";
 import { MockUsdsJoin }     from "./mocks/MockUsdsJoin.sol";
 import { MockVat }          from "./mocks/MockVat.sol";
+import { PSMWrapper }       from "./mocks/PSMWrapper.sol";
 
 struct Domain {
     string  name;
@@ -82,6 +83,7 @@ contract StagingDeploymentBase is Script {
 
     address dai;
     address daiUsds;
+    address livePsm;
     address psm;
     address susds;
     address usds;
@@ -178,7 +180,11 @@ contract StagingDeploymentBase is Script {
         usds    = mainnet.config.readAddress(".usds");
         susds   = mainnet.config.readAddress(".susds");
         daiUsds = mainnet.config.readAddress(".daiUsds");
-        psm     = mainnet.config.readAddress(".psm");
+        livePsm = mainnet.config.readAddress(".psm");
+
+        // This contract is necessary to get past the `kiss` requirement from the pause proxy.
+        // It wraps the `noFee` calls with regular PSM swap calls.
+        psm = address(new PSMWrapper(USDC, dai, livePsm));
     }
 
     function _setUpMocks() internal {

@@ -8,6 +8,7 @@ import { ScriptTools } from "dss-test/ScriptTools.sol";
 import { Bridge }                from "xchain-helpers/src/testing/Bridge.sol";
 import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
 import { CCTPBridgeTesting }     from "xchain-helpers/src/testing/bridges/CCTPBridgeTesting.sol";
+import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
 import { Usds }  from "lib/usds/src/Usds.sol";
 import { SUsds } from "lib/sdai/src/SUsds.sol";
@@ -29,7 +30,8 @@ contract DeployEthereumTest is Test {
     using CCTPBridgeTesting for *;
 
     address admin;
-    address safe;  // Will be the same on all chains
+    address safeBase;  // Will be the same on all chains
+    address safeMainnet;
 
     string inputMainnet;
     string outputMainnet;
@@ -48,12 +50,12 @@ contract DeployEthereumTest is Test {
     AllocatorVault  allocatorVault;
     AllocatorBuffer allocatorBuffer;
 
+    ALMProxy          almProxy;
     MainnetController mainnetController;
-    ALMProxy almProxy;
-    RateLimits rateLimits;
+    RateLimits        rateLimits;
 
     // Base contracts
-    PSM3 psm;
+    PSM3 psmBase;
 
     IERC20 usdsBase;
     IERC20 susdsBase;
@@ -73,18 +75,10 @@ contract DeployEthereumTest is Test {
         inputBase     = ScriptTools.readInput("base");
         outputBase    = ScriptTools.readOutput("base-release", 20241017);
 
-        cctpBridge = CCTPBridgeTesting.init(Bridge({
-            source:                         mainnet,
-            destination:                    base,
-            sourceCrossChainMessenger:      inputMainnet.readAddress(".cctpTokenMessenger"),
-            destinationCrossChainMessenger: inputBase.readAddress(".cctpTokenMessenger"),
-            lastSourceLogIndex:             0,
-            lastDestinationLogIndex:        0,
-            extraData:                      ""
-        }));
+        cctpBridge = CCTPBridgeTesting.createCircleBridge(mainnet, base);
 
-        admin = outputMainnet.readAddress(".admin");
-        safe  = outputMainnet.readAddress(".safe");
+        admin       = outputMainnet.readAddress(".admin");
+        safeMainnet = outputMainnet.readAddress(".safe");
 
         usds  = Usds(outputMainnet.readAddress(".usds"));
         susds = SUsds(outputMainnet.readAddress(".sUsds"));
@@ -97,7 +91,8 @@ contract DeployEthereumTest is Test {
         almProxy          = ALMProxy(payable(outputMainnet.readAddress(".almProxy")));
         rateLimits        = RateLimits(outputMainnet.readAddress(".rateLimits"));
 
-        psm = PSM3(outputBase.readAddress(".psm"));
+        safeBase = outputBase.readAddress(".safe");
+        psmBase  = PSM3(outputBase.readAddress(".psm"));
 
         usdsBase  = IERC20(outputBase.readAddress(".usds"));
         susdsBase = IERC20(outputBase.readAddress(".sUsds"));
@@ -112,10 +107,99 @@ contract DeployEthereumTest is Test {
     function test_mintUSDS() public {
         assertEq(usds.balanceOf(address(almProxy)), 0);
 
-        vm.prank(safe);
+        vm.prank(safeMainnet);
         mainnetController.mintUSDS(10e18);
 
         assertEq(usds.balanceOf(address(almProxy)), 10e18);
+    }
+
+    function test_mintAndSwapToUSDC() public {
+        assertEq(usdc.balanceOf(address(almProxy)), 0);
+
+        vm.startPrank(safeMainnet);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        vm.stopPrank();
+
+        assertEq(usdc.balanceOf(address(almProxy)), 10e6);
+    }
+
+    function test_transferCCTP() public {
+        base.selectFork();
+
+        assertEq(usdcBase.balanceOf(address(almProxyBase)), 0);
+
+        mainnet.selectFork();
+
+        vm.startPrank(safeMainnet);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        assertEq(usdcBase.balanceOf(address(almProxyBase)), 10e6);
+    }
+
+    function test_transferToPSM() public {
+        base.selectFork();
+
+        assertEq(usdcBase.balanceOf(address(psmBase)), 0);
+
+        mainnet.selectFork();
+
+        vm.startPrank(safeMainnet);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        vm.startPrank(safeBase);
+        foreignController.depositPSM(address(usdcBase), 10e6);
+        vm.stopPrank();
+
+        assertEq(usdcBase.balanceOf(address(psmBase)), 10e6);
+    }
+
+    function test_fullRoundTrip() public {
+        mainnet.selectFork();
+
+        vm.startPrank(safeMainnet);
+        mainnetController.mintUSDS(1e18);
+        mainnetController.swapUSDSToUSDC(1e6);
+        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        vm.startPrank(safeBase);
+        foreignController.depositPSM(address(usdcBase), 1e6);
+        foreignController.withdrawPSM(address(usdcBase), 1e6);
+        foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+        vm.stopPrank();
+
+        // There is a bug when the messenger addresses are the same
+        // Need to force update to skip the previous relayed message
+        // See: https://github.com/marsfoundation/xchain-helpers/issues/24
+        cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
+        cctpBridge.relayMessagesToSource(true);
+
+        // NOTE: This is a HACK to make sure that `fill` doesn't get called until the call reverts.
+        //       Because this PSM contract is a wrapper over the real PSM, the controller queries
+        //       the DAI balance of the PSM to check if it should fill or not. Filling with DAI
+        //       fills the live PSM NOT the wrapper, so the while loop will continue until the
+        //       function reverts. Dealing DAI into the wrapper will prevent fill from being called.
+        address psm = outputMainnet.readAddress(".psm");
+        address dai = inputMainnet.readAddress(".dai");
+        deal(address(dai), psm, 100e18);
+
+        vm.startPrank(safeMainnet);
+        mainnetController.swapUSDCToUSDS(1e6);
+        mainnetController.burnUSDS(1e18);
+        vm.stopPrank();
     }
 
 }
