@@ -4,5 +4,5 @@ deploy-ethereum-staging :; forge script script/staging/DeployEthereum.s.sol:Depl
 
 # Production Deployments
 deploy-base     :; forge script script/Deploy.s.sol:DeployBaseFull --sender ${ETH_FROM} --broadcast --verify
-deploy-ethereum :; forge script script/Deploy.s.sol:DeployMainnetFull --sender ${ETH_FROM} --broadcast --verify
+deploy-ethereum :; forge script script/Deploy.s.sol:DeployMainnetFull --sender ${ETH_FROM} --broadcast --verify -vvvvvv
 

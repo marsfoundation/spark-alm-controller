@@ -13,27 +13,36 @@ import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForward
 import { Usds }  from "lib/usds/src/Usds.sol";
 import { SUsds } from "lib/sdai/src/SUsds.sol";
 
-import { AllocatorVault }  from "lib/dss-allocator/src/AllocatorVault.sol";
-import { AllocatorBuffer } from "lib/dss-allocator/src/AllocatorBuffer.sol";
+import { AllocatorVault }    from "lib/dss-allocator/src/AllocatorVault.sol";
+import { AllocatorBuffer }   from "lib/dss-allocator/src/AllocatorBuffer.sol";
+import { AllocatorRegistry } from "lib/dss-allocator/src/AllocatorRegistry.sol";
+import { AllocatorRoles }    from "lib/dss-allocator/src/AllocatorRoles.sol";
 
 import { MainnetController } from "src/MainnetController.sol";
 import { ForeignController } from "src/ForeignController.sol";
 import { ALMProxy }          from "src/ALMProxy.sol";
 import { RateLimits }        from "src/RateLimits.sol";
 
-import { PSM3, IERC20 } from "lib/spark-psm/src/PSM3.sol";
+import { PSM3, IERC20 }      from "lib/spark-psm/src/PSM3.sol";
+import { IRateProviderLike } from "lib/spark-psm/src/interfaces/IRateProviderLike.sol";
+
+interface IVatLike {
+    function can(address, address) external view returns (uint256);
+}
 
 contract DeployEthereumTest is Test {
 
     using stdJson for *;
     using DomainHelpers for *;
     using CCTPBridgeTesting for *;
+    using ScriptTools for *;
 
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     address admin;
     address safeBase;  // Will be the same on all chains
     address safeMainnet;
+    address usdsJoin;
 
     string inputMainnet;
     string outputMainnet;
@@ -48,9 +57,12 @@ contract DeployEthereumTest is Test {
     Usds   usds;
     SUsds  susds;
     IERC20 usdc;
+    IERC20 dai;
 
-    AllocatorVault  allocatorVault;
-    AllocatorBuffer allocatorBuffer;
+    AllocatorVault    vault;
+    AllocatorBuffer   buffer;
+    AllocatorRegistry registry;
+    AllocatorRoles    roles;
 
     ALMProxy          almProxy;
     MainnetController mainnetController;
@@ -63,8 +75,9 @@ contract DeployEthereumTest is Test {
     IERC20 susdsBase;
     IERC20 usdcBase;
 
+    ALMProxy          foreignAlmProxy;
     ForeignController foreignController;
-    ALMProxy almProxyBase;
+    RateLimits        foreignRateLimits;
 
     function setUp() public {
         vm.setEnv("FOUNDRY_ROOT_CHAINID", "1");
@@ -85,13 +98,18 @@ contract DeployEthereumTest is Test {
         usds  = Usds(outputMainnet.readAddress(".usds"));
         susds = SUsds(outputMainnet.readAddress(".sUsds"));
         usdc  = IERC20(inputMainnet.readAddress(".usdc"));
+        dai   = IERC20(inputMainnet.readAddress(".dai"));
 
-        allocatorVault  = AllocatorVault(outputMainnet.readAddress(".allocatorVault"));
-        allocatorBuffer = AllocatorBuffer(outputMainnet.readAddress(".allocatorBuffer"));
+        vault    = AllocatorVault(outputMainnet.readAddress(".allocatorVault"));
+        buffer   = AllocatorBuffer(outputMainnet.readAddress(".allocatorBuffer"));
+        registry = AllocatorRegistry(outputMainnet.readAddress(".allocatorRegistry"));
+        roles    = AllocatorRoles(outputMainnet.readAddress(".allocatorRoles"));
 
         mainnetController = MainnetController(outputMainnet.readAddress(".controller"));
         almProxy          = ALMProxy(payable(outputMainnet.readAddress(".almProxy")));
         rateLimits        = RateLimits(outputMainnet.readAddress(".rateLimits"));
+
+        usdsJoin = outputMainnet.readAddress(".usdsJoin");
 
         safeBase = outputBase.readAddress(".safe");
         psmBase  = PSM3(outputBase.readAddress(".psm"));
@@ -100,16 +118,15 @@ contract DeployEthereumTest is Test {
         susdsBase = IERC20(outputBase.readAddress(".sUsds"));
         usdcBase  = IERC20(outputBase.readAddress(".usdc"));
 
+        foreignAlmProxy   = ALMProxy(payable(outputBase.readAddress(".almProxy")));
         foreignController = ForeignController(outputBase.readAddress(".controller"));
-        almProxyBase      = ALMProxy(payable(outputBase.readAddress(".almProxy")));
+        foreignRateLimits = RateLimits(outputBase.readAddress(".rateLimits"));
 
         mainnet.selectFork();
     }
 
     function test_mainnetConfiguration() public {
-        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),          true);
-        assertEq(mainnetController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
-        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),        true);
+        // Mainnet controller initialization
 
         assertEq(address(mainnetController.proxy()),      outputMainnet.readAddress(".almProxy"));
         assertEq(address(mainnetController.rateLimits()), outputMainnet.readAddress(".rateLimits"));
@@ -126,43 +143,126 @@ contract DeployEthereumTest is Test {
         assertEq(mainnetController.psmTo18ConversionFactor(), 1e12);
         assertEq(mainnetController.active(),                  true);
 
-        assertEq(mainnetController.hasRole(mainnetController.RELAYER(), safeMainnet), true);
-
-        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)), true);
-
-        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), true);
-
         assertEq(
             mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
             bytes32(uint256(uint160(outputBase.readAddress(".almProxy"))))
         );
 
-        assertEq(allocatorVault.wards(address(almProxy)), 1);
+        // ALM system roles
 
-        assertEq(usds.allowance(address(allocatorBuffer), address(almProxy)), type(uint256).max);
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),          true);
+        assertEq(mainnetController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),        true);
+
+        assertEq(mainnetController.hasRole(mainnetController.FREEZER(), makeAddr("freezer")), true);
+        assertEq(mainnetController.hasRole(mainnetController.RELAYER(), safeMainnet),         true);
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)), true);
+
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), true);
+
+        // Allocation system deployment and initialization
+
+        bytes32 ilk = ScriptTools.readInput("common").readString(".ilk").stringToBytes32();
+
+        assertEq(registry.buffers(ilk), address(buffer));
+        assertEq(address(vault.jug()),  outputMainnet.readAddress(".jug"));
+
+        assertEq(usds.allowance(address(buffer), address(almProxy)), type(uint256).max);
+        assertEq(usds.allowance(address(vault),  usdsJoin),          type(uint256).max);
+
+        assertEq(roles.ilkAdmins(ilk), admin);
+
+        assertEq(buffer.wards(address(admin)),   1);
+        assertEq(registry.wards(address(admin)), 1);
+        assertEq(roles.wards(address(admin)),    1);
+        assertEq(vault.wards(address(admin)),    1);
+        assertEq(vault.wards(address(almProxy)), 1);
+
+        address vat = outputMainnet.readAddress(".vat");
+
+        assertEq(address(vault.roles()),    address(roles));
+        assertEq(address(vault.buffer()),   address(buffer));
+        assertEq(bytes32(vault.ilk()),      ilk);
+        assertEq(address(vault.usdsJoin()), usdsJoin);
+        assertEq(address(vault.vat()),      vat);
+
+        // NOTE: Not asserting vat.can because vat is mocked in this deployment and storage doesn't
+        //       get updated on vat.hope in vault constructor
+
+        // Starting token balances
+
+        assertEq(usds.balanceOf(address(almProxy)),  0);
+        assertEq(usdc.balanceOf(address(almProxy)),  0);
+        assertEq(susds.balanceOf(address(almProxy)), 0);
+
+        assertEq(
+            usds.balanceOf(address(usdsJoin)),
+            ScriptTools.readInput("common").readUint(".usdsUnitSize") * 1e18
+        );
+
+        // Amount added to PSM wrapper to make `fill` logic work on swaps
+        assertEq(
+            dai.balanceOf(outputMainnet.readAddress(".psm")),
+            ScriptTools.readInput("common").readUint(".usdsUnitSize") * 10 * 1e18
+        );
+
+        // TODO: Rate limits
     }
 
     function test_baseConfiguration() public {
-        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR),          true);
-        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR),        true);
-        assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR), true);
+        base.selectFork();
 
-        assertEq(address(foreignController.proxy()),      controllerInst.almProxy);
-        assertEq(address(foreignController.rateLimits()), controllerInst.rateLimits);
-        assertEq(address(foreignController.psm()),        address(psmBase));
-        assertEq(address(foreignController.usdc()),       USDC_BASE);
-        assertEq(address(foreignController.cctp()),       CCTP_MESSENGER_BASE);
+        // PSM configuration
 
-        assertEq(foreignController.hasRole(foreignController.FREEZER(), freezer), true);
-        assertEq(foreignController.hasRole(foreignController.RELAYER(), relayer), true);
+        assertEq(address(psmBase.usdc()),   outputBase.readAddress(".usdc"));
+        assertEq(address(psmBase.usds()),   outputBase.readAddress(".usds"));
+        assertEq(address(psmBase.susds()),  outputBase.readAddress(".sUsds"));
+        assertEq(address(psmBase.pocket()), outputBase.readAddress(".psm"));
 
-        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)), true);
+        assertEq(psmBase.totalAssets(), 1e18);
+        assertEq(psmBase.totalShares(), 1e18);
 
-        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), true);
+        assertEq(IRateProviderLike(psmBase.rateProvider()).getConversionRate(), 1.2e27);
+
+        // Foreign controller initialization
+
+        assertEq(address(foreignController.proxy()),      outputBase.readAddress(".almProxy"));
+        assertEq(address(foreignController.rateLimits()), outputBase.readAddress(".rateLimits"));
+        assertEq(address(foreignController.psm()),        outputBase.readAddress(".psm"));
+        assertEq(address(foreignController.usdc()),       outputBase.readAddress(".usdc"));
+        assertEq(address(foreignController.cctp()),       inputBase.readAddress(".cctpTokenMessenger"));
+
+        assertEq(foreignController.active(), true);
 
         assertEq(
             foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
-            bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
+            bytes32(uint256(uint160(outputMainnet.readAddress(".almProxy"))))
+        );
+
+        // ALM System roles
+
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),          true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),        true);
+        assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
+
+        assertEq(foreignController.hasRole(foreignController.FREEZER(), makeAddr("freezer")), true);
+        assertEq(foreignController.hasRole(foreignController.RELAYER(), safeBase),            true);
+
+        assertEq(foreignAlmProxy.hasRole(foreignAlmProxy.CONTROLLER(), address(foreignController)), true);
+
+        assertEq(foreignRateLimits.hasRole(foreignRateLimits.CONTROLLER(), address(foreignController)), true);
+
+        // Starting token balances
+
+        assertEq(
+            usdsBase.balanceOf(address(foreignAlmProxy)),
+            ScriptTools.readInput("common").readUint(".usdsUnitSize") * 1e18
+        );
+
+        assertEq(
+            susdsBase.balanceOf(address(foreignAlmProxy)),
+            ScriptTools.readInput("common").readUint(".usdsUnitSize") * 1e18
         );
     }
 
@@ -189,7 +289,7 @@ contract DeployEthereumTest is Test {
     function test_transferCCTP() public {
         base.selectFork();
 
-        assertEq(usdcBase.balanceOf(address(almProxyBase)), 0);
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 0);
 
         mainnet.selectFork();
 
@@ -201,7 +301,7 @@ contract DeployEthereumTest is Test {
 
         cctpBridge.relayMessagesToDestination(true);
 
-        assertEq(usdcBase.balanceOf(address(almProxyBase)), 10e6);
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 10e6);
     }
 
     function test_transferToPSM() public {
@@ -248,15 +348,6 @@ contract DeployEthereumTest is Test {
         // See: https://github.com/marsfoundation/xchain-helpers/issues/24
         cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
         cctpBridge.relayMessagesToSource(true);
-
-        // NOTE: This is a HACK to make sure that `fill` doesn't get called until the call reverts.
-        //       Because this PSM contract is a wrapper over the real PSM, the controller queries
-        //       the DAI balance of the PSM to check if it should fill or not. Filling with DAI
-        //       fills the live PSM NOT the wrapper, so the while loop will continue until the
-        //       function reverts. Dealing DAI into the wrapper will prevent fill from being called.
-        address psm = outputMainnet.readAddress(".psm");
-        address dai = inputMainnet.readAddress(".dai");
-        deal(address(dai), psm, 100e18);
 
         vm.startPrank(safeMainnet);
         mainnetController.swapUSDCToUSDS(1e6);

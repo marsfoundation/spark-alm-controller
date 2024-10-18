@@ -95,4 +95,6 @@ export BASE_RPC_URL="http://127.0.0.1:8546"
 cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_setBalance $ETH_FROM `cast to-wei 1000 | cast to-hex`
 cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_impersonateAccount 0x3E67e3e55F0E26d0C566910B51347e04222E808e
 cast send 0xdC035D45d973E3EC169d2276DDab16f1e407384F 'transfer(address,uint256)' $ETH_FROM 100000000000000000000000 --unlocked --from 0x3E67e3e55F0E26d0C566910B51347e04222E808e
+cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_impersonateAccount 0xD1668fB5F690C59Ab4B0CAbAd0f8C1617895052B
+cast send 0x6b175474e89094c44da98b954eedeac495271d0f 'transfer(address,uint256)' $ETH_FROM 100000000000000000000000 --unlocked --from 0xD1668fB5F690C59Ab4B0CAbAd0f8C1617895052B
 ```
