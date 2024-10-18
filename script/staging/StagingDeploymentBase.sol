@@ -25,8 +25,6 @@ import { IERC20 }  from "forge-std/interfaces/IERC20.sol";
 import { Script }  from "forge-std/Script.sol";
 import { stdJson } from "forge-std/StdJson.sol";
 
-import { console } from "forge-std/console.sol";
-
 import { PSM3Deploy } from "spark-psm/deploy/PSM3Deploy.sol";
 
 import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
@@ -435,19 +433,10 @@ contract StagingDeploymentBase is Script {
 
         // Step 3: Seed ALM Proxy with initial amounts of USDS and sUSDS
 
-        console.log("usdsBase", usdsBase);
-        console.log("susdsBase", susdsBase);
-        console.log("baseAlmProxy", baseAlmProxy);
-        console.log("USDS_UNIT_SIZE", USDS_UNIT_SIZE);
-
         MockERC20(usdsBase).mint(baseAlmProxy,  USDS_UNIT_SIZE);
         MockERC20(susdsBase).mint(baseAlmProxy, USDS_UNIT_SIZE);
 
         vm.stopBroadcast();
-
-        console.log("usdsBase balance", IERC20(usdsBase).balanceOf(baseAlmProxy));
-        console.log("susdsBase balance", IERC20(susdsBase).balanceOf(baseAlmProxy));
-        console.log("usdsBase balance 2", IERC20(0x4e9BEe8F2b33d8893a5A219854AC52e9518ee328).balanceOf(0x94eA1518cACD45786Dbe0fe646F93446F94d21FE));
 
         // Step 4: Export all deployed addresses
 
