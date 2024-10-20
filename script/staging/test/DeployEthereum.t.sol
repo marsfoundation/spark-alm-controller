@@ -387,6 +387,8 @@ contract DeployEthereumTest is Test {
         vm.stopPrank();
 
         assertEq(usdcBase.balanceOf(address(psmBase)), 10e6);
+
+        assertEq(psmBase.shares(address(foreignAlmProxy)), 10e18);
     }
 
     function test_fullRoundTrip() public {
