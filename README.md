@@ -70,18 +70,20 @@ This is a linear rate limit that increases over time with a maximum limit. This 
 
 ## Testing
 
-To run all testing scripts, run the following command:
+To run all tests, run the following command:
 
 ```bash
 forge test
 ```
 
-In order to get the mainnet deployment testing to work, the staging environment must be deployed against local forks of mainnet and base until the staging deployment is live. The following procedure to run the setup:
+In order to get the mainnet deployment testing to work, the staging environment must be deployed against local forks of mainnet and base until the staging deployment is live. Use the following procedure to run the setup:
 
 1. Set up two local forks of mainnet and base using the following commands in different terminal windows:
 
 ```
 anvil --fork-url $MAINNET_RPC_URL
+```
+```
 anvil --fork-url $BASE_RPC_URL -p "8546"
 ```
 
