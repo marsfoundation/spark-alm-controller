@@ -23,6 +23,9 @@ interface IPSMLike {
 interface IPSM3Like {
     function totalAssets() external view returns (uint256);
     function totalShares() external view returns (uint256);
+    function usdc() external view returns (address);
+    function usds() external view returns (address);
+    function susds() external view returns (address);
 }
 
 interface IVaultLike {
@@ -247,8 +250,14 @@ library ForeignControllerInit {
 
         require(addresses.oldController != address(controller), "ForeignControllerInit/old-controller-is-new-controller");
 
-        require(IPSM3Like(addresses.psm).totalAssets() >= 1e18, "ForeignControllerInit/psm-totalAssets-not-seeded");
-        require(IPSM3Like(addresses.psm).totalShares() >= 1e18, "ForeignControllerInit/psm-totalShares-not-seeded");
+        IPSM3Like psm = IPSM3Like(addresses.psm);
+
+        require(psm.totalAssets() >= 1e18, "ForeignControllerInit/psm-totalAssets-not-seeded");
+        require(psm.totalShares() >= 1e18, "ForeignControllerInit/psm-totalShares-not-seeded");
+
+        require(psm.usdc()  == addresses.usdc,  "ForeignControllerInit/psm-incorrect-usdc");
+        require(psm.usds()  == addresses.usds,  "ForeignControllerInit/psm-incorrect-usds");
+        require(psm.susds() == addresses.susds, "ForeignControllerInit/psm-incorrect-susds");
 
         // Step 1: Configure ACL permissions for controller and almProxy
 

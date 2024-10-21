@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
+import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
+
 import { CCTPForwarder } from "lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
 import "test/base-fork/ForkTestBase.t.sol";
@@ -299,6 +301,78 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         assertEq(psmBase.totalAssets(), 1e18 + 2);
         assertEq(psmBase.totalShares(), 1e18);
 
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
+    function test_init_incorrectPsmUsdc() external {
+        ERC20Mock wrongUsdc = new ERC20Mock();
+
+        deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
+
+        // Deploy a new PSM with the wrong USDC
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            SPARK_EXECUTOR, address(wrongUsdc), address(usdsBase), address(susdsBase), SSR_ORACLE
+        ));
+
+        // Deploy a new controller pointing to misconfigured PSM
+        controllerInst = ForeignControllerDeploy.deployFull(
+            SPARK_EXECUTOR,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
+
+        addresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+
+        vm.expectRevert("ForeignControllerInit/psm-incorrect-usdc");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
+    function test_init_incorrectPsmUsds() external {
+        ERC20Mock wrongUsds = new ERC20Mock();
+
+        deal(address(wrongUsds), address(this), 1e18);  // For seeding PSM during deployment
+
+        // Deploy a new PSM with the wrong USDC
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            SPARK_EXECUTOR, USDC_BASE, address(wrongUsds), address(susdsBase), SSR_ORACLE
+        ));
+
+        // Deploy a new controller pointing to misconfigured PSM
+        controllerInst = ForeignControllerDeploy.deployFull(
+            SPARK_EXECUTOR,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
+
+        addresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+
+        vm.expectRevert("ForeignControllerInit/psm-incorrect-usds");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
+    function test_init_incorrectPsmSUsds() external {
+        ERC20Mock wrongSUsds = new ERC20Mock();
+
+        deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
+
+        // Deploy a new PSM with the wrong USDC
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            SPARK_EXECUTOR, USDC_BASE, address(usdsBase), address(wrongSUsds), SSR_ORACLE
+        ));
+
+        // Deploy a new controller pointing to misconfigured PSM
+        controllerInst = ForeignControllerDeploy.deployFull(
+            SPARK_EXECUTOR,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
+
+        addresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+
+        vm.expectRevert("ForeignControllerInit/psm-incorrect-susds");
         wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
