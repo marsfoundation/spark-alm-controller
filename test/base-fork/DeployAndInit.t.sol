@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
+import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
+
 import { CCTPForwarder } from "lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
 import "test/base-fork/ForkTestBase.t.sol";
@@ -302,6 +304,78 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
+    function test_init_incorrectPsmUsdc() external {
+        ERC20Mock wrongUsdc = new ERC20Mock();
+
+        deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
+
+        // Deploy a new PSM with the wrong USDC
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            SPARK_EXECUTOR, address(wrongUsdc), address(usdsBase), address(susdsBase), SSR_ORACLE
+        ));
+
+        // Deploy a new controller pointing to misconfigured PSM
+        controllerInst = ForeignControllerDeploy.deployFull(
+            SPARK_EXECUTOR,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
+
+        addresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+
+        vm.expectRevert("ForeignControllerInit/psm-incorrect-usdc");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
+    function test_init_incorrectPsmUsds() external {
+        ERC20Mock wrongUsds = new ERC20Mock();
+
+        deal(address(wrongUsds), address(this), 1e18);  // For seeding PSM during deployment
+
+        // Deploy a new PSM with the wrong USDC
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            SPARK_EXECUTOR, USDC_BASE, address(wrongUsds), address(susdsBase), SSR_ORACLE
+        ));
+
+        // Deploy a new controller pointing to misconfigured PSM
+        controllerInst = ForeignControllerDeploy.deployFull(
+            SPARK_EXECUTOR,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
+
+        addresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+
+        vm.expectRevert("ForeignControllerInit/psm-incorrect-usds");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
+    function test_init_incorrectPsmSUsds() external {
+        ERC20Mock wrongSUsds = new ERC20Mock();
+
+        deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
+
+        // Deploy a new PSM with the wrong USDC
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            SPARK_EXECUTOR, USDC_BASE, address(usdsBase), address(wrongSUsds), SSR_ORACLE
+        ));
+
+        // Deploy a new controller pointing to misconfigured PSM
+        controllerInst = ForeignControllerDeploy.deployFull(
+            SPARK_EXECUTOR,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
+
+        addresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+
+        vm.expectRevert("ForeignControllerInit/psm-incorrect-susds");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
     /**********************************************************************************************/
     /*** Rate limit unlimited boundary failure modes                                            ***/
     /**********************************************************************************************/
@@ -576,6 +650,70 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         rateLimitData.cctpToEthereumDomainData.slope = uint256(1e18) / 1 hours;
 
         wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
+    /**********************************************************************************************/
+    /*** Old controller role check tests                                                        ***/
+    /**********************************************************************************************/
+
+    function test_init_oldControllerDoesNotHaveRoleInAlmProxy() external {
+        _deployNewControllerAfterExistingControllerInit();
+
+        // Revoke the old controller address in ALM proxy
+
+        vm.startPrank(SPARK_EXECUTOR);
+        almProxy.revokeRole(almProxy.CONTROLLER(), addresses.oldController);
+        vm.stopPrank();
+
+        // Try to init with the old controller address that is doesn't have the CONTROLLER role
+
+        vm.expectRevert("ForeignControllerInit/old-controller-not-almProxy-controller");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
+    function test_init_oldControllerDoesNotHaveRoleInRateLimits() external {
+        _deployNewControllerAfterExistingControllerInit();
+
+        // Revoke the old controller address
+
+        vm.startPrank(SPARK_EXECUTOR);
+        rateLimits.revokeRole(rateLimits.CONTROLLER(), addresses.oldController);
+        vm.stopPrank();
+
+        // Try to init with the old controller address that is doesn't have the CONTROLLER role
+
+        vm.expectRevert("ForeignControllerInit/old-controller-not-rateLimits-controller");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
+    /**********************************************************************************************/
+    /*** Helper functions                                                                       ***/
+    /**********************************************************************************************/
+
+    function _deployNewControllerAfterExistingControllerInit() internal {
+        // Successfully init first controller
+
+        vm.startPrank(SPARK_EXECUTOR);
+        ForeignControllerInit.init(
+            addresses,
+            controllerInst,
+            rateLimitData,
+            mintRecipients
+        );
+        vm.stopPrank();
+
+        // Deploy a new controller (controllerInst is used in init with new controller address)
+
+        controllerInst.controller = ForeignControllerDeploy.deployController(
+            SPARK_EXECUTOR,
+            controllerInst.almProxy,
+            controllerInst.rateLimits,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
+
+        addresses.oldController = address(foreignController);
     }
 
 }

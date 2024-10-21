@@ -32,7 +32,6 @@ interface IPSMLike {
     function buyGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 usdsAmount);
     function fill() external returns (uint256 wad);
     function gem() external view returns(address);
-    function pocket() external view returns(address);
     function sellGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 usdsAmount);
     function to18ConversionFactor() external view returns (uint256);
 }
