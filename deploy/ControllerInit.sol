@@ -114,6 +114,9 @@ library MainnetControllerInit {
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
 
         if (addresses.oldController != address(0)) {
+            require(almProxy.hasRole(almProxy.CONTROLLER(), addresses.oldController)     == true, "MainnetControllerInit/old-controller-not-almProxy-controller");
+            require(rateLimits.hasRole(rateLimits.CONTROLLER(), addresses.oldController) == true, "MainnetControllerInit/old-controller-not-rateLimits-controller");
+
             almProxy.revokeRole(almProxy.CONTROLLER(), addresses.oldController);
             rateLimits.revokeRole(rateLimits.CONTROLLER(), addresses.oldController);
         }
@@ -268,6 +271,9 @@ library ForeignControllerInit {
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
 
         if (addresses.oldController != address(0)) {
+            require(almProxy.hasRole(almProxy.CONTROLLER(), addresses.oldController)     == true, "ForeignControllerInit/old-controller-not-almProxy-controller");
+            require(rateLimits.hasRole(rateLimits.CONTROLLER(), addresses.oldController) == true, "ForeignControllerInit/old-controller-not-rateLimits-controller");
+
             almProxy.revokeRole(almProxy.CONTROLLER(), addresses.oldController);
             rateLimits.revokeRole(rateLimits.CONTROLLER(), addresses.oldController);
         }

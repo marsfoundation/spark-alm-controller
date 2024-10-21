@@ -652,6 +652,70 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
     }
 
+    /**********************************************************************************************/
+    /*** Old controller role check tests                                                        ***/
+    /**********************************************************************************************/
+
+    function test_init_oldControllerDoesNotHaveRoleInAlmProxy() external {
+        _deployNewControllerAfterExistingControllerInit();
+
+        // Revoke the old controller address in ALM proxy
+
+        vm.startPrank(SPARK_EXECUTOR);
+        almProxy.revokeRole(almProxy.CONTROLLER(), addresses.oldController);
+        vm.stopPrank();
+
+        // Try to init with the old controller address that is doesn't have the CONTROLLER role
+
+        vm.expectRevert("ForeignControllerInit/old-controller-not-almProxy-controller");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
+    function test_init_oldControllerDoesNotHaveRoleInRateLimits() external {
+        _deployNewControllerAfterExistingControllerInit();
+
+        // Revoke the old controller address
+
+        vm.startPrank(SPARK_EXECUTOR);
+        rateLimits.revokeRole(rateLimits.CONTROLLER(), addresses.oldController);
+        vm.stopPrank();
+
+        // Try to init with the old controller address that is doesn't have the CONTROLLER role
+
+        vm.expectRevert("ForeignControllerInit/old-controller-not-rateLimits-controller");
+        wrapper.init(addresses, controllerInst, rateLimitData, mintRecipients);
+    }
+
+    /**********************************************************************************************/
+    /*** Helper functions                                                                       ***/
+    /**********************************************************************************************/
+
+    function _deployNewControllerAfterExistingControllerInit() internal {
+        // Successfully init first controller
+
+        vm.startPrank(SPARK_EXECUTOR);
+        ForeignControllerInit.init(
+            addresses,
+            controllerInst,
+            rateLimitData,
+            mintRecipients
+        );
+        vm.stopPrank();
+
+        // Deploy a new controller (controllerInst is used in init with new controller address)
+
+        controllerInst.controller = ForeignControllerDeploy.deployController(
+            SPARK_EXECUTOR,
+            controllerInst.almProxy,
+            controllerInst.rateLimits,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
+
+        addresses.oldController = address(foreignController);
+    }
+
 }
 
 contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAndInitTestBase {

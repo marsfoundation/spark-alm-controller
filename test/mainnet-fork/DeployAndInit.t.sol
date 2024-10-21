@@ -345,7 +345,7 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     }
 
     /**********************************************************************************************/
-    /*** `slope` rate limit precision boundary tests                                        ***/
+    /*** `slope` rate limit precision boundary tests                                            ***/
     /**********************************************************************************************/
 
     function test_init_incorrectUsdsMintData_slopePrecisionBoundary() external {
@@ -378,6 +378,70 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
 
         rateLimitData.cctpToBaseDomainData.slope = uint256(1e12 * 1e6) / 1 hours;
         _checkBothInitsSucceed();
+    }
+
+    /**********************************************************************************************/
+    /*** Old controller role check tests                                                        ***/
+    /**********************************************************************************************/
+
+    function test_init_oldControllerDoesNotHaveRoleInAlmProxy() external {
+        _deployNewControllerAfterExistingControllerInit();
+
+        // Revoke the old controller address in ALM proxy
+
+        vm.startPrank(SPARK_PROXY);
+        almProxy.revokeRole(almProxy.CONTROLLER(), addresses.oldController);
+        vm.stopPrank();
+
+        // Try to init with the old controller address that is doesn't have the CONTROLLER role
+
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-not-almProxy-controller"));
+    }
+
+    function test_init_oldControllerDoesNotHaveRoleInRateLimits() external {
+        _deployNewControllerAfterExistingControllerInit();
+
+        // Revoke the old controller address
+
+        vm.startPrank(SPARK_PROXY);
+        rateLimits.revokeRole(rateLimits.CONTROLLER(), addresses.oldController);
+        vm.stopPrank();
+
+        // Try to init with the old controller address that is doesn't have the CONTROLLER role
+
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-not-rateLimits-controller"));
+    }
+
+    /**********************************************************************************************/
+    /*** Helper functions                                                                       ***/
+    /**********************************************************************************************/
+
+    function _deployNewControllerAfterExistingControllerInit() internal {
+        // Successfully init first controller
+
+        vm.startPrank(SPARK_PROXY);
+        MainnetControllerInit.subDaoInitFull(
+            addresses,
+            controllerInst,
+            rateLimitData,
+            mintRecipients
+        );
+        vm.stopPrank();
+
+        // Deploy a new controller (controllerInst is used in init with new controller address)
+
+        controllerInst.controller = MainnetControllerDeploy.deployController(
+            SPARK_PROXY,
+            address(almProxy),
+            address(rateLimits),
+            vault,
+            PSM,
+            DAI_USDS,
+            CCTP_MESSENGER,
+            address(susds)
+        );
+
+        addresses.oldController = address(mainnetController);
     }
 
     // Added this function to ensure that all the failure modes from `subDaoInitController`
