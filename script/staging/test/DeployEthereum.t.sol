@@ -103,9 +103,9 @@ contract DeployEthereumTest is Test {
 
         // JSON data
         inputMainnet  = ScriptTools.readInput("mainnet");
-        outputMainnet = ScriptTools.readOutput("mainnet-release", 20241017);
+        outputMainnet = ScriptTools.readOutput("mainnet");  // TODO: Change to date after deployment
         inputBase     = ScriptTools.readInput("base");
-        outputBase    = ScriptTools.readOutput("base-release", 20241017);
+        outputBase    = ScriptTools.readOutput("base");  // TODO: Change to date after deployment
 
         // Roles
         admin       = outputMainnet.readAddress(".admin");
@@ -230,7 +230,7 @@ contract DeployEthereumTest is Test {
 
         // USDS added to join, amount added to PSM wrapper to make `fill` logic work on swaps
         assertEq(usds.balanceOf(address(usdsJoin)),                usdsUnitSize * 1e18);
-        assertEq(dai.balanceOf(outputMainnet.readAddress(".psm")), usdsUnitSize * 10 * 1e18);
+        assertEq(dai.balanceOf(outputMainnet.readAddress(".psm")), usdsUnitSize * 1e18);
 
         // Rate limits
 
@@ -424,7 +424,9 @@ contract DeployEthereumTest is Test {
     /**** Helper functions                                                                      ***/
     /**********************************************************************************************/
 
-    function _assertDepositRateLimitData(IERC20 asset, uint256 maxAmount, uint256 slope) internal {
+    function _assertDepositRateLimitData(IERC20 asset, uint256 maxAmount, uint256 slope)
+        internal view
+    {
         bytes32 assetKey = RateLimitHelpers.makeAssetKey(
             foreignController.LIMIT_PSM_DEPOSIT(),
             address(asset)
@@ -433,7 +435,9 @@ contract DeployEthereumTest is Test {
         _assertRateLimitData(address(foreignRateLimits), assetKey, maxAmount, slope);
     }
 
-    function _assertWithdrawRateLimitData(IERC20 asset, uint256 maxAmount, uint256 slope) internal {
+    function _assertWithdrawRateLimitData(IERC20 asset, uint256 maxAmount, uint256 slope)
+        internal view
+    {
         bytes32 assetKey = RateLimitHelpers.makeAssetKey(
             foreignController.LIMIT_PSM_WITHDRAW(),
             address(asset)
@@ -449,10 +453,10 @@ contract DeployEthereumTest is Test {
         _assertRateLimitData(address(rateLimits), domainKey, maxAmount, slope);
     }
 
-    function _assertRateLimitData(address rateLimits, bytes32 key, uint256 maxAmount, uint256 slope)
+    function _assertRateLimitData(address rateLimits_, bytes32 key, uint256 maxAmount, uint256 slope)
         internal view
     {
-        IRateLimits.RateLimitData memory data = IRateLimits(rateLimits).getRateLimitData(key);
+        IRateLimits.RateLimitData memory data = IRateLimits(rateLimits_).getRateLimitData(key);
 
         assertEq(data.maxAmount,  maxAmount);
         assertEq(data.slope,      slope);
@@ -462,7 +466,7 @@ contract DeployEthereumTest is Test {
         assertLe(data.lastUpdated, block.timestamp);
 
         // Deployment is assumed to be untouched
-        assertEq(IRateLimits(rateLimits).getCurrentRateLimit(key), maxAmount);
+        assertEq(IRateLimits(rateLimits_).getCurrentRateLimit(key), maxAmount);
     }
 
 }

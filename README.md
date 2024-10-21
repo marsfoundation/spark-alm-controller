@@ -109,9 +109,7 @@ cast send 0x6b175474e89094c44da98b954eedeac495271d0f 'transfer(address,uint256)'
 ```
 make deploy-ethereum-staging
 ```
-
-5. Copy the files `mainnet-latest.json` and `base-latest.json` from the `script/output/1/` directory to `mainnet-20241017.json` and `base-20241017.json` in the `script/output/1` directory respectively.
-6. Run `forge t --mc DeployEthereumTest -vvv` to run the staging environment tests in isolation, or run all tests with `forge test`.
+5. Run `forge t --mc DeployEthereumTest -vvv` to run the staging environment tests in isolation, or run all tests with `forge test`.
 
 
 ***

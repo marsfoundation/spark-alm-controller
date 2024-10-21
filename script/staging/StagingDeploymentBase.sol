@@ -191,7 +191,7 @@ contract StagingDeploymentBase is Script {
         //       the DAI balance of the PSM to check if it should fill or not. Filling with DAI
         //       fills the live PSM NOT the wrapper, so the while loop will continue until the
         //       function reverts. Dealing DAI into the wrapper will prevent fill from being called.
-        IERC20(dai).transfer(psm, USDS_UNIT_SIZE * 10);
+        IERC20(dai).transfer(psm, USDS_UNIT_SIZE);
     }
 
     function _setUpMocks() internal {
