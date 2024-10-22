@@ -103,9 +103,9 @@ contract DeployEthereumTest is Test {
 
         // JSON data
         inputMainnet  = ScriptTools.readInput("mainnet");
-        outputMainnet = ScriptTools.readOutput("mainnet");  // TODO: Change to date after deployment
+        outputMainnet = ScriptTools.readOutput("mainnet-release", 20241022);
         inputBase     = ScriptTools.readInput("base");
-        outputBase    = ScriptTools.readOutput("base");  // TODO: Change to date after deployment
+        outputBase    = ScriptTools.readOutput("base-release", 20241022);
 
         // Roles
         admin       = outputMainnet.readAddress(".admin");

@@ -76,42 +76,6 @@ To run all tests, run the following command:
 forge test
 ```
 
-In order to get the mainnet deployment testing to work, the staging environment must be deployed against local forks of mainnet and base until the staging deployment is live. Use the following procedure to run the setup:
-
-1. Set up two local forks of mainnet and base using the following commands in different terminal windows:
-
-```
-anvil --fork-url $MAINNET_RPC_URL
-```
-```
-anvil --fork-url $BASE_RPC_URL -p "8546"
-```
-
-2. Set the environment variables for the mainnet and base RPC URLs to the new forks in the terminal that will run the testing:
-```
-export MAINNET_RPC_URL="http://127.0.0.1:8545"
-export BASE_RPC_URL="http://127.0.0.1:8546"
-```
-
-3. Run the following commands to impersonate accounts and send funds to the contracts for testing. These commands do the following:
-   - Set the balance of the `ETH_FROM` address to 1000 ETH.
-   - Send mainnet USDS to `ETH_FROM` from the `0x3E67e3e55F0E26d0C566910B51347e04222E808e` address (mainnet whale).
-   - Send mainnet DAI to `ETH_FROM` from the `0xD1668fB5F690C59Ab4B0CAbAd0f8C1617895052B` address (mainnet whale).
-```
-cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_setBalance $ETH_FROM `cast to-wei 1000 | cast to-hex`
-cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_impersonateAccount 0x3E67e3e55F0E26d0C566910B51347e04222E808e
-cast send 0xdC035D45d973E3EC169d2276DDab16f1e407384F 'transfer(address,uint256)' $ETH_FROM 100000000000000000000000 --unlocked --from 0x3E67e3e55F0E26d0C566910B51347e04222E808e
-cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_impersonateAccount 0xD1668fB5F690C59Ab4B0CAbAd0f8C1617895052B
-cast send 0x6b175474e89094c44da98b954eedeac495271d0f 'transfer(address,uint256)' $ETH_FROM 100000000000000000000000 --unlocked --from 0xD1668fB5F690C59Ab4B0CAbAd0f8C1617895052B
-```
-
-4. Run the following command to deploy the staging environment against both local forks:
-```
-make deploy-ethereum-staging
-```
-5. Run `forge t --mc DeployEthereumTest -vvv` to run the staging environment tests in isolation, or run all tests with `forge test`.
-
-
 ***
 *The IP in this repository was assigned to Mars SPC Limited in respect of the MarsOne SP*
 
