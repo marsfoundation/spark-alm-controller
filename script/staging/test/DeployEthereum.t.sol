@@ -283,8 +283,8 @@ contract DeployEthereumTest is Test {
 
         // ALM System roles
 
-        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),          true);
-        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),        true);
+        assertEq(foreignAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),   true);
+        assertEq(foreignRateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
         assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
         assertEq(foreignController.hasRole(foreignController.FREEZER(), makeAddr("freezer")), true);
