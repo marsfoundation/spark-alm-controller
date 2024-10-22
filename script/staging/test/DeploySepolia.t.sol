@@ -96,7 +96,7 @@ contract DeploySepoliaTest is Test {
         safe  = outputMainnet.readAddress(".safe");
 
         usds  = Usds(outputMainnet.readAddress(".usds"));
-        susds = SUsds(outputMainnet.readAddress(".sUsds"));
+        susds = SUsds(outputMainnet.readAddress(".susds"));
         usdc  = IERC20(USDC);
 
         allocatorVault = AllocatorVault(outputMainnet.readAddress(".allocatorVault"));
@@ -109,7 +109,7 @@ contract DeploySepoliaTest is Test {
         psm = PSM3(outputBase.readAddress(".psm"));
 
         usdsBase  = IERC20(outputBase.readAddress(".usds"));
-        susdsBase = IERC20(outputBase.readAddress(".sUsds"));
+        susdsBase = IERC20(outputBase.readAddress(".susds"));
         usdcBase  = IERC20(outputBase.readAddress(".usdc"));
 
         foreignController = ForeignController(outputBase.readAddress(".controller"));
