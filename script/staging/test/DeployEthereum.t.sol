@@ -113,7 +113,7 @@ contract DeployEthereumTest is Test {
 
         // Tokens
         usds  = Usds(outputMainnet.readAddress(".usds"));
-        susds = SUsds(outputMainnet.readAddress(".sUsds"));
+        susds = SUsds(outputMainnet.readAddress(".susds"));
         usdc  = IERC20(inputMainnet.readAddress(".usdc"));
         dai   = IERC20(inputMainnet.readAddress(".dai"));
 
@@ -134,7 +134,7 @@ contract DeployEthereumTest is Test {
 
         // Base tokens
         usdsBase  = IERC20(outputBase.readAddress(".usds"));
-        susdsBase = IERC20(outputBase.readAddress(".sUsds"));
+        susdsBase = IERC20(outputBase.readAddress(".susds"));
         usdcBase  = IERC20(outputBase.readAddress(".usdc"));
 
         // Base ALM system
@@ -164,7 +164,7 @@ contract DeployEthereumTest is Test {
         assertEq(address(mainnetController.psm()),        outputMainnet.readAddress(".psm"));
         assertEq(address(mainnetController.daiUsds()),    outputMainnet.readAddress(".daiUsds"));
         assertEq(address(mainnetController.cctp()),       inputMainnet.readAddress(".cctpTokenMessenger"));
-        assertEq(address(mainnetController.susds()),      outputMainnet.readAddress(".sUsds"));  // TODO: Update casing
+        assertEq(address(mainnetController.susds()),      outputMainnet.readAddress(".susds"));
         assertEq(address(mainnetController.dai()),        outputMainnet.readAddress(".dai"));
         assertEq(address(mainnetController.usdc()),       outputMainnet.readAddress(".usdc"));
         assertEq(address(mainnetController.usds()),       outputMainnet.readAddress(".usds"));
@@ -258,7 +258,7 @@ contract DeployEthereumTest is Test {
 
         assertEq(address(psmBase.usdc()),   outputBase.readAddress(".usdc"));
         assertEq(address(psmBase.usds()),   outputBase.readAddress(".usds"));
-        assertEq(address(psmBase.susds()),  outputBase.readAddress(".sUsds"));
+        assertEq(address(psmBase.susds()),  outputBase.readAddress(".susds"));
         assertEq(address(psmBase.pocket()), outputBase.readAddress(".psm"));
 
         assertEq(psmBase.totalAssets(), 1e18);

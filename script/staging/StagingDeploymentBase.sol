@@ -168,7 +168,7 @@ contract StagingDeploymentBase is Script {
         ScriptTools.exportContract(mainnet.name, "daiUsds",  daiUsds);
         ScriptTools.exportContract(mainnet.name, "jug",      jug);
         ScriptTools.exportContract(mainnet.name, "psm",      psm);
-        ScriptTools.exportContract(mainnet.name, "sUsds",    susds);
+        ScriptTools.exportContract(mainnet.name, "susds",    susds);
         ScriptTools.exportContract(mainnet.name, "usdc",     USDC);
         ScriptTools.exportContract(mainnet.name, "usds",     usds);
         ScriptTools.exportContract(mainnet.name, "usdsJoin", usdsJoin);
@@ -362,7 +362,7 @@ contract StagingDeploymentBase is Script {
         vm.stopBroadcast();
 
         ScriptTools.exportContract(base.name, "usds",  usdsBase);
-        ScriptTools.exportContract(base.name, "sUsds", susdsBase);
+        ScriptTools.exportContract(base.name, "susds", susdsBase);
         ScriptTools.exportContract(base.name, "usdc",  USDC_BASE);
         ScriptTools.exportContract(base.name, "psm",   psmBase);
     }
