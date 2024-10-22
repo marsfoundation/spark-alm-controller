@@ -51,6 +51,7 @@ import { MockRateProvider } from "./mocks/MockRateProvider.sol";
 import { MockSUsds }        from "./mocks/MockSUsds.sol";
 import { MockUsdsJoin }     from "./mocks/MockUsdsJoin.sol";
 import { MockVat }          from "./mocks/MockVat.sol";
+import { PSMWrapper }       from "./mocks/PSMWrapper.sol";
 
 struct Domain {
     string  name;
@@ -82,6 +83,7 @@ contract StagingDeploymentBase is Script {
 
     address dai;
     address daiUsds;
+    address livePsm;
     address psm;
     address susds;
     address usds;
@@ -178,7 +180,18 @@ contract StagingDeploymentBase is Script {
         usds    = mainnet.config.readAddress(".usds");
         susds   = mainnet.config.readAddress(".susds");
         daiUsds = mainnet.config.readAddress(".daiUsds");
-        psm     = mainnet.config.readAddress(".psm");
+        livePsm = mainnet.config.readAddress(".psm");
+
+        // This contract is necessary to get past the `kiss` requirement from the pause proxy.
+        // It wraps the `noFee` calls with regular PSM swap calls.
+        psm = address(new PSMWrapper(USDC, dai, livePsm));
+
+        // NOTE: This is a HACK to make sure that `fill` doesn't get called until the call reverts.
+        //       Because this PSM contract is a wrapper over the real PSM, the controller queries
+        //       the DAI balance of the PSM to check if it should fill or not. Filling with DAI
+        //       fills the live PSM NOT the wrapper, so the while loop will continue until the
+        //       function reverts. Dealing DAI into the wrapper will prevent fill from being called.
+        IERC20(dai).transfer(psm, USDS_UNIT_SIZE);
     }
 
     function _setUpMocks() internal {
@@ -314,6 +327,10 @@ contract StagingDeploymentBase is Script {
             mintRecipients: mintRecipients
         });
 
+        // Step 3: Transfer ownership of mock usdsJoin to the vault (able to mint usds)
+
+        MockUsdsJoin(usdsJoin).transferOwnership(vault);
+
         vm.stopBroadcast();
 
         // Step 4: Export all deployed addresses
@@ -332,7 +349,7 @@ contract StagingDeploymentBase is Script {
         susdsBase = address(new MockERC20("sUSDS", "sUSDS", 18));
 
         // Mint enough for seeded deposit
-        MockERC20(usdsBase).mint(deployer,  1e18);
+        MockERC20(usdsBase).mint(deployer, 1e18);
 
         psmBase = PSM3Deploy.deploy({
             owner        : deployer,
@@ -385,7 +402,7 @@ contract StagingDeploymentBase is Script {
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
         mintRecipients[0] = MintRecipient({
             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-            mintRecipient : bytes32(uint256(uint160(baseAlmProxy)))
+            mintRecipient : bytes32(uint256(uint160(mainnetAlmProxy)))
         });
 
         ForeignControllerInit.init({
@@ -414,12 +431,12 @@ contract StagingDeploymentBase is Script {
             mintRecipients: mintRecipients
         });
 
-        vm.stopBroadcast();
-
         // Step 3: Seed ALM Proxy with initial amounts of USDS and sUSDS
 
         MockERC20(usdsBase).mint(baseAlmProxy,  USDS_UNIT_SIZE);
         MockERC20(susdsBase).mint(baseAlmProxy, USDS_UNIT_SIZE);
+
+        vm.stopBroadcast();
 
         // Step 4: Export all deployed addresses
 
@@ -447,7 +464,6 @@ contract StagingDeploymentBase is Script {
 
         MockDaiUsds(daiUsds).transferOwnership(mainnetAlmProxy);
         MockPSM(psm).transferOwnership(mainnetAlmProxy);
-        MockUsdsJoin(usdsJoin).transferOwnership(vault);
 
         vm.stopBroadcast();
     }
