@@ -23,6 +23,9 @@ interface IPSMLike {
 interface IPSM3Like {
     function totalAssets() external view returns (uint256);
     function totalShares() external view returns (uint256);
+    function usdc() external view returns (address);
+    function usds() external view returns (address);
+    function susds() external view returns (address);
 }
 
 interface IVaultLike {
@@ -81,7 +84,9 @@ library MainnetControllerInit {
 
         // Step 1: Perform sanity checks
 
-        require(controller.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin) == true, "MainnetControllerInit/incorrect-admin-controller");
+        require(almProxy.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin),   "MainnetControllerInit/incorrect-admin-almProxy");
+        require(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin), "MainnetControllerInit/incorrect-admin-rateLimits");
+        require(controller.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin), "MainnetControllerInit/incorrect-admin-controller");
 
         require(address(controller.proxy())      == controllerInst.almProxy,   "MainnetControllerInit/incorrect-almProxy");
         require(address(controller.rateLimits()) == controllerInst.rateLimits, "MainnetControllerInit/incorrect-rateLimits");
@@ -96,7 +101,8 @@ library MainnetControllerInit {
         require(address(controller.usds())       == addresses.usds,            "MainnetControllerInit/incorrect-usds");
 
         require(controller.psmTo18ConversionFactor() == 1e12, "MainnetControllerInit/incorrect-psmTo18ConversionFactor");
-        require(controller.active()                  == true, "MainnetControllerInit/controller-not-active");
+
+        require(controller.active(), "MainnetControllerInit/controller-not-active");
 
         require(addresses.oldController != address(controller), "MainnetControllerInit/old-controller-is-new-controller");
 
@@ -109,6 +115,9 @@ library MainnetControllerInit {
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
 
         if (addresses.oldController != address(0)) {
+            require(almProxy.hasRole(almProxy.CONTROLLER(), addresses.oldController),     "MainnetControllerInit/old-controller-not-almProxy-controller");
+            require(rateLimits.hasRole(rateLimits.CONTROLLER(), addresses.oldController), "MainnetControllerInit/old-controller-not-rateLimits-controller");
+
             almProxy.revokeRole(almProxy.CONTROLLER(), addresses.oldController);
             rateLimits.revokeRole(rateLimits.CONTROLLER(), addresses.oldController);
         }
@@ -140,19 +149,7 @@ library MainnetControllerInit {
     )
         internal
     {
-        // Step 1: Perform initial sanity checks
-
-        require(
-            IALMProxy(controllerInst.almProxy).hasRole(DEFAULT_ADMIN_ROLE, addresses.admin) == true,
-            "MainnetControllerInit/incorrect-admin-almProxy"
-        );
-
-        require(
-            IRateLimits(controllerInst.rateLimits).hasRole(DEFAULT_ADMIN_ROLE, addresses.admin) == true,
-            "MainnetControllerInit/incorrect-admin-rateLimits"
-        );
-
-        // Step 2: Perform controller sanity checks, configure ACL permissions for controller
+        // Step 1: Perform controller sanity checks, configure ACL permissions for controller
         //         and almProxy and rate limits.
 
         subDaoInitController(
@@ -162,7 +159,7 @@ library MainnetControllerInit {
             mintRecipients
         );
 
-        // Step 3: Configure almProxy within the allocation system
+        // Step 2: Configure almProxy within the allocation system
 
         IVaultLike(addresses.vault).rely(controllerInst.almProxy);
         IBufferLike(addresses.buffer).approve(addresses.usds, controllerInst.almProxy, type(uint256).max);
@@ -243,9 +240,9 @@ library ForeignControllerInit {
 
         ForeignController controller = ForeignController(controllerInst.controller);
 
-        require(almProxy.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin)   == true, "ForeignControllerInit/incorrect-admin-almProxy");
-        require(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin) == true, "ForeignControllerInit/incorrect-admin-rateLimits");
-        require(controller.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin) == true, "ForeignControllerInit/incorrect-admin-controller");
+        require(almProxy.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin),   "ForeignControllerInit/incorrect-admin-almProxy");
+        require(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin), "ForeignControllerInit/incorrect-admin-rateLimits");
+        require(controller.hasRole(DEFAULT_ADMIN_ROLE, addresses.admin), "ForeignControllerInit/incorrect-admin-controller");
 
         require(address(controller.proxy())      == controllerInst.almProxy,   "ForeignControllerInit/incorrect-almProxy");
         require(address(controller.rateLimits()) == controllerInst.rateLimits, "ForeignControllerInit/incorrect-rateLimits");
@@ -253,12 +250,18 @@ library ForeignControllerInit {
         require(address(controller.usdc())       == addresses.usdc,            "ForeignControllerInit/incorrect-usdc");
         require(address(controller.cctp())       == addresses.cctpMessenger,   "ForeignControllerInit/incorrect-cctp");
 
-        require(controller.active() == true, "ForeignControllerInit/controller-not-active");
+        require(controller.active(), "ForeignControllerInit/controller-not-active");
 
         require(addresses.oldController != address(controller), "ForeignControllerInit/old-controller-is-new-controller");
 
-        require(IPSM3Like(addresses.psm).totalAssets() >= 1e18, "ForeignControllerInit/psm-totalAssets-not-seeded");
-        require(IPSM3Like(addresses.psm).totalShares() >= 1e18, "ForeignControllerInit/psm-totalShares-not-seeded");
+        IPSM3Like psm = IPSM3Like(addresses.psm);
+
+        require(psm.totalAssets() >= 1e18, "ForeignControllerInit/psm-totalAssets-not-seeded");
+        require(psm.totalShares() >= 1e18, "ForeignControllerInit/psm-totalShares-not-seeded");
+
+        require(psm.usdc()  == addresses.usdc,  "ForeignControllerInit/psm-incorrect-usdc");
+        require(psm.usds()  == addresses.usds,  "ForeignControllerInit/psm-incorrect-usds");
+        require(psm.susds() == addresses.susds, "ForeignControllerInit/psm-incorrect-susds");
 
         // Step 1: Configure ACL permissions for controller and almProxy
 
@@ -269,6 +272,9 @@ library ForeignControllerInit {
         rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
 
         if (addresses.oldController != address(0)) {
+            require(almProxy.hasRole(almProxy.CONTROLLER(), addresses.oldController)     == true, "ForeignControllerInit/old-controller-not-almProxy-controller");
+            require(rateLimits.hasRole(rateLimits.CONTROLLER(), addresses.oldController) == true, "ForeignControllerInit/old-controller-not-rateLimits-controller");
+
             almProxy.revokeRole(almProxy.CONTROLLER(), addresses.oldController);
             rateLimits.revokeRole(rateLimits.CONTROLLER(), addresses.oldController);
         }
