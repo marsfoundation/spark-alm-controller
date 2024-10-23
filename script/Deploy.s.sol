@@ -21,7 +21,7 @@ contract DeployMainnetFull is Script {
 
         ControllerInstance memory instance = MainnetControllerDeploy.deployFull({
             admin   : Ethereum.SPARK_PROXY,
-            vault   : address(0),  // TODO: Replace
+            vault   : Ethereum.ALLOCATOR_VAULT,
             psm     : Ethereum.PSM,
             daiUsds : Ethereum.DAI_USDS,
             cctp    : Ethereum.CCTP_TOKEN_MESSENGER,
@@ -71,7 +71,7 @@ contract DeployBaseFull is DeployForeignFull {
         deploy({
             remoteRpcUrl : getChain("base").rpcUrl,
             admin        : Base.SPARK_EXECUTOR,
-            psm          : address(0),  // TODO: Replace,
+            psm          : Base.PSM3,
             usdc         : Base.USDC,
             cctp         : Base.CCTP_TOKEN_MESSENGER
         });
