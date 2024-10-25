@@ -10,22 +10,22 @@ interface IPSM is IPSMLike {
 
 contract MainnetControllerSwapUSDSToUSDCFailureTests is ForkTestBase {
 
-    function test_swapUSDCToUSDS_notRelayer() external {
+    function test_swapUSDSToUSDC_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.swapUSDCToUSDS(1e6);
+        mainnetController.swapUSDSToUSDC(1e6);
     }
 
-    function test_swapUSDCToUSDS_frozen() external {
+    function test_swapUSDSToUSDC_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.swapUSDCToUSDS(1e6);
+        mainnetController.swapUSDSToUSDC(1e6);
     }
 
 }
