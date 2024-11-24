@@ -88,7 +88,7 @@ contract ForkTestBase is Test {
     function setUp() public virtual {
         /*** Step 1: Set up environment, deploy mock addresses ***/
 
-        vm.createSelectFork(getChain('base').rpcUrl, 20782500);  // October 8, 2024
+        vm.createSelectFork(getChain('base').rpcUrl, 22841965);  // November 24, 2024
 
         usdsBase  = IERC20(address(new ERC20Mock()));
         susdsBase = IERC20(address(new ERC20Mock()));

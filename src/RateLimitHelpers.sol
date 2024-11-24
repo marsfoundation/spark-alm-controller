@@ -11,4 +11,8 @@ library RateLimitHelpers {
         return keccak256(abi.encode(key, domain));
     }
 
+    function makeVaultKey(bytes32 key, address vault) internal pure returns (bytes32) {
+        return keccak256(abi.encode(key, vault));
+    }
+
 }
