@@ -67,7 +67,7 @@ contract MorphoTest is ForkTestBase {
         IMetaMorpho(MORPHO_VAULT_USDC).setSupplyQueue(supplyQueueUSDC);
 
         rateLimits.setRateLimitData(
-            RateLimitHelpers.makeVaultKey(
+            RateLimitHelpers.makeAssetKey(
                 foreignController.LIMIT_VAULT_DEPOSIT(),
                 MORPHO_VAULT_USDS
             ),
@@ -75,7 +75,7 @@ contract MorphoTest is ForkTestBase {
             uint256(5_000_000e18) / 1 days
         );
         rateLimits.setRateLimitData(
-            RateLimitHelpers.makeVaultKey(
+            RateLimitHelpers.makeAssetKey(
                 foreignController.LIMIT_VAULT_DEPOSIT(),
                 MORPHO_VAULT_USDC
             ),

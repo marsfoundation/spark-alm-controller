@@ -225,7 +225,7 @@ contract ForeignController is AccessControl {
         onlyRole(RELAYER)
         isActive
         rateLimited(
-            RateLimitHelpers.makeVaultKey(LIMIT_VAULT_DEPOSIT, vault),
+            RateLimitHelpers.makeAssetKey(LIMIT_VAULT_DEPOSIT, vault),
             amount
         )
         returns (uint256 shares)
