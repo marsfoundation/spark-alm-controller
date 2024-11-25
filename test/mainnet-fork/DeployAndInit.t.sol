@@ -511,17 +511,20 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         assertEq(mainnetController.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY), true);
         assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),        true);
 
-        assertEq(address(mainnetController.proxy()),      controllerInst.almProxy);
-        assertEq(address(mainnetController.rateLimits()), controllerInst.rateLimits);
-        assertEq(address(mainnetController.vault()),      vault);
-        assertEq(address(mainnetController.buffer()),     buffer);
-        assertEq(address(mainnetController.psm()),        PSM);
-        assertEq(address(mainnetController.daiUsds()),    DAI_USDS);
-        assertEq(address(mainnetController.cctp()),       CCTP_MESSENGER);
-        assertEq(address(mainnetController.susds()),      address(susds));
-        assertEq(address(mainnetController.dai()),        address(dai));
-        assertEq(address(mainnetController.usdc()),       address(usdc));
-        assertEq(address(mainnetController.usds()),       address(usds));
+        assertEq(address(mainnetController.proxy()),        controllerInst.almProxy);
+        assertEq(address(mainnetController.rateLimits()),   controllerInst.rateLimits);
+        assertEq(address(mainnetController.vault()),        vault);
+        assertEq(address(mainnetController.buffer()),       buffer);
+        assertEq(address(mainnetController.psm()),          PSM);
+        assertEq(address(mainnetController.daiUsds()),      DAI_USDS);
+        assertEq(address(mainnetController.cctp()),         CCTP_MESSENGER);
+        assertEq(address(mainnetController.ethenaMinter()), ETHENA_MINTER);
+        assertEq(address(mainnetController.susds()),        address(susds));
+        assertEq(address(mainnetController.susde()),        address(susde));
+        assertEq(address(mainnetController.dai()),          address(dai));
+        assertEq(address(mainnetController.usdc()),         address(usdc));
+        assertEq(address(mainnetController.usds()),         address(usds));
+        assertEq(address(mainnetController.usde()),         address(usde));
 
         assertEq(mainnetController.psmTo18ConversionFactor(), 1e12);
         assertEq(mainnetController.active(),                  true);

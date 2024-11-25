@@ -53,7 +53,7 @@ interface IPSMLike {
 interface ISUSDELike is IERC4626 {
     function asset() external view returns(address);
     function cooldownAssets(uint256 usdeAmount) external;
-    function cooldownShares(uint256 usdeSharesAmount) external;
+    function cooldownShares(uint256 susdeAmount) external;
     function unstake(address receiver) external;
 }
 
