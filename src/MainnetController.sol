@@ -34,7 +34,7 @@ interface IPSMLike {
 interface ISUSDELike is IERC4626 {
     function asset() external view returns(address);
     function cooldownAssets(uint256 usdeAmount) external;
-    function cooldownShares(uint256 usdeSharesAmount) external;
+    function cooldownShares(uint256 susdeAmount) external;
     function unstake(address receiver) external;
 }
 
@@ -294,6 +294,7 @@ contract MainnetController is AccessControl {
     }
 
     // Note that 2m per block includes other users
+    // TODO: Add rate limits
     function prepareUSDeMint(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
         proxy.doCall(
             address(usdc),
@@ -315,10 +316,10 @@ contract MainnetController is AccessControl {
         );
     }
 
-    function cooldownSharesSUSDe(uint256 usdeSharesAmount) external onlyRole(RELAYER) isActive {
+    function cooldownSharesSUSDe(uint256 susdeAmount) external onlyRole(RELAYER) isActive {
         proxy.doCall(
             address(susde),
-            abi.encodeCall(susde.cooldownShares, (usdeSharesAmount))
+            abi.encodeCall(susde.cooldownShares, (susdeAmount))
         );
     }
 
