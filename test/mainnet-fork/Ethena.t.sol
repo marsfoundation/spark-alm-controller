@@ -255,7 +255,6 @@ contract MainnetControllerCooldownSharesSUSDeSuccessTests is ForkTestBase {
 
 }
 
-
 contract MainnetControllerUnstakeSUSDeFailureTests is ForkTestBase {
 
     function test_unstakeSUSDe_notRelayer() external {
