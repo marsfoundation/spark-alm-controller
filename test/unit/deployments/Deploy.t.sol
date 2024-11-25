@@ -7,6 +7,7 @@ import "deploy/ControllerDeploy.sol";  // All imports needed so not importing ex
 
 import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
 import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
+import { MockSUsde }   from "test/unit/mocks/MockSUsde.sol";
 import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
 import { MockVault }   from "test/unit/mocks/MockVault.sol";
 
@@ -77,6 +78,8 @@ contract MainnetControllerDeployTests is UnitTestBase {
         address daiUsds;
         address psm;
         address susds;
+        address susde;
+        address ethenaMinter;
         address admin;
         address vault;
         address cctp;
@@ -85,10 +88,12 @@ contract MainnetControllerDeployTests is UnitTestBase {
     function test_deployController() public {
         TestVars memory vars;  // Avoid stack too deep
 
-        vars.daiUsds = address(new MockDaiUsds(makeAddr("dai")));
-        vars.psm     = address(new MockPSM(makeAddr("usdc")));
-        vars.susds   = address(new MockSUsds(makeAddr("usds")));
-        vars.vault   = address(new MockVault(makeAddr("buffer")));
+        vars.daiUsds      = address(new MockDaiUsds(makeAddr("dai")));
+        vars.psm          = address(new MockPSM(makeAddr("usdc")));
+        vars.susds        = address(new MockSUsds(makeAddr("usds")));
+        vars.susde        = address(new MockSUsde(makeAddr("usde")));
+        vars.vault        = address(new MockVault(makeAddr("buffer")));
+        vars.ethenaMinter = makeAddr("ethenaMinter");
 
         vars.admin = makeAddr("admin");
         vars.cctp  = makeAddr("cctp");
@@ -105,23 +110,28 @@ contract MainnetControllerDeployTests is UnitTestBase {
                 vars.psm,
                 vars.daiUsds,
                 vars.cctp,
-                vars.susds
+                vars.susds,
+                vars.susde,
+                vars.ethenaMinter
             )
         );
 
         assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
-        assertEq(address(controller.proxy()),      almProxy);
-        assertEq(address(controller.rateLimits()), rateLimits);
-        assertEq(address(controller.vault()),      vars.vault);
-        assertEq(address(controller.buffer()),     makeAddr("buffer"));  // Buffer param in MockVault
-        assertEq(address(controller.psm()),        vars.psm);
-        assertEq(address(controller.daiUsds()),    vars.daiUsds);
-        assertEq(address(controller.cctp()),       vars.cctp);
-        assertEq(address(controller.susds()),      vars.susds);
-        assertEq(address(controller.dai()),        makeAddr("dai"));   // Dai param in MockDaiUsds
-        assertEq(address(controller.usdc()),       makeAddr("usdc"));  // Gem param in MockPSM
-        assertEq(address(controller.usds()),       makeAddr("usds"));  // Usds param in MockSUsds
+        assertEq(address(controller.proxy()),        almProxy);
+        assertEq(address(controller.rateLimits()),   rateLimits);
+        assertEq(address(controller.vault()),        vars.vault);
+        assertEq(address(controller.buffer()),       makeAddr("buffer"));  // Buffer param in MockVault
+        assertEq(address(controller.psm()),          vars.psm);
+        assertEq(address(controller.daiUsds()),      vars.daiUsds);
+        assertEq(address(controller.cctp()),         vars.cctp);
+        assertEq(address(controller.ethenaMinter()), vars.ethenaMinter);
+        assertEq(address(controller.susds()),        vars.susds);
+        assertEq(address(controller.susde()),        vars.susde);
+        assertEq(address(controller.dai()),          makeAddr("dai"));   // Dai param in MockDaiUsds
+        assertEq(address(controller.usdc()),         makeAddr("usdc"));  // Gem param in MockPSM
+        assertEq(address(controller.usds()),         makeAddr("usds"));  // Usds param in MockSUsds
+        assertEq(address(controller.usde()),         makeAddr("usde"));  // Usde param in MockSUsde
 
         assertEq(controller.psmTo18ConversionFactor(), 1e12);
         assertEq(controller.active(),                  true);
@@ -132,6 +142,7 @@ contract MainnetControllerDeployTests is UnitTestBase {
 
         vars.daiUsds = address(new MockDaiUsds(makeAddr("dai")));
         vars.psm     = address(new MockPSM(makeAddr("usdc")));
+        vars.susde   = address(new MockSUsde(makeAddr("usde")));
         vars.susds   = address(new MockSUsds(makeAddr("usds")));
         vars.vault   = address(new MockVault(makeAddr("buffer")));
 
@@ -144,7 +155,9 @@ contract MainnetControllerDeployTests is UnitTestBase {
             vars.psm,
             vars.daiUsds,
             vars.cctp,
-            vars.susds
+            vars.susds,
+            vars.susde,
+            vars.ethenaMinter
         );
 
         ALMProxy          almProxy   = ALMProxy(payable(instance.almProxy));
@@ -155,17 +168,20 @@ contract MainnetControllerDeployTests is UnitTestBase {
         assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
         assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
 
-        assertEq(address(controller.proxy()),      instance.almProxy);
-        assertEq(address(controller.rateLimits()), instance.rateLimits);
-        assertEq(address(controller.vault()),      vars.vault);
-        assertEq(address(controller.buffer()),     makeAddr("buffer"));  // Buffer param in MockVault
-        assertEq(address(controller.psm()),        vars.psm);
-        assertEq(address(controller.daiUsds()),    vars.daiUsds);
-        assertEq(address(controller.cctp()),       vars.cctp);
-        assertEq(address(controller.susds()),      vars.susds);
-        assertEq(address(controller.dai()),        makeAddr("dai"));   // Dai param in MockDaiUsds
-        assertEq(address(controller.usdc()),       makeAddr("usdc"));  // Gem param in MockPSM
-        assertEq(address(controller.usds()),       makeAddr("usds"));  // Usds param in MockSUsds
+        assertEq(address(controller.proxy()),        instance.almProxy);
+        assertEq(address(controller.rateLimits()),   instance.rateLimits);
+        assertEq(address(controller.vault()),        vars.vault);
+        assertEq(address(controller.buffer()),       makeAddr("buffer"));  // Buffer param in MockVault
+        assertEq(address(controller.psm()),          vars.psm);
+        assertEq(address(controller.daiUsds()),      vars.daiUsds);
+        assertEq(address(controller.cctp()),         vars.cctp);
+        assertEq(address(controller.ethenaMinter()), vars.ethenaMinter);
+        assertEq(address(controller.susds()),        vars.susds);
+        assertEq(address(controller.susde()),        vars.susde);
+        assertEq(address(controller.dai()),          makeAddr("dai"));   // Dai param in MockDaiUsds
+        assertEq(address(controller.usdc()),         makeAddr("usdc"));  // Gem param in MockPSM
+        assertEq(address(controller.usds()),         makeAddr("usds"));  // Usds param in MockSUsds
+        assertEq(address(controller.usde()),         makeAddr("usde"));  // Usde param in MockSUsde
 
         assertEq(controller.psmTo18ConversionFactor(), 1e12);
         assertEq(controller.active(),                  true);

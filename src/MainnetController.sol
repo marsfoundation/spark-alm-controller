@@ -18,14 +18,9 @@ interface IDaiUsdsLike {
     function usdsToDai(address usr, uint256 wad) external;
 }
 
-interface ISUSDSLike is IERC4626 {
-    function usds() external view returns(address);
-}
-
-interface IVaultLike {
-    function buffer() external view returns(address);
-    function draw(uint256 usdsAmount) external;
-    function wipe(uint256 usdsAmount) external;
+interface IEthenaMinterLike {
+    function setDelegateSigner(address delegateSigner) external;
+    function removeDelegatedSigner(address delegateSigner) external;
 }
 
 interface IPSMLike {
@@ -34,6 +29,23 @@ interface IPSMLike {
     function gem() external view returns(address);
     function sellGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 usdsAmount);
     function to18ConversionFactor() external view returns (uint256);
+}
+
+interface ISUSDELike is IERC4626 {
+    function asset() external view returns(address);
+    function cooldownAssets(uint256 usdeAmount) external;
+    function cooldownShares(uint256 usdeSharesAmount) external;
+    function unstake(address receiver) external;
+}
+
+interface ISUSDSLike is IERC4626 {
+    function usds() external view returns(address);
+}
+
+interface IVaultLike {
+    function buffer() external view returns(address);
+    function draw(uint256 usdsAmount) external;
+    function wipe(uint256 usdsAmount) external;
 }
 
 contract MainnetController is AccessControl {
@@ -70,16 +82,19 @@ contract MainnetController is AccessControl {
 
     address public immutable buffer;
 
-    IALMProxy    public immutable proxy;
-    IRateLimits  public immutable rateLimits;
-    ICCTPLike    public immutable cctp;
-    IDaiUsdsLike public immutable daiUsds;
-    IPSMLike     public immutable psm;
-    IVaultLike   public immutable vault;
+    IALMProxy         public immutable proxy;
+    ICCTPLike         public immutable cctp;
+    IDaiUsdsLike      public immutable daiUsds;
+    IEthenaMinterLike public immutable ethenaMinter;
+    IPSMLike          public immutable psm;
+    IRateLimits       public immutable rateLimits;
+    ISUSDELike        public immutable susde;
+    IVaultLike        public immutable vault;
 
     IERC20     public immutable dai;
-    IERC20     public immutable usds;
     IERC20     public immutable usdc;
+    IERC20     public immutable usde;
+    IERC20     public immutable usds;
     ISUSDSLike public immutable susds;
 
     uint256 public immutable psmTo18ConversionFactor;
@@ -100,22 +115,27 @@ contract MainnetController is AccessControl {
         address psm_,
         address daiUsds_,
         address cctp_,
-        address susds_
+        address susds_,
+        address susde_,
+        address ethenaMinter_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
-        proxy      = IALMProxy(proxy_);
-        rateLimits = IRateLimits(rateLimits_);
-        vault      = IVaultLike(vault_);
-        buffer     = IVaultLike(vault_).buffer();
-        psm        = IPSMLike(psm_);
-        daiUsds    = IDaiUsdsLike(daiUsds_);
-        cctp       = ICCTPLike(cctp_);
+        proxy        = IALMProxy(proxy_);
+        rateLimits   = IRateLimits(rateLimits_);
+        vault        = IVaultLike(vault_);
+        buffer       = IVaultLike(vault_).buffer();
+        psm          = IPSMLike(psm_);
+        daiUsds      = IDaiUsdsLike(daiUsds_);
+        cctp         = ICCTPLike(cctp_);
+        ethenaMinter = IEthenaMinterLike(ethenaMinter_);
 
+        susde = ISUSDELike(susde_);
         susds = ISUSDSLike(susds_ );
         dai   = IERC20(daiUsds.dai());
         usdc  = IERC20(psm.gem());
         usds  = IERC20(susds.usds());
+        usde  = IERC20(susde.asset());
 
         psmTo18ConversionFactor = psm.to18ConversionFactor();
 
@@ -203,8 +223,10 @@ contract MainnetController is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Relayer sUSDS functions                                                                 ***/
+    /*** Relayer sUSDS functions                                                                ***/
     /**********************************************************************************************/
+
+    // TODO: Update to 4626, refactor rate limits to be 4626 token based
 
     function depositToSUSDS(uint256 usdsAmount)
         external onlyRole(RELAYER) isActive returns (uint256 shares)
@@ -250,6 +272,60 @@ contract MainnetController is AccessControl {
                 abi.encodeCall(susds.redeem, (susdsSharesAmount, address(proxy), address(proxy)))
             ),
             (uint256)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Ethena functions                                                                       ***/
+    /**********************************************************************************************/
+
+    function setDelegateSigner(address delegateSigner) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(ethenaMinter),
+            abi.encodeCall(ethenaMinter.setDelegateSigner, (address(delegateSigner)))
+        );
+    }
+
+    function removeDelegatedSigner(address delegateSigner) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(ethenaMinter),
+            abi.encodeCall(ethenaMinter.removeDelegatedSigner, (address(delegateSigner)))
+        );
+    }
+
+    // Note that 2m per block includes other users
+    function prepareUSDeMint(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(usdc),
+            abi.encodeCall(usdc.approve, (address(ethenaMinter), usdcAmount))
+        );
+    }
+
+    function prepareUSDeBurn(uint256 usdeAmount) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(usde),
+            abi.encodeCall(usde.approve, (address(ethenaMinter), usdeAmount))
+        );
+    }
+
+    function cooldownAssetsSUSDe(uint256 usdeAmount) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(susde),
+            abi.encodeCall(susde.cooldownAssets, (usdeAmount))
+        );
+    }
+
+    function cooldownSharesSUSDe(uint256 usdeSharesAmount) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(susde),
+            abi.encodeCall(susde.cooldownShares, (usdeSharesAmount))
+        );
+    }
+
+    function unstakeSUSDe() external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(susde),
+            abi.encodeCall(susde.unstake, (address(proxy)))
         );
     }
 
@@ -416,4 +492,3 @@ contract MainnetController is AccessControl {
     }
 
 }
-

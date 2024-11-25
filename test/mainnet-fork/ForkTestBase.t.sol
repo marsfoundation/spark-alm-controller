@@ -12,7 +12,8 @@ import {
 
 import { AllocatorDeploy } from "dss-allocator/deploy/AllocatorDeploy.sol";
 
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+import { IERC20 }   from "forge-std/interfaces/IERC20.sol";
+import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { ISUsds } from "sdai/src/ISUsds.sol";
 
@@ -38,7 +39,6 @@ import { MainnetController } from "src/MainnetController.sol";
 interface IChainlogLike {
     function getAddress(bytes32) external view returns (address);
 }
-
 interface IBufferLike {
     function approve(address, address, uint256) external;
 }
@@ -48,6 +48,13 @@ interface IPSMLike {
     function pocket() external view returns (address);
     function kiss(address) external;
     function rush() external view returns (uint256);
+}
+
+interface ISUSDELike is IERC4626 {
+    function asset() external view returns(address);
+    function cooldownAssets(uint256 usdeAmount) external;
+    function cooldownShares(uint256 usdeSharesAmount) external;
+    function unstake(address receiver) external;
 }
 
 interface IVaultLike {
@@ -86,15 +93,17 @@ contract ForkTestBase is DssTest {
     address constant LOG = 0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F;
 
     address constant CCTP_MESSENGER = Ethereum.CCTP_TOKEN_MESSENGER;
+    address constant ETHENA_MINTER  = Ethereum.ETHENA_MINTER;
     address constant DAI_USDS       = Ethereum.DAI_USDS;
     address constant PAUSE_PROXY    = Ethereum.PAUSE_PROXY;
     address constant PSM            = Ethereum.PSM;
     address constant SPARK_PROXY    = Ethereum.SPARK_PROXY;
 
-    IERC20 constant dai   = IERC20(Ethereum.DAI);
-    IERC20 constant usdc  = IERC20(Ethereum.USDC);
-    IERC20 constant usds  = IERC20(Ethereum.USDS);
-    ISUsds constant susds = ISUsds(Ethereum.SUSDS);
+    IERC20     constant dai   = IERC20(Ethereum.DAI);
+    IERC20     constant usdc  = IERC20(Ethereum.USDC);
+    IERC20     constant usds  = IERC20(Ethereum.USDS);
+    ISUsds     constant susds = ISUsds(Ethereum.SUSDS);
+    ISUSDELike constant susde = ISUSDELike(Ethereum.SUSDE);
 
     IPSMLike constant psm = IPSMLike(PSM);
 
@@ -158,6 +167,7 @@ contract ForkTestBase is DssTest {
         VAT_DAI_USDS_JOIN = dss.vat.dai(USDS_JOIN);
 
         /*** Step 2: Deploy and configure allocation system ***/
+        // TODO: Remove this step and use live system
 
         AllocatorSharedInstance memory sharedInst
             = AllocatorDeploy.deployShared(address(this), Ethereum.PAUSE_PROXY);
@@ -191,12 +201,14 @@ contract ForkTestBase is DssTest {
         /*** Step 3: Deploy and configure ALM system ***/
 
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull({
-            admin  : Ethereum.SPARK_PROXY,
-            vault  : ilkInst.vault,
-            psm    : Ethereum.PSM,
-            daiUsds: Ethereum.DAI_USDS,
-            cctp   : Ethereum.CCTP_TOKEN_MESSENGER,
-            susds  : Ethereum.SUSDS
+            admin        : Ethereum.SPARK_PROXY,
+            vault        : ilkInst.vault,
+            psm          : Ethereum.PSM,
+            daiUsds      : Ethereum.DAI_USDS,
+            cctp         : Ethereum.CCTP_TOKEN_MESSENGER,
+            susds        : Ethereum.SUSDS,
+            susde        : Ethereum.SUSDE,
+            ethenaMinter : Ethereum.ETHENA_MINTER
         });
 
         almProxy          = ALMProxy(payable(controllerInst.almProxy));

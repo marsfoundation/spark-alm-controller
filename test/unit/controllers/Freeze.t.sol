@@ -9,6 +9,7 @@ import { ForeignController } from "src/ForeignController.sol";
 import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
 import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
 import { MockPSM3 }    from "test/unit/mocks/MockPSM3.sol";
+import { MockSUsde }   from "test/unit/mocks/MockSUsde.sol";
 import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
 import { MockVault }   from "test/unit/mocks/MockVault.sol";
 
@@ -26,6 +27,7 @@ contract ControllerTestBase is UnitTestBase {
     function setUp() public virtual {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
+        MockSUsde   susde   = new MockSUsde(makeAddr("susde"));
         MockSUsds   susds   = new MockSUsds(makeAddr("susds"));
         MockVault   vault   = new MockVault(makeAddr("buffer"));
 
@@ -38,7 +40,9 @@ contract ControllerTestBase is UnitTestBase {
             address(psm),
             address(daiUsds),
             makeAddr("cctp"),
-            address(susds)
+            address(susds),
+            address(susde),
+            makeAddr("ethenaMinter")
         )));
 
         _setRoles();

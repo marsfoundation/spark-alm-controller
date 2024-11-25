@@ -63,19 +63,23 @@ library MainnetControllerDeploy {
         address psm,
         address daiUsds,
         address cctp,
-        address susds
+        address susds,
+        address susde,
+        address ethenaMinter
     )
         internal returns (address controller)
     {
         controller = address(new MainnetController({
-            admin_      : admin,
-            proxy_      : almProxy,
-            rateLimits_ : rateLimits,
-            vault_      : vault,
-            psm_        : psm,
-            daiUsds_    : daiUsds,
-            cctp_       : cctp,
-            susds_      : susds
+            admin_        : admin,
+            proxy_        : almProxy,
+            rateLimits_   : rateLimits,
+            vault_        : vault,
+            psm_          : psm,
+            daiUsds_      : daiUsds,
+            cctp_         : cctp,
+            susds_        : susds,
+            susde_        : susde,
+            ethenaMinter_ : ethenaMinter
         }));
     }
 
@@ -85,7 +89,9 @@ library MainnetControllerDeploy {
         address psm,
         address daiUsds,
         address cctp,
-        address susds
+        address susds,
+        address susde,
+        address ethenaMinter
     )
         internal returns (ControllerInstance memory instance)
     {
@@ -93,14 +99,16 @@ library MainnetControllerDeploy {
         instance.rateLimits = address(new RateLimits(admin));
 
         instance.controller = address(new MainnetController({
-            admin_      : admin,
-            proxy_      : instance.almProxy,
-            rateLimits_ : instance.rateLimits,
-            vault_      : vault,
-            psm_        : psm,
-            daiUsds_    : daiUsds,
-            cctp_       : cctp,
-            susds_      : susds
+            admin_        : admin,
+            proxy_        : instance.almProxy,
+            rateLimits_   : instance.rateLimits,
+            vault_        : vault,
+            psm_          : psm,
+            daiUsds_      : daiUsds,
+            cctp_         : cctp,
+            susds_        : susds,
+            susde_        : susde,
+            ethenaMinter_ : ethenaMinter
         }));
     }
 

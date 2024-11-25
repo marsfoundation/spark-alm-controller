@@ -134,7 +134,9 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
             PSM,
             DAI_USDS,
             CCTP_MESSENGER,
-            address(susds)
+            address(susds),
+            address(susde),
+            ETHENA_MINTER
         );
 
         MintRecipient[] memory mintRecipients_ = new MintRecipient[](1);
@@ -438,7 +440,9 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
             PSM,
             DAI_USDS,
             CCTP_MESSENGER,
-            address(susds)
+            address(susds),
+            address(susde),
+            ETHENA_MINTER
         );
 
         addresses.oldController = address(mainnetController);
@@ -492,7 +496,9 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             PSM,
             DAI_USDS,
             CCTP_MESSENGER,
-            address(susds)
+            address(susds),
+            address(susde),
+            ETHENA_MINTER
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
@@ -591,7 +597,9 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             PSM,
             DAI_USDS,
             CCTP_MESSENGER,
-            address(susds)
+            address(susds),
+            address(susde),
+            ETHENA_MINTER
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
@@ -655,7 +663,9 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             PSM,
             DAI_USDS,
             CCTP_MESSENGER,
-            address(susds)
+            address(susds),
+            address(susde),
+            ETHENA_MINTER
         );
 
         (
@@ -683,7 +693,9 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             PSM,
             DAI_USDS,
             CCTP_MESSENGER,
-            address(susds)
+            address(susds),
+            address(susde),
+            ETHENA_MINTER
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment

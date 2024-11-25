@@ -20,12 +20,14 @@ contract DeployMainnetFull is Script {
         vm.startBroadcast();
 
         ControllerInstance memory instance = MainnetControllerDeploy.deployFull({
-            admin   : Ethereum.SPARK_PROXY,
-            vault   : Ethereum.ALLOCATOR_VAULT,
-            psm     : Ethereum.PSM,
-            daiUsds : Ethereum.DAI_USDS,
-            cctp    : Ethereum.CCTP_TOKEN_MESSENGER,
-            susds   : Ethereum.SUSDS
+            admin        : Ethereum.SPARK_PROXY,
+            vault        : Ethereum.ALLOCATOR_VAULT,
+            psm          : Ethereum.PSM,
+            daiUsds      : Ethereum.DAI_USDS,
+            cctp         : Ethereum.CCTP_TOKEN_MESSENGER,
+            susds        : Ethereum.SUSDS,
+            susde        : Ethereum.SUSDE,
+            ethenaMinter : Ethereum.ETHENA_MINTER
         });
 
         vm.stopBroadcast();
