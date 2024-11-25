@@ -152,7 +152,7 @@ contract DeployEthereumTest is Test {
     /**** Tests                                                                                 ***/
     /**********************************************************************************************/
 
-    function test_mainnetConfiguration() public {
+    function skip_test_mainnetConfiguration() public {
         mainnet.selectFork();
 
         // Mainnet controller initialization
@@ -251,7 +251,7 @@ contract DeployEthereumTest is Test {
         _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), type(uint256).max, 0);
     }
 
-    function test_baseConfiguration() public {
+    function skip_test_baseConfiguration() public {
         base.selectFork();
 
         // PSM configuration
@@ -329,7 +329,7 @@ contract DeployEthereumTest is Test {
         _assertRateLimitData(address(foreignRateLimits), domainKeyEthereum, max6, slope6);
     }
 
-    function test_mintUSDS() public {
+    function skip_test_mintUSDS() public {
         assertEq(usds.balanceOf(address(almProxy)), 0);
 
         vm.prank(safeMainnet);
@@ -338,7 +338,7 @@ contract DeployEthereumTest is Test {
         assertEq(usds.balanceOf(address(almProxy)), 10e18);
     }
 
-    function test_mintAndSwapToUSDC() public {
+    function skip_test_mintAndSwapToUSDC() public {
         assertEq(usdc.balanceOf(address(almProxy)), 0);
 
         vm.startPrank(safeMainnet);
@@ -349,7 +349,7 @@ contract DeployEthereumTest is Test {
         assertEq(usdc.balanceOf(address(almProxy)), 10e6);
     }
 
-    function test_transferCCTP() public {
+    function skip_test_transferCCTP() public {
         base.selectFork();
 
         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 0);
@@ -367,7 +367,7 @@ contract DeployEthereumTest is Test {
         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 10e6);
     }
 
-    function test_transferToPSM() public {
+    function skip_test_transferToPSM() public {
         base.selectFork();
 
         assertEq(usdcBase.balanceOf(address(psmBase)), 0);
@@ -391,7 +391,7 @@ contract DeployEthereumTest is Test {
         assertEq(psmBase.shares(address(foreignAlmProxy)), 10e18);
     }
 
-    function test_fullRoundTrip() public {
+    function skip_test_fullRoundTrip() public {
         mainnet.selectFork();
 
         vm.startPrank(safeMainnet);

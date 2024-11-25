@@ -101,6 +101,7 @@ contract ForkTestBase is DssTest {
 
     IERC20     constant dai   = IERC20(Ethereum.DAI);
     IERC20     constant usdc  = IERC20(Ethereum.USDC);
+    IERC20     constant usde  = IERC20(Ethereum.USDE);
     IERC20     constant usds  = IERC20(Ethereum.USDS);
     ISUsds     constant susds = ISUsds(Ethereum.SUSDS);
     ISUSDELike constant susde = ISUSDELike(Ethereum.SUSDE);
