@@ -88,7 +88,7 @@ contract ForkTestBase is Test {
     function setUp() public virtual {
         /*** Step 1: Set up environment, deploy mock addresses ***/
 
-        vm.createSelectFork(getChain('base').rpcUrl, 22841965);  // November 24, 2024
+        vm.createSelectFork(getChain('base').rpcUrl, _getBlock());
 
         usdsBase  = IERC20(address(new ERC20Mock()));
         susdsBase = IERC20(address(new ERC20Mock()));
@@ -174,6 +174,10 @@ contract ForkTestBase is Test {
         vm.startPrank(SPARK_EXECUTOR);
         ForeignControllerInit.init(addresses, controllerInst, rateLimitData, mintRecipients);
         vm.stopPrank();
+    }
+
+    function _getBlock() internal virtual view returns (uint256) {
+        return 20782500;  // October 8, 2024
     }
 
 }

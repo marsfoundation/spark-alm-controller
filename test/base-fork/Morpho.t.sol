@@ -11,7 +11,7 @@ import { IMetaMorpho, Id }       from "metamorpho/interfaces/IMetaMorpho.sol";
 import { MarketParamsLib }       from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import { IMorpho, MarketParams } from "morpho-blue/src/interfaces/IMorpho.sol";
 
-contract ForeignControllerMorphoTestBase is ForkTestBase {
+contract MorphoTest is ForkTestBase {
 
     address constant MORPHO = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
 
@@ -84,6 +84,10 @@ contract ForeignControllerMorphoTestBase is ForkTestBase {
         );
 
         vm.stopPrank();
+    }
+
+    function _getBlock() internal view override returns (uint256) {
+        return 22841965;  // November 24, 2024
     }
 
     function test_morpho_usds_deposit() public {
