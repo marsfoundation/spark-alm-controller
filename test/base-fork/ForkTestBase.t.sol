@@ -176,7 +176,7 @@ contract ForkTestBase is Test {
         vm.stopPrank();
     }
 
-    function _getBlock() internal virtual view returns (uint256) {
+    function _getBlock() internal virtual pure returns (uint256) {
         return 20782500;  // October 8, 2024
     }
 

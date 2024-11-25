@@ -86,9 +86,88 @@ contract MorphoTest is ForkTestBase {
         vm.stopPrank();
     }
 
-    function _getBlock() internal view override returns (uint256) {
+    function _getBlock() internal pure override returns (uint256) {
         return 22841965;  // November 24, 2024
     }
+
+    /**********************************************************************************************/
+    /*** Only testing USDS failure modes because it is the same for USDC                        ***/
+    /**********************************************************************************************/
+
+    function test_morpho_usds_deposit_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
+    }
+
+    function test_morpho_usds_deposit_frozen() external {
+        vm.prank(freezer);
+        foreignController.freeze();
+
+        vm.prank(relayer);
+        vm.expectRevert("ForeignController/not-active");
+        foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
+    }
+
+    function test_morpho_usds_deposit_rateLimited() external {
+        deal(Base.USDS, address(almProxy), 25_000_001e18);
+
+        assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))), 0);
+        assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                    25_000_001e18);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        vm.prank(relayer);
+        foreignController.depositERC4626(MORPHO_VAULT_USDS, 25_000_001e18);
+
+        vm.prank(relayer);
+        foreignController.depositERC4626(MORPHO_VAULT_USDS, 25_000_000e18);
+
+        assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))), 25_000_000e18);
+        assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                    1e18);
+    }
+
+    function test_morpho_usds_withdraw_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        foreignController.withdrawERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
+    }
+
+    function test_morpho_usds_withdraw_frozen() external {
+        vm.prank(freezer);
+        foreignController.freeze();
+
+        vm.prank(relayer);
+        vm.expectRevert("ForeignController/not-active");
+        foreignController.withdrawERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
+    }
+
+    function test_morpho_usds_redeem_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        foreignController.redeemERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
+    }
+
+    function test_morpho_usds_redeem_frozen() external {
+        vm.prank(freezer);
+        foreignController.freeze();
+
+        vm.prank(relayer);
+        vm.expectRevert("ForeignController/not-active");
+        foreignController.redeemERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
+    }
+
+    /**********************************************************************************************/
+    /*** Success modes testing both USDS and USDC                                               ***/
+    /**********************************************************************************************/
 
     function test_morpho_usds_deposit() public {
         deal(Base.USDS, address(almProxy), 1_000_000e18);
