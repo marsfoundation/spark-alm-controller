@@ -67,6 +67,7 @@ contract MainnetController is AccessControl {
     bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
     bytes32 public constant LIMIT_USDS_MINT      = keccak256("LIMIT_USDS_MINT");
     bytes32 public constant LIMIT_USDS_TO_USDC   = keccak256("LIMIT_USDS_TO_USDC");
+    bytes32 public constant LIMIT_4626_DEPOSIT   = keccak256("LIMIT_4626_DEPOSIT");
 
     address public immutable buffer;
 
@@ -203,51 +204,61 @@ contract MainnetController is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Relayer sUSDS functions                                                                 ***/
+    /*** Relayer ERC4626 functions                                                              ***/
     /**********************************************************************************************/
 
-    function depositToSUSDS(uint256 usdsAmount)
-        external onlyRole(RELAYER) isActive returns (uint256 shares)
+    function depositERC4626(address token, uint256 amount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(
+            RateLimitHelpers.makeTokenKey(LIMIT_4626_DEPOSIT, token),  // TODO: Use makeAssetKey?
+            amount
+        )
+        returns (uint256 shares)
     {
-        // Approve USDS to sUSDS from the proxy (assumes the proxy has enough USDS).
+        // Note that whitelist is done by rate limits
+        IERC20 asset = IERC20(IERC4626(token).asset());
+
+        // Approve asset to token from the proxy (assumes the proxy has enough of the asset).
         proxy.doCall(
-            address(usds),
-            abi.encodeCall(usds.approve, (address(susds), usdsAmount))
+            address(asset),
+            abi.encodeCall(asset.approve, (token, amount))
         );
 
-        // Deposit USDS into sUSDS, proxy receives sUSDS shares, decode the resulting shares
+        // Deposit asset into the token, proxy receives token shares, decode the resulting shares
         shares = abi.decode(
             proxy.doCall(
-                address(susds),
-                abi.encodeCall(susds.deposit, (usdsAmount, address(proxy)))
+                token,
+                abi.encodeCall(IERC4626(token).deposit, (amount, address(proxy)))
             ),
             (uint256)
         );
     }
 
-    function withdrawFromSUSDS(uint256 usdsAmount)
+    function withdrawERC4626(address token, uint256 amount)
         external onlyRole(RELAYER) isActive returns (uint256 shares)
     {
-        // Withdraw USDS from sUSDS, decode resulting shares.
-        // Assumes proxy has adequate sUSDS shares.
+        // Withdraw asset from a token, decode resulting shares.
+        // Assumes proxy has adequate token shares.
         shares = abi.decode(
             proxy.doCall(
-                address(susds),
-                abi.encodeCall(susds.withdraw, (usdsAmount, address(proxy), address(proxy)))
+                token,
+                abi.encodeCall(IERC4626(token).withdraw, (amount, address(proxy), address(proxy)))
             ),
             (uint256)
         );
     }
 
-    function redeemFromSUSDS(uint256 susdsSharesAmount)
+    function redeemERC4626(address token, uint256 shares)
         external onlyRole(RELAYER) isActive returns (uint256 assets)
     {
-        // Redeem shares for USDS from sUSDS, decode the resulting assets.
-        // Assumes proxy has adequate sUSDS shares.
+        // Redeem shares for assets from the token, decode the resulting assets.
+        // Assumes proxy has adequate token shares.
         assets = abi.decode(
             proxy.doCall(
-                address(susds),
-                abi.encodeCall(susds.redeem, (susdsSharesAmount, address(proxy), address(proxy)))
+                token,
+                abi.encodeCall(IERC4626(token).redeem, (shares, address(proxy), address(proxy)))
             ),
             (uint256)
         );

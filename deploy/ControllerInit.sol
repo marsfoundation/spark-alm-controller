@@ -65,6 +65,7 @@ library MainnetControllerInit {
         RateLimitData usdsToUsdcData;
         RateLimitData usdcToCctpData;
         RateLimitData cctpToBaseDomainData;
+        RateLimitData susdsDepositData;
     }
 
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
@@ -129,10 +130,16 @@ library MainnetControllerInit {
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
         );
 
+        bytes32 susdsKey = RateLimitHelpers.makeTokenKey(
+            controller.LIMIT_4626_DEPOSIT(),
+            addresses.susds
+        );
+
         _setRateLimitData(controller.LIMIT_USDS_MINT(),    rateLimits, data.usdsMintData,         "usdsMintData",         18);
         _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, data.usdsToUsdcData,       "usdsToUsdcData",       6);
         _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, data.usdcToCctpData,       "usdcToCctpData",       6);
         _setRateLimitData(domainKeyBase,                   rateLimits, data.cctpToBaseDomainData, "cctpToBaseDomainData", 6);
+        _setRateLimitData(susdsKey,                        rateLimits, data.susdsDepositData,     "susdsDepositData",     18);
 
         // Step 4: Configure the mint recipients on other domains
 

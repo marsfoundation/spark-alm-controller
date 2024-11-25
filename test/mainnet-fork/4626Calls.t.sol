@@ -35,31 +35,31 @@ contract SUSDSTestBase is ForkTestBase {
 
 }
 
-contract MainnetControllerDepositToSUSDSFailureTests is SUSDSTestBase {
+contract MainnetControllerDepositERC4626FailureTests is SUSDSTestBase {
 
-    function test_depositToSUSDS_notRelayer() external {
+    function test_depositERC4626_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.depositToSUSDS(1e18);
+        mainnetController.depositERC4626(address(susds), 1e18);
     }
 
-    function test_depositToSUSDS_frozen() external {
+    function test_depositERC4626_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.depositToSUSDS(1e18);
+        mainnetController.depositERC4626(address(susds), 1e18);
     }
 
 }
 
-contract MainnetControllerDepositToSUSDSTests is SUSDSTestBase {
+contract MainnetControllerDepositERC4626Tests is SUSDSTestBase {
 
-    function test_depositToSUSDS() external {
+    function test_depositERC4626() external {
         vm.prank(relayer);
         mainnetController.mintUSDS(1e18);
 
@@ -75,7 +75,7 @@ contract MainnetControllerDepositToSUSDSTests is SUSDSTestBase {
         assertEq(susds.balanceOf(address(almProxy)), 0);
 
         vm.prank(relayer);
-        uint256 shares = mainnetController.depositToSUSDS(1e18);
+        uint256 shares = mainnetController.depositERC4626(address(susds), 1e18);
 
         assertEq(shares, SUSDS_CONVERTED_SHARES);
 
@@ -93,34 +93,34 @@ contract MainnetControllerDepositToSUSDSTests is SUSDSTestBase {
 
 }
 
-contract MainnetControllerWithdrawFromSUSDSFailureTests is SUSDSTestBase {
+contract MainnetControllerWithdrawERC4626FailureTests is SUSDSTestBase {
 
-    function test_withdrawFromSUSDS_notRelayer() external {
+    function test_withdrawERC4626_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.withdrawFromSUSDS(1e18);
+        mainnetController.withdrawERC4626(address(susds), 1e18);
     }
 
-    function test_withdrawFromSUSDS_frozen() external {
+    function test_withdrawERC4626_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.withdrawFromSUSDS(1e18);
+        mainnetController.withdrawERC4626(address(susds), 1e18);
     }
 
 }
 
-contract MainnetControllerWithdrawFromSUSDSTests is SUSDSTestBase {
+contract MainnetControllerWithdrawERC4626Tests is SUSDSTestBase {
 
-    function test_withdrawFromSUSDS() external {
+    function test_withdrawERC4626() external {
         vm.startPrank(relayer);
         mainnetController.mintUSDS(1e18);
-        mainnetController.depositToSUSDS(1e18);
+        mainnetController.depositERC4626(address(susds), 1e18);
         vm.stopPrank();
 
         assertEq(usds.balanceOf(address(almProxy)),          0);
@@ -136,7 +136,7 @@ contract MainnetControllerWithdrawFromSUSDSTests is SUSDSTestBase {
 
         // Max available with rounding
         vm.prank(relayer);
-        uint256 shares = mainnetController.withdrawFromSUSDS(1e18 - 1);  // Rounding
+        uint256 shares = mainnetController.withdrawERC4626(address(susds), 1e18 - 1);  // Rounding
 
         assertEq(shares, SUSDS_CONVERTED_SHARES);
 
@@ -154,35 +154,35 @@ contract MainnetControllerWithdrawFromSUSDSTests is SUSDSTestBase {
 
 }
 
-contract MainnetControllerRedeemFromSUSDSFailureTests is SUSDSTestBase {
+contract MainnetControllerRedeemERC4626FailureTests is SUSDSTestBase {
 
-    function test_redeemFromSUSDS_notRelayer() external {
+    function test_redeemERC4626_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
             RELAYER
         ));
-        mainnetController.redeemFromSUSDS(1e18);
+        mainnetController.redeemERC4626(address(susds), 1e18);
     }
 
-    function test_redeemFromSUSDS_frozen() external {
+    function test_redeemERC4626_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
-        mainnetController.redeemFromSUSDS(1e18);
+        mainnetController.redeemERC4626(address(susds), 1e18);
     }
 
 }
 
 
-contract MainnetControllerRedeemFromSUSDSTests is SUSDSTestBase {
+contract MainnetControllerRedeemERC4626Tests is SUSDSTestBase {
 
-    function test_redeemFromSUSDS() external {
+    function test_redeemERC4626() external {
         vm.startPrank(relayer);
         mainnetController.mintUSDS(1e18);
-        mainnetController.depositToSUSDS(1e18);
+        mainnetController.depositERC4626(address(susds), 1e18);
         vm.stopPrank();
 
         assertEq(usds.balanceOf(address(almProxy)),          0);
@@ -197,7 +197,7 @@ contract MainnetControllerRedeemFromSUSDSTests is SUSDSTestBase {
         assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
 
         vm.prank(relayer);
-        uint256 assets = mainnetController.redeemFromSUSDS(SUSDS_CONVERTED_SHARES);
+        uint256 assets = mainnetController.redeemERC4626(address(susds), SUSDS_CONVERTED_SHARES);
 
         assertEq(assets, 1e18 - 1);  // Rounding
 

@@ -223,7 +223,7 @@ contract ForkTestBase is DssTest {
             susds         : Ethereum.SUSDS
         });
 
-        RateLimitData memory usdsMintData = RateLimitData({
+        RateLimitData memory standardUsdsData = RateLimitData({
             maxAmount : 5_000_000e18,
             slope     : uint256(1_000_000e18) / 4 hours
         });
@@ -235,10 +235,11 @@ contract ForkTestBase is DssTest {
 
         MainnetControllerInit.InitRateLimitData memory rateLimitData
             = MainnetControllerInit.InitRateLimitData({
-                usdsMintData         : usdsMintData,
+                usdsMintData         : standardUsdsData,
                 usdsToUsdcData       : standardUsdcData,
                 usdcToCctpData       : standardUsdcData,
-                cctpToBaseDomainData : standardUsdcData
+                cctpToBaseDomainData : standardUsdcData,
+                susdsDepositData     : standardUsdsData
             });
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
