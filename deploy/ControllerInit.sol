@@ -130,7 +130,7 @@ library MainnetControllerInit {
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
         );
 
-        bytes32 susdsKey = RateLimitHelpers.makeTokenKey(
+        bytes32 susdsKey = RateLimitHelpers.makeAssetKey(
             controller.LIMIT_4626_DEPOSIT(),
             addresses.susds
         );

@@ -212,7 +212,7 @@ contract MainnetController is AccessControl {
         onlyRole(RELAYER)
         isActive
         rateLimited(
-            RateLimitHelpers.makeTokenKey(LIMIT_4626_DEPOSIT, token),  // TODO: Use makeAssetKey?
+            RateLimitHelpers.makeAssetKey(LIMIT_4626_DEPOSIT, token),  // TODO: Use makeAssetKey?
             amount
         )
         returns (uint256 shares)
