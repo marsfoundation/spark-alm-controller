@@ -21,7 +21,7 @@ interface IDaiUsdsLike {
 }
 
 interface IEthenaMinterLike {
-    function setDelegateSigner(address delegateSigner) external;
+    function setDelegatedSigner(address delegateSigner) external;
     function removeDelegatedSigner(address delegateSigner) external;
 }
 
@@ -82,8 +82,6 @@ contract MainnetController is AccessControl {
     bytes32 public constant LIMIT_USDS_MINT      = keccak256("LIMIT_USDS_MINT");
     bytes32 public constant LIMIT_USDS_TO_USDC   = keccak256("LIMIT_USDS_TO_USDC");
 
-    address public constant ETHENA_MINTER = Ethereum.ETHENA_MINTER;
-
     address public immutable buffer;
 
     IALMProxy         public immutable proxy;
@@ -130,6 +128,8 @@ contract MainnetController is AccessControl {
         psm        = IPSMLike(psm_);
         daiUsds    = IDaiUsdsLike(daiUsds_);
         cctp       = ICCTPLike(cctp_);
+
+        ethenaMinter = IEthenaMinterLike(Ethereum.ETHENA_MINTER);
 
         susde = ISUSDELike(Ethereum.SUSDE);
         susds = ISUSDSLike(susds_);
@@ -280,17 +280,17 @@ contract MainnetController is AccessControl {
 
     // TODO: 4626 rate limits on deposit, token-specific, separate PR
 
-    function setDelegateSigner(address delegateSigner) external onlyRole(RELAYER) isActive {
+    function setDelegatedSigner(address delegatedSigner) external onlyRole(RELAYER) isActive {
         proxy.doCall(
             address(ethenaMinter),
-            abi.encodeCall(ethenaMinter.setDelegateSigner, (address(delegateSigner)))
+            abi.encodeCall(ethenaMinter.setDelegatedSigner, (address(delegatedSigner)))
         );
     }
 
-    function removeDelegatedSigner(address delegateSigner) external onlyRole(RELAYER) isActive {
+    function removeDelegatedSigner(address delegatedSigner) external onlyRole(RELAYER) isActive {
         proxy.doCall(
             address(ethenaMinter),
-            abi.encodeCall(ethenaMinter.removeDelegatedSigner, (address(delegateSigner)))
+            abi.encodeCall(ethenaMinter.removeDelegatedSigner, (address(delegatedSigner)))
         );
     }
 
