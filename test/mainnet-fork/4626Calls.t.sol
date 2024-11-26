@@ -176,7 +176,6 @@ contract MainnetControllerRedeemERC4626FailureTests is SUSDSTestBase {
 
 }
 
-
 contract MainnetControllerRedeemERC4626Tests is SUSDSTestBase {
 
     function test_redeemERC4626() external {
@@ -214,5 +213,3 @@ contract MainnetControllerRedeemERC4626Tests is SUSDSTestBase {
     }
 
 }
-
-
