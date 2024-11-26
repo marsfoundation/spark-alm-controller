@@ -6,6 +6,8 @@ import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
+import { Ethereum } from "lib/spark-address-registry/src/Ethereum.sol";
+
 import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
@@ -18,8 +20,19 @@ interface IDaiUsdsLike {
     function usdsToDai(address usr, uint256 wad) external;
 }
 
+interface IEthenaMinterLike {
+    function setDelegatedSigner(address delegateSigner) external;
+    function removeDelegatedSigner(address delegateSigner) external;
+}
+
 interface ISUSDSLike is IERC4626 {
     function usds() external view returns(address);
+}
+
+interface ISUSDELike is IERC4626 {
+    function cooldownAssets(uint256 usdeAmount) external;
+    function cooldownShares(uint256 susdeAmount) external;
+    function unstake(address receiver) external;
 }
 
 interface IVaultLike {
@@ -65,21 +78,26 @@ contract MainnetController is AccessControl {
 
     bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
+    bytes32 public constant LIMIT_USDE_BURN      = keccak256("LIMIT_USDE_BURN");
+    bytes32 public constant LIMIT_USDE_MINT      = keccak256("LIMIT_USDE_MINT");
     bytes32 public constant LIMIT_USDS_MINT      = keccak256("LIMIT_USDS_MINT");
     bytes32 public constant LIMIT_USDS_TO_USDC   = keccak256("LIMIT_USDS_TO_USDC");
 
     address public immutable buffer;
 
-    IALMProxy    public immutable proxy;
-    IRateLimits  public immutable rateLimits;
-    ICCTPLike    public immutable cctp;
-    IDaiUsdsLike public immutable daiUsds;
-    IPSMLike     public immutable psm;
-    IVaultLike   public immutable vault;
+    IALMProxy         public immutable proxy;
+    ICCTPLike         public immutable cctp;
+    IDaiUsdsLike      public immutable daiUsds;
+    IEthenaMinterLike public immutable ethenaMinter;
+    IPSMLike          public immutable psm;
+    IRateLimits       public immutable rateLimits;
+    IVaultLike        public immutable vault;
 
     IERC20     public immutable dai;
     IERC20     public immutable usds;
+    IERC20     public immutable usde;
     IERC20     public immutable usdc;
+    ISUSDELike public immutable susde;
     ISUSDSLike public immutable susds;
 
     uint256 public immutable psmTo18ConversionFactor;
@@ -112,10 +130,14 @@ contract MainnetController is AccessControl {
         daiUsds    = IDaiUsdsLike(daiUsds_);
         cctp       = ICCTPLike(cctp_);
 
-        susds = ISUSDSLike(susds_ );
+        ethenaMinter = IEthenaMinterLike(Ethereum.ETHENA_MINTER);
+
+        susde = ISUSDELike(Ethereum.SUSDE);
+        susds = ISUSDSLike(susds_);
         dai   = IERC20(daiUsds.dai());
         usdc  = IERC20(psm.gem());
         usds  = IERC20(susds.usds());
+        usde  = IERC20(Ethereum.USDE);
 
         psmTo18ConversionFactor = psm.to18ConversionFactor();
 
@@ -250,6 +272,64 @@ contract MainnetController is AccessControl {
                 abi.encodeCall(susds.redeem, (susdsSharesAmount, address(proxy), address(proxy)))
             ),
             (uint256)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Ethena functions                                                                       ***/
+    /**********************************************************************************************/
+
+    function setDelegatedSigner(address delegatedSigner) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(ethenaMinter),
+            abi.encodeCall(ethenaMinter.setDelegatedSigner, (address(delegatedSigner)))
+        );
+    }
+
+    function removeDelegatedSigner(address delegatedSigner) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(ethenaMinter),
+            abi.encodeCall(ethenaMinter.removeDelegatedSigner, (address(delegatedSigner)))
+        );
+    }
+
+    // Note that 2m per block includes other users
+    function prepareUSDeMint(uint256 usdcAmount)
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDE_MINT, usdcAmount)
+    {
+        proxy.doCall(
+            address(usdc),
+            abi.encodeCall(usdc.approve, (address(ethenaMinter), usdcAmount))
+        );
+    }
+
+    function prepareUSDeBurn(uint256 usdeAmount)
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDE_BURN, usdeAmount)
+    {
+        proxy.doCall(
+            address(usde),
+            abi.encodeCall(usde.approve, (address(ethenaMinter), usdeAmount))
+        );
+    }
+
+    function cooldownAssetsSUSDe(uint256 usdeAmount) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(susde),
+            abi.encodeCall(susde.cooldownAssets, (usdeAmount))
+        );
+    }
+
+    function cooldownSharesSUSDe(uint256 susdeAmount) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(susde),
+            abi.encodeCall(susde.cooldownShares, (susdeAmount))
+        );
+    }
+
+    function unstakeSUSDe() external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(susde),
+            abi.encodeCall(susde.unstake, (address(proxy)))
         );
     }
 
