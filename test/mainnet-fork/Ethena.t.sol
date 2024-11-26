@@ -95,9 +95,37 @@ contract MainnetControllerPrepareUSDeMintFailureTests is ForkTestBase {
         mainnetController.prepareUSDeMint(100);
     }
 
+    function test_prepareUSDeMint_rateLimitBoundary() external {
+        vm.startPrank(SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            mainnetController.LIMIT_USDE_MINT(),
+            100e18,
+            uint256(100e18) / 1 hours
+        );
+        vm.stopPrank();
+
+        vm.prank(relayer);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.prepareUSDeMint(100e18 + 1);
+
+        vm.prank(relayer);
+        mainnetController.prepareUSDeMint(100e18);
+    }
+
 }
 
 contract MainnetControllerPrepareUSDeMintSuccessTests is ForkTestBase {
+
+    bytes32 key;
+
+    function setUp() public override {
+        super.setUp();
+
+        key = mainnetController.LIMIT_USDE_MINT();
+
+        vm.prank(SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 100e18, uint256(10e18) / 1 hours);
+    }
 
     function test_prepareUSDeMint() external {
         assertEq(usdc.allowance(address(almProxy), ETHENA_MINTER), 0);
@@ -106,6 +134,24 @@ contract MainnetControllerPrepareUSDeMintSuccessTests is ForkTestBase {
         mainnetController.prepareUSDeMint(100);
 
         assertEq(usdc.allowance(address(almProxy), ETHENA_MINTER), 100);
+    }
+
+    function test_prepareUSDeMint_rateLimits() external {
+        assertEq(rateLimits.getCurrentRateLimit(key), 100e18);
+
+        vm.prank(relayer);
+        mainnetController.prepareUSDeMint(40e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 60e18);
+
+        skip(1 hours);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 70e18 - 2800);  // Rounding
+
+        vm.prank(relayer);
+        mainnetController.prepareUSDeMint(30e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 40e18 - 2800);  // Rounding
     }
 
 }
@@ -130,9 +176,37 @@ contract MainnetControllerPrepareUSDeBurnFailureTests is ForkTestBase {
         mainnetController.prepareUSDeBurn(100);
     }
 
+    function test_prepareUSDeBurn_rateLimitBoundary() external {
+        vm.startPrank(SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            mainnetController.LIMIT_USDE_BURN(),
+            100e18,
+            uint256(100e18) / 1 hours
+        );
+        vm.stopPrank();
+
+        vm.prank(relayer);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.prepareUSDeBurn(100e18 + 1);
+
+        vm.prank(relayer);
+        mainnetController.prepareUSDeBurn(100e18);
+    }
+
 }
 
 contract MainnetControllerPrepareUSDeBurnSuccessTests is ForkTestBase {
+
+    bytes32 key;
+
+    function setUp() public override {
+        super.setUp();
+
+        key = mainnetController.LIMIT_USDE_BURN();
+
+        vm.prank(SPARK_PROXY);
+        rateLimits.setRateLimitData(key, 100e18, uint256(10e18) / 1 hours);
+    }
 
     function test_prepareUSDeBurn() external {
         assertEq(usde.allowance(address(almProxy), ETHENA_MINTER), 0);
@@ -141,6 +215,24 @@ contract MainnetControllerPrepareUSDeBurnSuccessTests is ForkTestBase {
         mainnetController.prepareUSDeBurn(100);
 
         assertEq(usde.allowance(address(almProxy), ETHENA_MINTER), 100);
+    }
+
+    function test_prepareUSDeBurn_rateLimits() external {
+        assertEq(rateLimits.getCurrentRateLimit(key), 100e18);
+
+        vm.prank(relayer);
+        mainnetController.prepareUSDeBurn(40e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 60e18);
+
+        skip(1 hours);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 70e18 - 2800);  // Rounding
+
+        vm.prank(relayer);
+        mainnetController.prepareUSDeBurn(30e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 40e18 - 2800);  // Rounding
     }
 
 }

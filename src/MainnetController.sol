@@ -79,6 +79,8 @@ contract MainnetController is AccessControl {
 
     bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
+    bytes32 public constant LIMIT_USDE_BURN      = keccak256("LIMIT_USDE_BURN");
+    bytes32 public constant LIMIT_USDE_MINT      = keccak256("LIMIT_USDE_MINT");
     bytes32 public constant LIMIT_USDS_MINT      = keccak256("LIMIT_USDS_MINT");
     bytes32 public constant LIMIT_USDS_TO_USDC   = keccak256("LIMIT_USDS_TO_USDC");
 
@@ -278,8 +280,6 @@ contract MainnetController is AccessControl {
     /*** Ethena functions                                                                       ***/
     /**********************************************************************************************/
 
-    // TODO: 4626 rate limits on deposit, token-specific, separate PR
-
     function setDelegatedSigner(address delegatedSigner) external onlyRole(RELAYER) isActive {
         proxy.doCall(
             address(ethenaMinter),
@@ -295,23 +295,24 @@ contract MainnetController is AccessControl {
     }
 
     // Note that 2m per block includes other users
-    // TODO: Add rate limits
-    function prepareUSDeMint(uint256 usdcAmount) external onlyRole(RELAYER) isActive {
+    function prepareUSDeMint(uint256 usdcAmount)
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDE_MINT, usdcAmount)
+    {
         proxy.doCall(
             address(usdc),
             abi.encodeCall(usdc.approve, (address(ethenaMinter), usdcAmount))
         );
     }
 
-    // TODO: Add rate limits
-    function prepareUSDeBurn(uint256 usdeAmount) external onlyRole(RELAYER) isActive {
+    function prepareUSDeBurn(uint256 usdeAmount)
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDE_BURN, usdeAmount)
+    {
         proxy.doCall(
             address(usde),
             abi.encodeCall(usde.approve, (address(ethenaMinter), usdeAmount))
         );
     }
 
-    // TODO: NO rate limit
     function cooldownAssetsSUSDe(uint256 usdeAmount) external onlyRole(RELAYER) isActive {
         proxy.doCall(
             address(susde),
@@ -319,7 +320,6 @@ contract MainnetController is AccessControl {
         );
     }
 
-    // TODO: NO rate limit
     function cooldownSharesSUSDe(uint256 susdeAmount) external onlyRole(RELAYER) isActive {
         proxy.doCall(
             address(susde),
@@ -327,7 +327,6 @@ contract MainnetController is AccessControl {
         );
     }
 
-    // TODO: NO rate limit
     function unstakeSUSDe() external onlyRole(RELAYER) isActive {
         proxy.doCall(
             address(susde),
