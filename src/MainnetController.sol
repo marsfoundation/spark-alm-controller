@@ -287,6 +287,35 @@ contract MainnetController is AccessControl {
         );
     }
 
+    /**************************************************************************************************************************************/
+    /*** Withdrawal Request Functions REFERENCE                                                                                          ***/
+    /**************************************************************************************************************************************/
+
+    // Manual redeem is available but its not recommended
+    // setManualWithdrawal to be done by maple
+
+    // Have to cancel a withdrawal request in order to change a withdraw request, cant update an existing request
+    function removeShares(uint256 shares_, address owner_)
+        external override nonReentrant checkCall("P:removeShares") returns (uint256 sharesReturned_)
+    {
+        if (msg.sender != owner_) _decreaseAllowance(owner_, msg.sender, shares_);
+
+        emit SharesRemoved(
+            owner_,
+            sharesReturned_ = IPoolManagerLike(manager).removeShares(shares_, owner_)
+        );
+    }
+
+    function requestRedeem(uint256 shares_, address owner_)
+        external override nonReentrant checkCall("P:requestRedeem") returns (uint256 escrowedShares_)
+    {
+        emit RedemptionRequested(
+            owner_,
+            shares_,
+            escrowedShares_ = _requestRedeem(shares_, owner_)
+        );
+    }
+
     /**********************************************************************************************/
     /*** Ethena functions                                                                       ***/
     /**********************************************************************************************/
