@@ -11,7 +11,7 @@ import { IMetaMorpho, Id }       from "metamorpho/interfaces/IMetaMorpho.sol";
 import { MarketParamsLib }       from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import { IMorpho, MarketParams } from "morpho-blue/src/interfaces/IMorpho.sol";
 
-contract MorphoTest is ForkTestBase {
+contract MorphoBaseTest is ForkTestBase {
 
     address constant MORPHO = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
 
@@ -90,11 +90,15 @@ contract MorphoTest is ForkTestBase {
         return 22841965;  // November 24, 2024
     }
 
-    /**********************************************************************************************/
-    /*** Only testing USDS failure modes because it is the same for USDC                        ***/
-    /**********************************************************************************************/
+}
 
-    function test_morpho_usds_deposit_notRelayer() external {
+/**********************************************************************************************/
+/*** Only testing USDS failure modes because it is the same for USDC                        ***/
+/**********************************************************************************************/
+
+contract MorphoFailureTests is MorphoBaseTest {
+
+    function test_morpho_deposit_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
@@ -103,7 +107,7 @@ contract MorphoTest is ForkTestBase {
         foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
     }
 
-    function test_morpho_usds_deposit_frozen() external {
+    function test_morpho_deposit_frozen() external {
         vm.prank(freezer);
         foreignController.freeze();
 
@@ -112,7 +116,7 @@ contract MorphoTest is ForkTestBase {
         foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
     }
 
-    function test_morpho_usds_deposit_rateLimited() external {
+    function test_morpho_deposit_rateLimited() external {
         deal(Base.USDS, address(almProxy), 25_000_001e18);
 
         assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))), 0);
@@ -129,7 +133,7 @@ contract MorphoTest is ForkTestBase {
         assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                    1e18);
     }
 
-    function test_morpho_usds_withdraw_notRelayer() external {
+    function test_morpho_withdraw_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
@@ -138,7 +142,7 @@ contract MorphoTest is ForkTestBase {
         foreignController.withdrawERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
     }
 
-    function test_morpho_usds_withdraw_frozen() external {
+    function test_morpho_withdraw_frozen() external {
         vm.prank(freezer);
         foreignController.freeze();
 
@@ -147,7 +151,7 @@ contract MorphoTest is ForkTestBase {
         foreignController.withdrawERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
     }
 
-    function test_morpho_usds_redeem_notRelayer() external {
+    function test_morpho_redeem_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
@@ -156,7 +160,7 @@ contract MorphoTest is ForkTestBase {
         foreignController.redeemERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
     }
 
-    function test_morpho_usds_redeem_frozen() external {
+    function test_morpho_redeem_frozen() external {
         vm.prank(freezer);
         foreignController.freeze();
 
@@ -165,9 +169,13 @@ contract MorphoTest is ForkTestBase {
         foreignController.redeemERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
     }
 
-    /**********************************************************************************************/
-    /*** Success modes testing both USDS and USDC                                               ***/
-    /**********************************************************************************************/
+}
+
+/**********************************************************************************************/
+/*** Success modes testing both USDS and USDC                                               ***/
+/**********************************************************************************************/
+
+contract MorphoUSDSSuccessTests is MorphoBaseTest {
 
     function test_morpho_usds_deposit() public {
         deal(Base.USDS, address(almProxy), 1_000_000e18);
@@ -212,6 +220,10 @@ contract MorphoTest is ForkTestBase {
         assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))), 0);
         assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                    1_000_000e18);
     }
+
+}
+
+contract MorphoUSDCSuccessTests is MorphoBaseTest {
 
     function test_morpho_usdc_deposit() public {
         deal(Base.USDC, address(almProxy), 1_000_000e6);
