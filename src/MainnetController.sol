@@ -25,6 +25,11 @@ interface IEthenaMinterLike {
     function removeDelegatedSigner(address delegateSigner) external;
 }
 
+interface IMaplePoolLike {
+    function requestRedeem(uint256 shares, address receiver) external;
+    function removeShares(uint256 shares, address receiver) external;
+}
+
 interface ISUSDSLike is IERC4626 {
     function usds() external view returns(address);
 }
@@ -287,32 +292,25 @@ contract MainnetController is AccessControl {
         );
     }
 
-    /**************************************************************************************************************************************/
-    /*** Withdrawal Request Functions REFERENCE                                                                                          ***/
-    /**************************************************************************************************************************************/
+    /**********************************************************************************************/
+    /*** Maple withdrawal functions                                                             ***/
+    /**********************************************************************************************/
 
-    // Manual redeem is available but its not recommended
-    // setManualWithdrawal to be done by maple
-
-    // Have to cancel a withdrawal request in order to change a withdraw request, cant update an existing request
-    function removeShares(uint256 shares_, address owner_)
-        external override nonReentrant checkCall("P:removeShares") returns (uint256 sharesReturned_)
+    function requestMapleRedemption(address maplePool, uint256 shares)
+        external onlyRole(RELAYER) isActive
     {
-        if (msg.sender != owner_) _decreaseAllowance(owner_, msg.sender, shares_);
-
-        emit SharesRemoved(
-            owner_,
-            sharesReturned_ = IPoolManagerLike(manager).removeShares(shares_, owner_)
+        proxy.doCall(
+            maplePool,
+            abi.encodeCall(IMaplePoolLike(maplePool).requestRedeem, (shares, address(proxy)))
         );
     }
 
-    function requestRedeem(uint256 shares_, address owner_)
-        external override nonReentrant checkCall("P:requestRedeem") returns (uint256 escrowedShares_)
+    function cancelMapleRedemption(address maplePool, uint256 shares)
+        external onlyRole(RELAYER) isActive
     {
-        emit RedemptionRequested(
-            owner_,
-            shares_,
-            escrowedShares_ = _requestRedeem(shares_, owner_)
+        proxy.doCall(
+            maplePool,
+            abi.encodeCall(IMaplePoolLike(maplePool).removeShares, (shares, address(proxy)))
         );
     }
 
