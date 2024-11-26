@@ -3,6 +3,10 @@ pragma solidity >=0.8.0;
 
 import "test/mainnet-fork/ForkTestBase.t.sol";
 
+interface IEthenaMinterLike {
+    function delegatedSigner(address signer, address owner) external view returns (uint8);
+}
+
 contract MainnetControllerSetDelegatedSignerFailureTests is ForkTestBase {
 
     function test_setDelegatedSigner_notRelayer() external {
@@ -31,10 +35,17 @@ contract MainnetControllerSetDelegatedSignerSuccessTests is ForkTestBase {
 
     function test_setDelegatedSigner() external {
         address signer = makeAddr("signer");
+
+        IEthenaMinterLike ethenaMinter = IEthenaMinterLike(ETHENA_MINTER);
+
+        assertEq(ethenaMinter.delegatedSigner(signer, address(almProxy)), 0);  // REJECTED
+
         vm.prank(relayer);
         vm.expectEmit(ETHENA_MINTER);
         emit DelegatedSignerInitiated(signer, address(almProxy));
         mainnetController.setDelegatedSigner(signer);
+
+        assertEq(ethenaMinter.delegatedSigner(signer, address(almProxy)), 1);  // PENDING
     }
 
 }
@@ -67,10 +78,20 @@ contract MainnetControllerRemoveDelegatedSignerSuccessTests is ForkTestBase {
 
     function test_removeDelegatedSigner() external {
         address signer = makeAddr("signer");
+
+        IEthenaMinterLike ethenaMinter = IEthenaMinterLike(ETHENA_MINTER);
+
+        vm.prank(relayer);
+        mainnetController.setDelegatedSigner(signer);
+
+        assertEq(ethenaMinter.delegatedSigner(signer, address(almProxy)), 1);  // PENDING
+
         vm.prank(relayer);
         vm.expectEmit(ETHENA_MINTER);
         emit DelegatedSignerRemoved(signer, address(almProxy));
         mainnetController.removeDelegatedSigner(signer);
+
+        assertEq(ethenaMinter.delegatedSigner(signer, address(almProxy)), 0);  // REJECTED
     }
 
 }
@@ -99,17 +120,17 @@ contract MainnetControllerPrepareUSDeMintFailureTests is ForkTestBase {
         vm.startPrank(SPARK_PROXY);
         rateLimits.setRateLimitData(
             mainnetController.LIMIT_USDE_MINT(),
-            100e18,
-            uint256(100e18) / 1 hours
+            100e6,
+            uint256(100e6) / 1 hours
         );
         vm.stopPrank();
 
         vm.prank(relayer);
         vm.expectRevert("RateLimits/rate-limit-exceeded");
-        mainnetController.prepareUSDeMint(100e18 + 1);
+        mainnetController.prepareUSDeMint(100e6 + 1);
 
         vm.prank(relayer);
-        mainnetController.prepareUSDeMint(100e18);
+        mainnetController.prepareUSDeMint(100e6);
     }
 
 }
@@ -124,34 +145,34 @@ contract MainnetControllerPrepareUSDeMintSuccessTests is ForkTestBase {
         key = mainnetController.LIMIT_USDE_MINT();
 
         vm.prank(SPARK_PROXY);
-        rateLimits.setRateLimitData(key, 100e18, uint256(10e18) / 1 hours);
+        rateLimits.setRateLimitData(key, 100e6, uint256(10e18) / 1 hours);
     }
 
     function test_prepareUSDeMint() external {
         assertEq(usdc.allowance(address(almProxy), ETHENA_MINTER), 0);
 
         vm.prank(relayer);
-        mainnetController.prepareUSDeMint(100);
+        mainnetController.prepareUSDeMint(100e6);
 
-        assertEq(usdc.allowance(address(almProxy), ETHENA_MINTER), 100);
+        assertEq(usdc.allowance(address(almProxy), ETHENA_MINTER), 100e6);
     }
 
     function test_prepareUSDeMint_rateLimits() external {
-        assertEq(rateLimits.getCurrentRateLimit(key), 100e18);
+        assertEq(rateLimits.getCurrentRateLimit(key), 100e6);
 
         vm.prank(relayer);
-        mainnetController.prepareUSDeMint(40e18);
+        mainnetController.prepareUSDeMint(40e6);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 60e18);
+        assertEq(rateLimits.getCurrentRateLimit(key), 60e6);
 
         skip(1 hours);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 70e18 - 2800);  // Rounding
+        assertEq(rateLimits.getCurrentRateLimit(key), 70e6 - 2800);  // Rounding
 
         vm.prank(relayer);
-        mainnetController.prepareUSDeMint(30e18);
+        mainnetController.prepareUSDeMint(30e6);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 40e18 - 2800);  // Rounding
+        assertEq(rateLimits.getCurrentRateLimit(key), 40e6 - 2800);  // Rounding
     }
 
 }

@@ -26,7 +26,8 @@ import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
 import { MainnetControllerDeploy } from "deploy/ControllerDeploy.sol";
 import { ControllerInstance }      from "deploy/ControllerInstance.sol";
 
-import { MainnetControllerInit,
+import {
+    MainnetControllerInit,
     MintRecipient,
     RateLimitData
 } from "deploy/ControllerInit.sol";
@@ -45,7 +46,6 @@ interface IBufferLike {
 }
 
 interface ISUSDELike is IERC4626 {
-    function asset() external view returns(address);
     function cooldownAssets(uint256 usdeAmount) external;
     function cooldownShares(uint256 susdeAmount) external;
     function unstake(address receiver) external;
