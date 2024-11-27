@@ -68,7 +68,7 @@ contract MorphoBaseTest is ForkTestBase {
 
         rateLimits.setRateLimitData(
             RateLimitHelpers.makeAssetKey(
-                foreignController.LIMIT_VAULT_DEPOSIT(),
+                foreignController.LIMIT_4626_DEPOSIT(),
                 MORPHO_VAULT_USDS
             ),
             25_000_000e18,
@@ -76,7 +76,7 @@ contract MorphoBaseTest is ForkTestBase {
         );
         rateLimits.setRateLimitData(
             RateLimitHelpers.makeAssetKey(
-                foreignController.LIMIT_VAULT_DEPOSIT(),
+                foreignController.LIMIT_4626_DEPOSIT(),
                 MORPHO_VAULT_USDC
             ),
             25_000_000e6,

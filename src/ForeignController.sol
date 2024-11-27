@@ -45,7 +45,7 @@ contract ForeignController is AccessControl {
     bytes32 public constant LIMIT_PSM_WITHDRAW   = keccak256("LIMIT_PSM_WITHDRAW");
     bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
-    bytes32 public constant LIMIT_VAULT_DEPOSIT  = keccak256("LIMIT_VAULT_DEPOSIT");
+    bytes32 public constant LIMIT_4626_DEPOSIT   = keccak256("LIMIT_4626_DEPOSIT");
 
     IALMProxy   public immutable proxy;
     ICCTPLike   public immutable cctp;
@@ -220,58 +220,58 @@ contract ForeignController is AccessControl {
     /*** Relayer ERC4626 functions                                                              ***/
     /**********************************************************************************************/
 
-    function depositERC4626(address vault, uint256 amount)
+    function depositERC4626(address token, uint256 amount)
         external
         onlyRole(RELAYER)
         isActive
         rateLimited(
-            RateLimitHelpers.makeAssetKey(LIMIT_VAULT_DEPOSIT, vault),
+            RateLimitHelpers.makeAssetKey(LIMIT_4626_DEPOSIT, token),  // TODO: Use makeAssetKey?
             amount
         )
         returns (uint256 shares)
     {
         // Note that whitelist is done by rate limits
-        IERC20 asset = IERC20(IERC4626(vault).asset());
+        IERC20 asset = IERC20(IERC4626(token).asset());
 
-        // Approve asset to vault from the proxy (assumes the proxy has enough of the asset).
+        // Approve asset to token from the proxy (assumes the proxy has enough of the asset).
         proxy.doCall(
             address(asset),
-            abi.encodeCall(asset.approve, (vault, amount))
+            abi.encodeCall(asset.approve, (token, amount))
         );
 
-        // Deposit asset into the vault, proxy receives vault shares, decode the resulting shares
+        // Deposit asset into the token, proxy receives token shares, decode the resulting shares
         shares = abi.decode(
             proxy.doCall(
-                vault,
-                abi.encodeCall(IERC4626(vault).deposit, (amount, address(proxy)))
+                token,
+                abi.encodeCall(IERC4626(token).deposit, (amount, address(proxy)))
             ),
             (uint256)
         );
     }
 
-    function withdrawERC4626(address vault, uint256 amount)
+    function withdrawERC4626(address token, uint256 amount)
         external onlyRole(RELAYER) isActive returns (uint256 shares)
     {
-        // Withdraw asset from a vault, decode resulting shares.
-        // Assumes proxy has adequate vault shares.
+        // Withdraw asset from a token, decode resulting shares.
+        // Assumes proxy has adequate token shares.
         shares = abi.decode(
             proxy.doCall(
-                vault,
-                abi.encodeCall(IERC4626(vault).withdraw, (amount, address(proxy), address(proxy)))
+                token,
+                abi.encodeCall(IERC4626(token).withdraw, (amount, address(proxy), address(proxy)))
             ),
             (uint256)
         );
     }
 
-    function redeemERC4626(address vault, uint256 shares)
+    function redeemERC4626(address token, uint256 shares)
         external onlyRole(RELAYER) isActive returns (uint256 assets)
     {
-        // Redeem shares for assets from the vault, decode the resulting assets.
-        // Assumes proxy has adequate vault shares.
+        // Redeem shares for assets from the token, decode the resulting assets.
+        // Assumes proxy has adequate token shares.
         assets = abi.decode(
             proxy.doCall(
-                vault,
-                abi.encodeCall(IERC4626(vault).redeem, (shares, address(proxy), address(proxy)))
+                token,
+                abi.encodeCall(IERC4626(token).redeem, (shares, address(proxy), address(proxy)))
             ),
             (uint256)
         );
