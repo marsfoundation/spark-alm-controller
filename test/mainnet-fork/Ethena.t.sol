@@ -583,4 +583,107 @@ contract MainnetControllerEthenaE2ETests is ForkTestBase {
         assertEq(usdc.balanceOf(address(almProxy)), 1_000_000e6 - 1);  // Rounding
     }
 
+    function test_ethena_e2eFlowUsingShares() external {
+        deal(address(usdc), address(almProxy), 1_000_000e6);
+
+        uint256 startingMinterBalance = usdc.balanceOf(ETHENA_MINTER);  // From mainnet state
+
+        // Step 1: Mint USDe
+
+        vm.prank(relayer);
+        mainnetController.prepareUSDeMint(1_000_000e6);
+
+        assertEq(usdc.allowance(address(almProxy), ETHENA_MINTER), 1_000_000e6);
+
+        assertEq(usdc.balanceOf(address(almProxy)), 1_000_000e6);
+        assertEq(usdc.balanceOf(ETHENA_MINTER),     startingMinterBalance);
+
+        assertEq(usde.balanceOf(address(almProxy)), 0);
+
+        _simulateUsdeMint(1_000_000e6);
+
+        assertEq(usdc.allowance(address(almProxy), ETHENA_MINTER), 0);
+
+        assertEq(usdc.balanceOf(address(almProxy)), 0);
+        assertEq(usdc.balanceOf(ETHENA_MINTER),     startingMinterBalance + 1_000_000e6);
+
+        assertEq(usde.balanceOf(address(almProxy)), 1_000_000e18);
+
+        // Step 2: Convert half of assets to sUSDe
+
+        uint256 startingAssets = usde.balanceOf(address(susde));
+
+        assertEq(usde.allowance(address(almProxy), address(susde)), 0);
+
+        assertEq(susde.convertToAssets(susde.balanceOf(address(almProxy))), 0);
+
+        assertEq(usde.balanceOf(address(susde)),    startingAssets);
+        assertEq(usde.balanceOf(address(almProxy)), 1_000_000e18);
+
+        vm.prank(relayer);
+        uint256 susdeShares = mainnetController.depositERC4626(address(susde), 500_000e18);
+
+        assertEq(susde.balanceOf(address(almProxy)), susdeShares);
+
+        assertEq(usde.allowance(address(almProxy), address(susde)), 0);
+
+        assertEq(susde.convertToAssets(susdeShares), 500_000e18 - 2);  // Rounding
+
+        assertEq(usde.balanceOf(address(susde)),    startingAssets + 500_000e18);
+        assertEq(usde.balanceOf(address(almProxy)), 500_000e18);
+
+        // Step 3: Cooldown sUSDe
+
+        address silo = susde.silo();
+
+        uint256 startingSiloBalance = usde.balanceOf(silo);
+
+        assertEq(susde.convertToAssets(susde.balanceOf(address(almProxy))), 500_000e18 - 2);  // Rounding
+
+        assertEq(usde.balanceOf(silo), startingSiloBalance);
+
+        vm.prank(relayer);
+        mainnetController.cooldownSharesSUSDe(susdeShares);
+
+        assertEq(susde.convertToAssets(susde.balanceOf(address(almProxy))), 0);
+
+        assertEq(usde.balanceOf(silo), startingSiloBalance + 500_000e18 - 2);
+
+        // Step 4: Wait for cooldown window to pass then unstake sUSDe
+
+        skip(7 days);
+
+        assertEq(usde.balanceOf(silo),              startingSiloBalance + 500_000e18 - 2);
+        assertEq(usde.balanceOf(address(almProxy)), 500_000e18);
+
+        vm.prank(relayer);
+        mainnetController.unstakeSUSDe();
+
+        assertEq(usde.balanceOf(silo),              startingSiloBalance);
+        assertEq(usde.balanceOf(address(almProxy)), 1_000_000e18 - 2);
+
+        // Step 5: Redeem USDe for USDC
+
+        startingMinterBalance = usde.balanceOf(ETHENA_MINTER);  // From mainnet state
+
+        vm.prank(relayer);
+        mainnetController.prepareUSDeBurn(1_000_000e18 - 2);
+
+        assertEq(usde.allowance(address(almProxy), ETHENA_MINTER), 1_000_000e18 - 2);
+
+        assertEq(usde.balanceOf(address(almProxy)), 1_000_000e18 - 2);
+        assertEq(usde.balanceOf(ETHENA_MINTER),     startingMinterBalance);
+
+        assertEq(usdc.balanceOf(address(almProxy)), 0);
+
+        _simulateUsdeBurn(1_000_000e18 - 2);
+
+        assertEq(usde.allowance(address(almProxy), ETHENA_MINTER), 0);
+
+        assertEq(usde.balanceOf(address(almProxy)), 0);
+        assertEq(usde.balanceOf(ETHENA_MINTER),     startingMinterBalance + 1_000_000e18 - 2);
+
+        assertEq(usdc.balanceOf(address(almProxy)), 1_000_000e6 - 1);  // Rounding
+    }
+
 }
