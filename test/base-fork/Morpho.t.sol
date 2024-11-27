@@ -58,7 +58,7 @@ contract MorphoBaseTest is ForkTestBase {
 
         IMetaMorpho(MORPHO_VAULT_USDS).acceptCap(usdsParams);
         IMetaMorpho(MORPHO_VAULT_USDC).acceptCap(usdcParams);
-        
+
         Id[] memory supplyQueueUSDS = new Id[](1);
         supplyQueueUSDS[0] = MarketParamsLib.id(usdsParams);
         IMetaMorpho(MORPHO_VAULT_USDS).setSupplyQueue(supplyQueueUSDS);
@@ -92,11 +92,9 @@ contract MorphoBaseTest is ForkTestBase {
 
 }
 
-/**********************************************************************************************/
-/*** Only testing USDS failure modes because it is the same for USDC                        ***/
-/**********************************************************************************************/
+// NOTE: Only testing USDS for non-rate limit failures as it doesn't matter which asset is used
 
-contract MorphoFailureTests is MorphoBaseTest {
+contract MorphoDepositFailureTests is MorphoBaseTest {
 
     function test_morpho_deposit_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -136,6 +134,44 @@ contract MorphoFailureTests is MorphoBaseTest {
         foreignController.depositERC4626(MORPHO_VAULT_USDC, 25_000_000e6);
     }
 
+}
+
+contract MorphoDepositSuccessTests is MorphoBaseTest {
+
+    function test_morpho_usds_deposit() public {
+        deal(Base.USDS, address(almProxy), 1_000_000e18);
+
+        assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))),          0);
+        assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                             1_000_000e18);
+        assertEq(IERC20(Base.USDS).allowance(address(almProxy), address(MORPHO_VAULT_USDS)), 0);
+
+        vm.prank(relayer);
+        assertEq(foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18), 1_000_000e18);
+
+        assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))),          1_000_000e18);
+        assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                             0);
+        assertEq(IERC20(Base.USDS).allowance(address(almProxy), address(MORPHO_VAULT_USDS)), 0);
+    }
+
+    function test_morpho_usdc_deposit() public {
+        deal(Base.USDC, address(almProxy), 1_000_000e6);
+
+        assertEq(usdcVault.convertToAssets(usdcVault.balanceOf(address(almProxy))),          0);
+        assertEq(IERC20(Base.USDC).balanceOf(address(almProxy)),                             1_000_000e6);
+        assertEq(IERC20(Base.USDC).allowance(address(almProxy), address(MORPHO_VAULT_USDC)), 0);
+
+        vm.prank(relayer);
+        assertEq(foreignController.depositERC4626(MORPHO_VAULT_USDC, 1_000_000e6), 1_000_000e18);
+
+        assertEq(usdcVault.convertToAssets(usdcVault.balanceOf(address(almProxy))),          1_000_000e6);
+        assertEq(IERC20(Base.USDC).balanceOf(address(almProxy)),                             0);
+        assertEq(IERC20(Base.USDC).allowance(address(almProxy), address(MORPHO_VAULT_USDC)), 0);
+    }
+
+}
+
+contract MorphoWithdrawFailureTests is MorphoBaseTest {
+
     function test_morpho_withdraw_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
@@ -153,6 +189,44 @@ contract MorphoFailureTests is MorphoBaseTest {
         vm.expectRevert("ForeignController/not-active");
         foreignController.withdrawERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
     }
+
+}
+
+contract MorphoWithdrawSuccessTests is MorphoBaseTest {
+
+    function test_morpho_usds_withdraw() public {
+        deal(Base.USDS, address(almProxy), 1_000_000e18);
+        vm.prank(relayer);
+        foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
+
+        assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))), 1_000_000e18);
+        assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                    0);
+
+        vm.prank(relayer);
+        assertEq(foreignController.withdrawERC4626(MORPHO_VAULT_USDS, 1_000_000e18), 1_000_000e18);
+
+        assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))), 0);
+        assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                    1_000_000e18);
+    }
+
+    function test_morpho_usdc_withdraw() public {
+        deal(Base.USDC, address(almProxy), 1_000_000e6);
+        vm.prank(relayer);
+        foreignController.depositERC4626(MORPHO_VAULT_USDC, 1_000_000e6);
+
+        assertEq(usdcVault.convertToAssets(usdcVault.balanceOf(address(almProxy))), 1_000_000e6);
+        assertEq(IERC20(Base.USDC).balanceOf(address(almProxy)),                    0);
+
+        vm.prank(relayer);
+        assertEq(foreignController.withdrawERC4626(MORPHO_VAULT_USDC, 1_000_000e6), 1_000_000e18);
+
+        assertEq(usdcVault.convertToAssets(usdcVault.balanceOf(address(almProxy))), 0);
+        assertEq(IERC20(Base.USDC).balanceOf(address(almProxy)),                    1_000_000e6);
+    }
+
+}
+
+contract MorphoRedeemFailureTests is MorphoBaseTest {
 
     function test_morpho_redeem_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
@@ -174,41 +248,7 @@ contract MorphoFailureTests is MorphoBaseTest {
 
 }
 
-/**********************************************************************************************/
-/*** Success modes testing both USDS and USDC                                               ***/
-/**********************************************************************************************/
-
-contract MorphoUSDSSuccessTests is MorphoBaseTest {
-
-    function test_morpho_usds_deposit() public {
-        deal(Base.USDS, address(almProxy), 1_000_000e18);
-
-        assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))),          0);
-        assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                             1_000_000e18);
-        assertEq(IERC20(Base.USDS).allowance(address(almProxy), address(MORPHO_VAULT_USDS)), 0);
-
-        vm.prank(relayer);
-        assertEq(foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18), 1_000_000e18);
-
-        assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))),          1_000_000e18);
-        assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                             0);
-        assertEq(IERC20(Base.USDS).allowance(address(almProxy), address(MORPHO_VAULT_USDS)), 0);
-    }
-
-    function test_morpho_usds_withdraw() public {
-        deal(Base.USDS, address(almProxy), 1_000_000e18);
-        vm.prank(relayer);
-        foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
-
-        assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))), 1_000_000e18);
-        assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                    0);
-
-        vm.prank(relayer);
-        assertEq(foreignController.withdrawERC4626(MORPHO_VAULT_USDS, 1_000_000e18), 1_000_000e18);
-
-        assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))), 0);
-        assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                    1_000_000e18);
-    }
+contract MorphoRedeemSuccessTests is MorphoBaseTest {
 
     function test_morpho_usds_redeem() public {
         deal(Base.USDS, address(almProxy), 1_000_000e18);
@@ -224,40 +264,6 @@ contract MorphoUSDSSuccessTests is MorphoBaseTest {
 
         assertEq(usdsVault.convertToAssets(usdsVault.balanceOf(address(almProxy))), 0);
         assertEq(IERC20(Base.USDS).balanceOf(address(almProxy)),                    1_000_000e18);
-    }
-
-}
-
-contract MorphoUSDCSuccessTests is MorphoBaseTest {
-
-    function test_morpho_usdc_deposit() public {
-        deal(Base.USDC, address(almProxy), 1_000_000e6);
-
-        assertEq(usdcVault.convertToAssets(usdcVault.balanceOf(address(almProxy))),          0);
-        assertEq(IERC20(Base.USDC).balanceOf(address(almProxy)),                             1_000_000e6);
-        assertEq(IERC20(Base.USDC).allowance(address(almProxy), address(MORPHO_VAULT_USDC)), 0);
-
-        vm.prank(relayer);
-        assertEq(foreignController.depositERC4626(MORPHO_VAULT_USDC, 1_000_000e6), 1_000_000e18);
-
-        assertEq(usdcVault.convertToAssets(usdcVault.balanceOf(address(almProxy))),          1_000_000e6);
-        assertEq(IERC20(Base.USDC).balanceOf(address(almProxy)),                             0);
-        assertEq(IERC20(Base.USDC).allowance(address(almProxy), address(MORPHO_VAULT_USDC)), 0);
-    }
-
-    function test_morpho_usdc_withdraw() public {
-        deal(Base.USDC, address(almProxy), 1_000_000e6);
-        vm.prank(relayer);
-        foreignController.depositERC4626(MORPHO_VAULT_USDC, 1_000_000e6);
-
-        assertEq(usdcVault.convertToAssets(usdcVault.balanceOf(address(almProxy))), 1_000_000e6);
-        assertEq(IERC20(Base.USDC).balanceOf(address(almProxy)),                    0);
-
-        vm.prank(relayer);
-        assertEq(foreignController.withdrawERC4626(MORPHO_VAULT_USDC, 1_000_000e6), 1_000_000e18);
-
-        assertEq(usdcVault.convertToAssets(usdcVault.balanceOf(address(almProxy))), 0);
-        assertEq(IERC20(Base.USDC).balanceOf(address(almProxy)),                    1_000_000e6);
     }
 
     function test_morpho_usdc_redeem() public {
