@@ -299,17 +299,17 @@ contract MainnetController is AccessControl {
     /*** Relayer Aave functions                                                                 ***/
     /**********************************************************************************************/
 
-    function depositAave(address atoken, uint256 amount)
+    function depositAave(address aToken, uint256 amount)
         external
         onlyRole(RELAYER)
         isActive
         rateLimited(
-            RateLimitHelpers.makeAssetKey(LIMIT_AAVE_DEPOSIT, atoken),
+            RateLimitHelpers.makeAssetKey(LIMIT_AAVE_DEPOSIT, aToken),
             amount
         )
     {
-        IERC20    underlying = IERC20(IATokenWithPool(atoken).UNDERLYING_ASSET_ADDRESS());
-        IAavePool pool       = IAavePool(IATokenWithPool(atoken).POOL());
+        IERC20    underlying = IERC20(IATokenWithPool(aToken).UNDERLYING_ASSET_ADDRESS());
+        IAavePool pool       = IAavePool(IATokenWithPool(aToken).POOL());
 
         // Approve underlying to Aave pool from the proxy (assumes the proxy has enough underlying).
         proxy.doCall(
@@ -324,10 +324,10 @@ contract MainnetController is AccessControl {
         );
     }
 
-    function withdrawAave(address atoken, uint256 amount)
+    function withdrawAave(address aToken, uint256 amount)
         external onlyRole(RELAYER) isActive returns (uint256 amountWithdrawn)
     {
-        IAavePool pool = IAavePool(IATokenWithPool(atoken).POOL());
+        IAavePool pool = IAavePool(IATokenWithPool(aToken).POOL());
 
         // Withdraw underlying from Aave pool, decode resulting amount withdrawn.
         // Assumes proxy has adequate aTokens.
@@ -336,7 +336,7 @@ contract MainnetController is AccessControl {
                 address(pool),
                 abi.encodeCall(
                     pool.withdraw,
-                    (IATokenWithPool(atoken).UNDERLYING_ASSET_ADDRESS(), amount, address(proxy))
+                    (IATokenWithPool(aToken).UNDERLYING_ASSET_ADDRESS(), amount, address(proxy))
                 )
             ),
             (uint256)
