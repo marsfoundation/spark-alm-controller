@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 
-import { CCTPForwarder } from "lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
+import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
 import "test/base-fork/ForkTestBase.t.sol";
 

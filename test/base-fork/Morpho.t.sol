@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "test/base-fork/ForkTestBase.t.sol";
 
-import { IERC4626 } from "lib/forge-std/src/interfaces/IERC4626.sol";
+import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
 

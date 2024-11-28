@@ -14,6 +14,9 @@ contract AaveV3MainMarketBaseTest is ForkTestBase {
     IAToken ausds = IAToken(ATOKEN_USDS);
     IAToken ausdc = IAToken(ATOKEN_USDC);
 
+    uint256 startingAUSDSBalance;
+    uint256 startingAUSDCBalance;
+
     function setUp() public override {
         super.setUp();
 
@@ -37,6 +40,9 @@ contract AaveV3MainMarketBaseTest is ForkTestBase {
         );
 
         vm.stopPrank();
+
+        startingAUSDCBalance = usdc.balanceOf(address(ausdc));
+        startingAUSDSBalance = usds.balanceOf(address(ausds));
     }
 
 }
@@ -45,7 +51,7 @@ contract AaveV3MainMarketBaseTest is ForkTestBase {
 
 contract AaveV3MainMarketDepositFailureTests is AaveV3MainMarketBaseTest {
 
-    function test_aave_deposit_notRelayer() external {
+    function test_depositAave_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
@@ -54,7 +60,7 @@ contract AaveV3MainMarketDepositFailureTests is AaveV3MainMarketBaseTest {
         mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
     }
 
-    function test_aave_deposit_frozen() external {
+    function test_depositAave_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
@@ -63,7 +69,7 @@ contract AaveV3MainMarketDepositFailureTests is AaveV3MainMarketBaseTest {
         mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
     }
 
-    function test_aave_usds_deposit_rateLimitedBoundary() external {
+    function test_depositAave_usdsRateLimitedBoundary() external {
         deal(Ethereum.USDS, address(almProxy), 25_000_000e18 + 1);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
@@ -73,7 +79,7 @@ contract AaveV3MainMarketDepositFailureTests is AaveV3MainMarketBaseTest {
         mainnetController.depositAave(ATOKEN_USDS, 25_000_000e18);
     }
 
-    function test_aave_usdc_deposit_rateLimitedBoundary() external {
+    function test_depositAave_usdcRateLimitedBoundary() external {
         deal(Ethereum.USDC, address(almProxy), 25_000_000e6 + 1);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
@@ -87,41 +93,49 @@ contract AaveV3MainMarketDepositFailureTests is AaveV3MainMarketBaseTest {
 
 contract AaveV3MainMarketDepositSuccessTests is AaveV3MainMarketBaseTest {
 
-    function test_aave_usds_deposit() public {
+    function test_depositAave_usds() public {
         deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
 
-        assertEq(ausds.balanceOf(address(almProxy)),                       0);
-        assertEq(IERC20(Ethereum.USDS).balanceOf(address(almProxy)),       1_000_000e18);
-        assertEq(IERC20(Ethereum.USDS).allowance(address(almProxy), POOL), 0);
+        assertEq(usds.allowance(address(almProxy), POOL), 0);
+
+        assertEq(ausds.balanceOf(address(almProxy)), 0);
+        assertEq(usds.balanceOf(address(almProxy)),  1_000_000e18);
+        assertEq(usds.balanceOf(address(ausds)),     startingAUSDSBalance);
 
         vm.prank(relayer);
         mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
 
-        assertEq(ausds.balanceOf(address(almProxy)),                       1_000_000e18);
-        assertEq(IERC20(Ethereum.USDS).balanceOf(address(almProxy)),       0);
-        assertEq(IERC20(Ethereum.USDS).allowance(address(almProxy), POOL), 0);
+        assertEq(usds.allowance(address(almProxy), POOL), 0);
+
+        assertEq(ausds.balanceOf(address(almProxy)), 1_000_000e18);
+        assertEq(usds.balanceOf(address(almProxy)),  0);
+        assertEq(usds.balanceOf(address(ausds)),     startingAUSDSBalance + 1_000_000e18);
     }
 
-    function test_aave_usdc_deposit() public {
+    function test_depositAave_usdc() public {
         deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
 
-        assertEq(ausdc.balanceOf(address(almProxy)),                       0);
-        assertEq(IERC20(Ethereum.USDC).balanceOf(address(almProxy)),       1_000_000e6);
-        assertEq(IERC20(Ethereum.USDC).allowance(address(almProxy), POOL), 0);
+        assertEq(usdc.allowance(address(almProxy), POOL), 0);
+
+        assertEq(ausdc.balanceOf(address(almProxy)), 0);
+        assertEq(usdc.balanceOf(address(almProxy)),  1_000_000e6);
+        assertEq(usdc.balanceOf(address(ausdc)),     startingAUSDCBalance);
 
         vm.prank(relayer);
         mainnetController.depositAave(ATOKEN_USDC, 1_000_000e6);
 
-        assertEq(ausdc.balanceOf(address(almProxy)),                       1_000_000e6);
-        assertEq(IERC20(Ethereum.USDC).balanceOf(address(almProxy)),       0);
-        assertEq(IERC20(Ethereum.USDC).allowance(address(almProxy), POOL), 0);
+        assertEq(usdc.allowance(address(almProxy), POOL), 0);
+
+        assertEq(ausdc.balanceOf(address(almProxy)), 1_000_000e6);
+        assertEq(usdc.balanceOf(address(almProxy)),  0);
+        assertEq(usdc.balanceOf(address(ausdc)),     startingAUSDCBalance + 1_000_000e6);
     }
 
 }
 
 contract AaveV3MainMarketWithdrawFailureTests is AaveV3MainMarketBaseTest {
 
-    function test_aave_withdraw_notRelayer() external {
+    function test_withdrawAave_notRelayer() external {
         vm.expectRevert(abi.encodeWithSignature(
             "AccessControlUnauthorizedAccount(address,bytes32)",
             address(this),
@@ -130,7 +144,7 @@ contract AaveV3MainMarketWithdrawFailureTests is AaveV3MainMarketBaseTest {
         mainnetController.withdrawAave(ATOKEN_USDS, 1_000_000e18);
     }
 
-    function test_aave_withdraw_frozen() external {
+    function test_withdrawAave_frozen() external {
         vm.prank(freezer);
         mainnetController.freeze();
 
@@ -143,50 +157,74 @@ contract AaveV3MainMarketWithdrawFailureTests is AaveV3MainMarketBaseTest {
 
 contract AaveV3MainMarketWithdrawSuccessTests is AaveV3MainMarketBaseTest {
 
-    function test_aave_usds_withdraw() public {
+    function test_withdrawAave_usds() public {
         deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
         vm.prank(relayer);
         mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
 
-        assertEq(ausds.balanceOf(address(almProxy)),                 1_000_000e18);
-        assertEq(IERC20(Ethereum.USDS).balanceOf(address(almProxy)), 0);
+        skip(1 days);
+
+        uint256 fullBalance = ausds.balanceOf(address(almProxy));
+
+        assertGe(fullBalance, 1_000_000e18);
+
+        assertEq(ausds.balanceOf(address(almProxy)), fullBalance);
+        assertEq(usds.balanceOf(address(almProxy)),  0);
+        assertEq(usds.balanceOf(address(ausds)),     startingAUSDSBalance + 1_000_000e18);
 
         // Partial withdraw
         vm.prank(relayer);
         assertEq(mainnetController.withdrawAave(ATOKEN_USDS, 400_000e18), 400_000e18);
 
-        assertEq(ausds.balanceOf(address(almProxy)),                 600_000e18);
-        assertEq(IERC20(Ethereum.USDS).balanceOf(address(almProxy)), 400_000e18);
+        assertEq(ausds.balanceOf(address(almProxy)), fullBalance - 400_000e18);
+        assertEq(usds.balanceOf(address(almProxy)),  400_000e18);
+        assertEq(usds.balanceOf(address(ausds)),     startingAUSDSBalance + 600_000e18);  // 1m - 400k
 
         // Withdraw all
         vm.prank(relayer);
-        assertEq(mainnetController.withdrawAave(ATOKEN_USDS, type(uint256).max), 600_000e18);
+        assertEq(mainnetController.withdrawAave(ATOKEN_USDS, type(uint256).max), fullBalance - 400_000e18);
 
-        assertEq(ausds.balanceOf(address(almProxy)),                 0);
-        assertEq(IERC20(Ethereum.USDS).balanceOf(address(almProxy)), 1_000_000e18);
+        assertEq(ausds.balanceOf(address(almProxy)), 0);
+        assertEq(usds.balanceOf(address(almProxy)),  fullBalance);
+        assertEq(usds.balanceOf(address(ausds)),     startingAUSDSBalance + 1_000_000e18 - fullBalance);
+
+        // Interest accrued was withdrawn, reducing cash balance
+        assertLe(usds.balanceOf(address(ausds)), startingAUSDSBalance);
     }
 
-    function test_aave_usdc_withdraw() public {
+    function test_withdrawAave_usdc() public {
         deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
         vm.prank(relayer);
         mainnetController.depositAave(ATOKEN_USDC, 1_000_000e6);
 
-        assertEq(ausdc.balanceOf(address(almProxy)),                 1_000_000e6);
-        assertEq(IERC20(Ethereum.USDC).balanceOf(address(almProxy)), 0);
+        skip(1 days);
+
+        uint256 fullBalance = ausdc.balanceOf(address(almProxy));
+
+        assertGe(fullBalance, 1_000_000e6);
+
+        assertEq(ausdc.balanceOf(address(almProxy)), fullBalance);
+        assertEq(usdc.balanceOf(address(almProxy)),  0);
+        assertEq(usdc.balanceOf(address(ausdc)),     startingAUSDCBalance + 1_000_000e6);
 
         // Partial withdraw
         vm.prank(relayer);
         assertEq(mainnetController.withdrawAave(ATOKEN_USDC, 400_000e6), 400_000e6);
 
-        assertEq(ausdc.balanceOf(address(almProxy)),                 600_000e6 + 1);  // Rounding error
-        assertEq(IERC20(Ethereum.USDC).balanceOf(address(almProxy)), 400_000e6);
+        assertEq(ausdc.balanceOf(address(almProxy)), fullBalance - 400_000e6);
+        assertEq(usdc.balanceOf(address(almProxy)),  400_000e6);
+        assertEq(usdc.balanceOf(address(ausdc)),     startingAUSDCBalance + 600_000e6);  // 1m - 400k
 
         // Withdraw all
         vm.prank(relayer);
-        assertEq(mainnetController.withdrawAave(ATOKEN_USDC, type(uint256).max), 600_000e6 + 1);
+        assertEq(mainnetController.withdrawAave(ATOKEN_USDC, type(uint256).max), fullBalance - 400_000e6);
 
-        assertEq(ausdc.balanceOf(address(almProxy)),                 0);
-        assertEq(IERC20(Ethereum.USDC).balanceOf(address(almProxy)), 1_000_000e6 + 1);
+        assertEq(ausdc.balanceOf(address(almProxy)), 0);
+        assertEq(usdc.balanceOf(address(almProxy)),  fullBalance);
+        assertEq(usdc.balanceOf(address(ausdc)),     startingAUSDCBalance + 1_000_000e6 - fullBalance);
+
+        // Interest accrued was withdrawn, reducing cash balance
+        assertLe(usdc.balanceOf(address(ausdc)), startingAUSDCBalance);
     }
 
 }

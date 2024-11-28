@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import { CCTPForwarder } from "lib/xchain-helpers/src/forwarders/CCTPForwarder.sol";
+import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
 import { ForeignController } from "src/ForeignController.sol";
 import { MainnetController } from "src/MainnetController.sol";

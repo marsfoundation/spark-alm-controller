@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
+import { IAToken }            from "aave-v3-origin/src/core/contracts/interfaces/IAToken.sol";
+import { IPool as IAavePool } from "aave-v3-origin/src/core/contracts/interfaces/IPool.sol";
+
 import { IERC20 }   from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
@@ -13,6 +16,10 @@ import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
 import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
+
+interface IATokenWithPool is IAToken {
+    function POOL() external view returns(address);
+}
 
 contract ForeignController is AccessControl {
 
@@ -41,11 +48,12 @@ contract ForeignController is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
+    bytes32 public constant LIMIT_4626_DEPOSIT   = keccak256("LIMIT_4626_DEPOSIT");
+    bytes32 public constant LIMIT_AAVE_DEPOSIT   = keccak256("LIMIT_AAVE_DEPOSIT");
     bytes32 public constant LIMIT_PSM_DEPOSIT    = keccak256("LIMIT_PSM_DEPOSIT");
     bytes32 public constant LIMIT_PSM_WITHDRAW   = keccak256("LIMIT_PSM_WITHDRAW");
     bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
-    bytes32 public constant LIMIT_4626_DEPOSIT   = keccak256("LIMIT_4626_DEPOSIT");
 
     IALMProxy   public immutable proxy;
     ICCTPLike   public immutable cctp;
@@ -272,6 +280,54 @@ contract ForeignController is AccessControl {
             proxy.doCall(
                 token,
                 abi.encodeCall(IERC4626(token).redeem, (shares, address(proxy), address(proxy)))
+            ),
+            (uint256)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer Aave functions                                                                 ***/
+    /**********************************************************************************************/
+
+    function depositAave(address aToken, uint256 amount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(
+            RateLimitHelpers.makeAssetKey(LIMIT_AAVE_DEPOSIT, aToken),
+            amount
+        )
+    {
+        IERC20    underlying = IERC20(IATokenWithPool(aToken).UNDERLYING_ASSET_ADDRESS());
+        IAavePool pool       = IAavePool(IATokenWithPool(aToken).POOL());
+
+        // Approve underlying to Aave pool from the proxy (assumes the proxy has enough underlying).
+        proxy.doCall(
+            address(underlying),
+            abi.encodeCall(underlying.approve, (address(pool), amount))
+        );
+
+        // Deposit underlying into Aave pool, proxy receives aTokens
+        proxy.doCall(
+            address(pool),
+            abi.encodeCall(pool.supply, (address(underlying), amount, address(proxy), 0))
+        );
+    }
+
+    function withdrawAave(address aToken, uint256 amount)
+        external onlyRole(RELAYER) isActive returns (uint256 amountWithdrawn)
+    {
+        IAavePool pool = IAavePool(IATokenWithPool(aToken).POOL());
+
+        // Withdraw underlying from Aave pool, decode resulting amount withdrawn.
+        // Assumes proxy has adequate aTokens.
+        amountWithdrawn = abi.decode(
+            proxy.doCall(
+                address(pool),
+                abi.encodeCall(
+                    pool.withdraw,
+                    (IATokenWithPool(aToken).UNDERLYING_ASSET_ADDRESS(), amount, address(proxy))
+                )
             ),
             (uint256)
         );
