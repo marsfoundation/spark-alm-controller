@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
+import { IAToken }            from "aave-v3-origin/src/core/contracts/interfaces/IAToken.sol";
+import { IPool as IAavePool } from "aave-v3-origin/src/core/contracts/interfaces/IPool.sol";
+
 import { IERC20 }   from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
 import { Ethereum } from "lib/spark-address-registry/src/Ethereum.sol";
-
-import { IAToken }            from "aave-v3-origin/src/core/contracts/interfaces/IAToken.sol";
-import { IPool as IAavePool } from "aave-v3-origin/src/core/contracts/interfaces/IPool.sol";
 
 import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
@@ -344,7 +344,7 @@ contract MainnetController is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Ethena functions                                                                       ***/
+    /*** Relayer Ethena functions                                                               ***/
     /**********************************************************************************************/
 
     function setDelegatedSigner(address delegatedSigner) external onlyRole(RELAYER) isActive {
