@@ -12,7 +12,8 @@ import {
 
 import { AllocatorDeploy } from "dss-allocator/deploy/AllocatorDeploy.sol";
 
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+import { IERC20 }   from "forge-std/interfaces/IERC20.sol";
+import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { ISUsds } from "sdai/src/ISUsds.sol";
 
@@ -25,7 +26,8 @@ import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
 import { MainnetControllerDeploy } from "deploy/ControllerDeploy.sol";
 import { ControllerInstance }      from "deploy/ControllerInstance.sol";
 
-import { MainnetControllerInit,
+import {
+    MainnetControllerInit,
     MintRecipient,
     RateLimitData
 } from "deploy/ControllerInit.sol";
@@ -41,6 +43,13 @@ interface IChainlogLike {
 
 interface IBufferLike {
     function approve(address, address, uint256) external;
+}
+
+interface ISUSDELike is IERC4626 {
+    function cooldownAssets(uint256 usdeAmount) external;
+    function cooldownShares(uint256 susdeAmount) external;
+    function unstake(address receiver) external;
+    function silo() external view returns(address);
 }
 
 interface IPSMLike {
@@ -87,14 +96,18 @@ contract ForkTestBase is DssTest {
 
     address constant CCTP_MESSENGER = Ethereum.CCTP_TOKEN_MESSENGER;
     address constant DAI_USDS       = Ethereum.DAI_USDS;
+    address constant ETHENA_MINTER  = Ethereum.ETHENA_MINTER;
     address constant PAUSE_PROXY    = Ethereum.PAUSE_PROXY;
     address constant PSM            = Ethereum.PSM;
     address constant SPARK_PROXY    = Ethereum.SPARK_PROXY;
 
     IERC20 constant dai   = IERC20(Ethereum.DAI);
     IERC20 constant usdc  = IERC20(Ethereum.USDC);
+    IERC20 constant usde  = IERC20(Ethereum.USDE);
     IERC20 constant usds  = IERC20(Ethereum.USDS);
     ISUsds constant susds = ISUsds(Ethereum.SUSDS);
+
+    ISUSDELike constant susde = ISUSDELike(Ethereum.SUSDE);
 
     IPSMLike constant psm = IPSMLike(PSM);
 
@@ -223,7 +236,7 @@ contract ForkTestBase is DssTest {
             susds         : Ethereum.SUSDS
         });
 
-        RateLimitData memory usdsMintData = RateLimitData({
+        RateLimitData memory standardUsdsData = RateLimitData({
             maxAmount : 5_000_000e18,
             slope     : uint256(1_000_000e18) / 4 hours
         });
@@ -235,10 +248,11 @@ contract ForkTestBase is DssTest {
 
         MainnetControllerInit.InitRateLimitData memory rateLimitData
             = MainnetControllerInit.InitRateLimitData({
-                usdsMintData         : usdsMintData,
+                usdsMintData         : standardUsdsData,
                 usdsToUsdcData       : standardUsdcData,
                 usdcToCctpData       : standardUsdcData,
-                cctpToBaseDomainData : standardUsdcData
+                cctpToBaseDomainData : standardUsdcData,
+                susdsDepositData     : standardUsdsData
             });
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
