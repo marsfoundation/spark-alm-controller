@@ -6,6 +6,9 @@ import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
+import { IAToken }            from "aave-v3-origin/src/core/contracts/interfaces/IAToken.sol";
+import { IPool as IAavePool } from "aave-v3-origin/src/core/contracts/interfaces/IPool.sol";
+
 import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
@@ -36,14 +39,8 @@ interface IPSMLike {
     function to18ConversionFactor() external view returns (uint256);
 }
 
-interface IAToken {
-    function POOL() external view returns (address);
-    function UNDERLYING_ASSET_ADDRESS() external view returns (address);
-}
-
-interface IAavePool {
-    function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external;
-    function withdraw(address asset, uint256 amount, address to) external returns (uint256);
+interface IATokenWithPool {
+    function POOL() external view returns(address);
 }
 
 contract MainnetController is AccessControl {
@@ -268,7 +265,7 @@ contract MainnetController is AccessControl {
     /*** Relayer Aave functions                                                                 ***/
     /**********************************************************************************************/
 
-    function depositToAave(address atoken, uint256 amount)
+    function depositAave(address atoken, uint256 amount)
         external
         onlyRole(RELAYER)
         isActive
@@ -278,12 +275,12 @@ contract MainnetController is AccessControl {
         )
     {
         IERC20 underlying = IERC20(IAToken(atoken).UNDERLYING_ASSET_ADDRESS());
-        IAavePool pool    = IAavePool(IAToken(atoken).POOL());
+        IAavePool pool    = IAavePool(IATokenWithPool(atoken).POOL());
 
         // Approve underlying to Aave pool from the proxy (assumes the proxy has enough underlying).
         proxy.doCall(
             address(underlying),
-            abi.encodeCall(underlying.approve, (address(underlying), amount))
+            abi.encodeCall(underlying.approve, (address(pool), amount))
         );
 
         // Deposit underlying into Aave pool, proxy receives atokens
@@ -293,10 +290,10 @@ contract MainnetController is AccessControl {
         );
     }
 
-    function withdrawFromAave(address atoken, uint256 amount)
+    function withdrawAave(address atoken, uint256 amount)
         external onlyRole(RELAYER) isActive returns (uint256 amountWithdrawn)
     {
-        IAavePool pool = IAavePool(IAToken(atoken).POOL());
+        IAavePool pool = IAavePool(IATokenWithPool(atoken).POOL());
 
         // Withdraw underlying from Aave pool, decode resulting amount withdrawn.
         // Assumes proxy has adequate atokens.
