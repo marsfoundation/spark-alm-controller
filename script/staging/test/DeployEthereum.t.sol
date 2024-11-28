@@ -10,13 +10,13 @@ import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
 import { CCTPBridgeTesting }     from "xchain-helpers/src/testing/bridges/CCTPBridgeTesting.sol";
 import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
-import { Usds }  from "lib/usds/src/Usds.sol";
-import { SUsds } from "lib/sdai/src/SUsds.sol";
+import { Usds }  from "usds/src/Usds.sol";
+import { SUsds } from "sdai/src/SUsds.sol";
 
-import { AllocatorVault }    from "lib/dss-allocator/src/AllocatorVault.sol";
-import { AllocatorBuffer }   from "lib/dss-allocator/src/AllocatorBuffer.sol";
-import { AllocatorRegistry } from "lib/dss-allocator/src/AllocatorRegistry.sol";
-import { AllocatorRoles }    from "lib/dss-allocator/src/AllocatorRoles.sol";
+import { AllocatorVault }    from "dss-allocator/src/AllocatorVault.sol";
+import { AllocatorBuffer }   from "dss-allocator/src/AllocatorBuffer.sol";
+import { AllocatorRegistry } from "dss-allocator/src/AllocatorRegistry.sol";
+import { AllocatorRoles }    from "dss-allocator/src/AllocatorRoles.sol";
 
 import { IRateLimits } from "src/interfaces/IRateLimits.sol";
 
@@ -26,8 +26,8 @@ import { MainnetController } from "src/MainnetController.sol";
 import { RateLimits }        from "src/RateLimits.sol";
 import { RateLimitHelpers }  from "src/RateLimitHelpers.sol";
 
-import { PSM3, IERC20 }      from "lib/spark-psm/src/PSM3.sol";
-import { IRateProviderLike } from "lib/spark-psm/src/interfaces/IRateProviderLike.sol";
+import { PSM3, IERC20 }      from "spark-psm/src/PSM3.sol";
+import { IRateProviderLike } from "spark-psm/src/interfaces/IRateProviderLike.sol";
 
 interface IVatLike {
     function can(address, address) external view returns (uint256);

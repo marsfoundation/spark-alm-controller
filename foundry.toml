@@ -12,6 +12,7 @@ remappings = [
     "usds/=lib/usds/",
     "sdai/=lib/sdai/",
     "spark-psm/=lib/spark-psm/",
+    "spark-address-registry/=lib/spark-address-registry/",
     "xchain-helpers/=lib/xchain-helpers/",
 ]
 fs_permissions = [
