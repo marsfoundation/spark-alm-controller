@@ -36,6 +36,16 @@ interface IPSMLike {
     function to18ConversionFactor() external view returns (uint256);
 }
 
+interface IAToken {
+    function POOL() external view returns (address);
+    function UNDERLYING_ASSET_ADDRESS() external view returns (address);
+}
+
+interface IAavePool {
+    function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external;
+    function withdraw(address asset, uint256 amount, address to) external returns (uint256);
+}
+
 contract MainnetController is AccessControl {
 
     /**********************************************************************************************/
@@ -67,6 +77,7 @@ contract MainnetController is AccessControl {
     bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
     bytes32 public constant LIMIT_USDS_MINT      = keccak256("LIMIT_USDS_MINT");
     bytes32 public constant LIMIT_USDS_TO_USDC   = keccak256("LIMIT_USDS_TO_USDC");
+    bytes32 public constant LIMIT_AAVE_DEPOSIT   = keccak256("LIMIT_AAVE_DEPOSIT");
 
     address public immutable buffer;
 
@@ -248,6 +259,51 @@ contract MainnetController is AccessControl {
             proxy.doCall(
                 address(susds),
                 abi.encodeCall(susds.redeem, (susdsSharesAmount, address(proxy), address(proxy)))
+            ),
+            (uint256)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer Aave functions                                                                 ***/
+    /**********************************************************************************************/
+
+    function depositToAave(address atoken, uint256 amount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(
+            RateLimitHelpers.makeAssetKey(LIMIT_AAVE_DEPOSIT, atoken),
+            amount
+        )
+    {
+        IERC20 underlying = IERC20(IAToken(atoken).UNDERLYING_ASSET_ADDRESS());
+        IAavePool pool    = IAavePool(IAToken(atoken).POOL());
+
+        // Approve underlying to Aave pool from the proxy (assumes the proxy has enough underlying).
+        proxy.doCall(
+            address(underlying),
+            abi.encodeCall(underlying.approve, (address(underlying), amount))
+        );
+
+        // Deposit underlying into Aave pool, proxy receives atokens
+        proxy.doCall(
+            address(pool),
+            abi.encodeCall(pool.supply, (address(underlying), amount, address(proxy), 0))
+        );
+    }
+
+    function withdrawFromAave(address atoken, uint256 amount)
+        external onlyRole(RELAYER) isActive returns (uint256 amountWithdrawn)
+    {
+        IAavePool pool = IAavePool(IAToken(atoken).POOL());
+
+        // Withdraw underlying from Aave pool, decode resulting amount withdrawn.
+        // Assumes proxy has adequate atokens.
+        amountWithdrawn = abi.decode(
+            proxy.doCall(
+                address(pool),
+                abi.encodeCall(pool.withdraw, (IAToken(atoken).UNDERLYING_ASSET_ADDRESS(), amount, address(proxy)))
             ),
             (uint256)
         );
