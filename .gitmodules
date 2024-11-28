@@ -31,3 +31,6 @@
 [submodule "lib/metamorpho"]
 	path = lib/metamorpho
 	url = https://github.com/morpho-org/metamorpho
+[submodule "lib/aave-v3-origin"]
+	path = lib/aave-v3-origin
+	url = https://github.com/aave-dao/aave-v3-origin
