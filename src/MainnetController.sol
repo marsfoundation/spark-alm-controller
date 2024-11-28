@@ -39,7 +39,7 @@ interface IPSMLike {
     function to18ConversionFactor() external view returns (uint256);
 }
 
-interface IATokenWithPool {
+interface IATokenWithPool is IAToken {
     function POOL() external view returns(address);
 }
 
@@ -274,8 +274,8 @@ contract MainnetController is AccessControl {
             amount
         )
     {
-        IERC20 underlying = IERC20(IAToken(atoken).UNDERLYING_ASSET_ADDRESS());
-        IAavePool pool    = IAavePool(IATokenWithPool(atoken).POOL());
+        IERC20    underlying = IERC20(IATokenWithPool(atoken).UNDERLYING_ASSET_ADDRESS());
+        IAavePool pool       = IAavePool(IATokenWithPool(atoken).POOL());
 
         // Approve underlying to Aave pool from the proxy (assumes the proxy has enough underlying).
         proxy.doCall(
@@ -283,7 +283,7 @@ contract MainnetController is AccessControl {
             abi.encodeCall(underlying.approve, (address(pool), amount))
         );
 
-        // Deposit underlying into Aave pool, proxy receives atokens
+        // Deposit underlying into Aave pool, proxy receives aTokens
         proxy.doCall(
             address(pool),
             abi.encodeCall(pool.supply, (address(underlying), amount, address(proxy), 0))
@@ -296,11 +296,14 @@ contract MainnetController is AccessControl {
         IAavePool pool = IAavePool(IATokenWithPool(atoken).POOL());
 
         // Withdraw underlying from Aave pool, decode resulting amount withdrawn.
-        // Assumes proxy has adequate atokens.
+        // Assumes proxy has adequate aTokens.
         amountWithdrawn = abi.decode(
             proxy.doCall(
                 address(pool),
-                abi.encodeCall(pool.withdraw, (IAToken(atoken).UNDERLYING_ASSET_ADDRESS(), amount, address(proxy)))
+                abi.encodeCall(
+                    pool.withdraw,
+                    (IATokenWithPool(atoken).UNDERLYING_ASSET_ADDRESS(), amount, address(proxy))
+                )
             ),
             (uint256)
         );
