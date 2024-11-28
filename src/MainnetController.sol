@@ -76,15 +76,14 @@ contract MainnetController is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
-    bytes32 public constant LIMIT_4626_DEPOSIT          = keccak256("LIMIT_4626_DEPOSIT");
-    bytes32 public constant LIMIT_SUSDE_COOLDOWN_ASSETS = keccak256("LIMIT_SUSDE_COOLDOWN_ASSETS");
-    bytes32 public constant LIMIT_SUSDE_COOLDOWN_SHARES = keccak256("LIMIT_SUSDE_COOLDOWN_SHARES");
-    bytes32 public constant LIMIT_USDC_TO_CCTP          = keccak256("LIMIT_USDC_TO_CCTP");
-    bytes32 public constant LIMIT_USDC_TO_DOMAIN        = keccak256("LIMIT_USDC_TO_DOMAIN");
-    bytes32 public constant LIMIT_USDE_BURN             = keccak256("LIMIT_USDE_BURN");
-    bytes32 public constant LIMIT_USDE_MINT             = keccak256("LIMIT_USDE_MINT");
-    bytes32 public constant LIMIT_USDS_MINT             = keccak256("LIMIT_USDS_MINT");
-    bytes32 public constant LIMIT_USDS_TO_USDC          = keccak256("LIMIT_USDS_TO_USDC");
+    bytes32 public constant LIMIT_4626_DEPOSIT   = keccak256("LIMIT_4626_DEPOSIT");
+    bytes32 public constant LIMIT_SUSDE_COOLDOWN = keccak256("LIMIT_SUSDE_COOLDOWN");
+    bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
+    bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
+    bytes32 public constant LIMIT_USDE_BURN      = keccak256("LIMIT_USDE_BURN");
+    bytes32 public constant LIMIT_USDE_MINT      = keccak256("LIMIT_USDE_MINT");
+    bytes32 public constant LIMIT_USDS_MINT      = keccak256("LIMIT_USDS_MINT");
+    bytes32 public constant LIMIT_USDS_TO_USDC   = keccak256("LIMIT_USDS_TO_USDC");
 
     address public immutable buffer;
 
@@ -326,7 +325,7 @@ contract MainnetController is AccessControl {
     }
 
     function cooldownAssetsSUSDe(uint256 usdeAmount)
-        external onlyRole(RELAYER) isActive rateLimited(LIMIT_SUSDE_COOLDOWN_ASSETS, usdeAmount)
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_SUSDE_COOLDOWN, usdeAmount)
     {
         proxy.doCall(
             address(susde),
@@ -335,7 +334,13 @@ contract MainnetController is AccessControl {
     }
 
     function cooldownSharesSUSDe(uint256 susdeAmount)
-        external onlyRole(RELAYER) isActive rateLimited(LIMIT_SUSDE_COOLDOWN_SHARES, susdeAmount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(
+            LIMIT_SUSDE_COOLDOWN,
+            susde.convertToAssets(susdeAmount)
+        )
     {
         proxy.doCall(
             address(susde),

@@ -284,7 +284,7 @@ contract MainnetControllerCooldownAssetsSUSDeFailureTests is ForkTestBase {
 
         vm.startPrank(SPARK_PROXY);
         rateLimits.setRateLimitData(
-            mainnetController.LIMIT_SUSDE_COOLDOWN_ASSETS(),
+            mainnetController.LIMIT_SUSDE_COOLDOWN(),
             100e18,
             uint256(100e18) / 1 hours
         );
@@ -315,7 +315,7 @@ contract MainnetControllerCooldownAssetsSUSDeSuccessTests is ForkTestBase {
     function setUp() public override {
         super.setUp();
 
-        key = mainnetController.LIMIT_SUSDE_COOLDOWN_ASSETS();
+        key = mainnetController.LIMIT_SUSDE_COOLDOWN();
 
         vm.prank(SPARK_PROXY);
         rateLimits.setRateLimitData(key, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
@@ -391,18 +391,25 @@ contract MainnetControllerCooldownSharesSUSDeFailureTests is ForkTestBase {
 
         vm.startPrank(SPARK_PROXY);
         rateLimits.setRateLimitData(
-            mainnetController.LIMIT_SUSDE_COOLDOWN_SHARES(),
+            mainnetController.LIMIT_SUSDE_COOLDOWN(),
             100e18,
             uint256(100e18) / 1 hours
         );
         vm.stopPrank();
 
-        vm.prank(relayer);
-        vm.expectRevert("RateLimits/rate-limit-exceeded");
-        mainnetController.cooldownSharesSUSDe(100e18 + 1);
+        uint256 overBoundaryShares = susde.convertToShares(100e18 + 2);
+        uint256 boundaryShares     = susde.convertToShares(100e18 + 1);
+
+        // Demonstrate how rounding works
+        assertEq(susde.convertToAssets(overBoundaryShares), 100e18 + 1);
+        assertEq(susde.convertToAssets(boundaryShares),     100e18);
 
         vm.prank(relayer);
-        mainnetController.cooldownSharesSUSDe(100e18);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.cooldownSharesSUSDe(overBoundaryShares);
+
+        vm.prank(relayer);
+        mainnetController.cooldownSharesSUSDe(boundaryShares);
     }
 
 }
@@ -422,7 +429,7 @@ contract MainnetControllerCooldownSharesSUSDeSuccessTests is ForkTestBase {
     function setUp() public override {
         super.setUp();
 
-        key = mainnetController.LIMIT_SUSDE_COOLDOWN_SHARES();
+        key = mainnetController.LIMIT_SUSDE_COOLDOWN();
 
         vm.prank(SPARK_PROXY);
         rateLimits.setRateLimitData(key, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
@@ -458,16 +465,24 @@ contract MainnetControllerCooldownSharesSUSDeSuccessTests is ForkTestBase {
         vm.prank(relayer);
         mainnetController.cooldownSharesSUSDe(4_000_000e18);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 1_000_000e18);
+        uint256 assets1 = susde.convertToAssets(4_000_000e18);
+
+        assertGe(assets1, 4_000_000e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e18 - assets1);
 
         skip(4 hours);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 2_000_000e18 - 6400);  // Rounding
+        assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e18 - assets1 + (1_000_000e18 - 6400));  // Rounding
 
         vm.prank(relayer);
         mainnetController.cooldownSharesSUSDe(600_000e18);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 1_400_000e18 - 6400);  // Rounding
+        uint256 assets2 = susde.convertToAssets(600_000e18);
+
+        assertGe(assets2, 600_000e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e18 - assets1 + (1_000_000e18 - 6400) - assets2);
     }
 
 }
@@ -493,18 +508,19 @@ contract MainnetControllerUnstakeSUSDeFailureTests is ForkTestBase {
     }
 
     function test_unstakeSUSDe_cooldownBoundary() external {
+        // Exchange rate greater than 1:1
         deal(address(susde), address(almProxy), 100e18);
 
         vm.startPrank(SPARK_PROXY);
         rateLimits.setRateLimitData(
-            mainnetController.LIMIT_SUSDE_COOLDOWN_SHARES(),
+            mainnetController.LIMIT_SUSDE_COOLDOWN(),
             100e18,
             uint256(100e18) / 1 hours
         );
         vm.stopPrank();
 
         vm.prank(relayer);
-        mainnetController.cooldownSharesSUSDe(100e18);
+        mainnetController.cooldownAssetsSUSDe(100e18);
 
         skip(7 days - 1);  // Cooldown period boundary
 
@@ -523,11 +539,12 @@ contract MainnetControllerUnstakeSUSDeFailureTests is ForkTestBase {
 contract MainnetControllerUnstakeSUSDeSuccessTests is ForkTestBase {
 
     function test_unstakeSUSDe() external {
+        // Setting higher rate limit so shares can be used for cooldown
         vm.startPrank(SPARK_PROXY);
         rateLimits.setRateLimitData(
-            mainnetController.LIMIT_SUSDE_COOLDOWN_SHARES(),
-            100e18,
-            uint256(100e18) / 1 hours
+            mainnetController.LIMIT_SUSDE_COOLDOWN(),
+            1000e18,
+            uint256(1000e18) / 1 hours
         );
         vm.stopPrank();
 
@@ -560,28 +577,25 @@ contract MainnetControllerEthenaE2ETests is ForkTestBase {
 
     address signer = makeAddr("signer");
 
+    bytes32 burnKey;
+    bytes32 cooldownKey;
     bytes32 depositKey;
     bytes32 mintKey;
-    bytes32 burnKey;
-    bytes32 cooldownAssetsKey;
-    bytes32 cooldownSharesKey;
 
     function setUp() public override {
         super.setUp();
 
         vm.startPrank(SPARK_PROXY);
 
-        depositKey        = RateLimitHelpers.makeAssetKey(mainnetController.LIMIT_4626_DEPOSIT(), address(susde));
-        mintKey           = mainnetController.LIMIT_USDE_MINT();
-        burnKey           = mainnetController.LIMIT_USDE_BURN();
-        cooldownAssetsKey = mainnetController.LIMIT_SUSDE_COOLDOWN_ASSETS();
-        cooldownSharesKey = mainnetController.LIMIT_SUSDE_COOLDOWN_SHARES();
+        burnKey     = mainnetController.LIMIT_USDE_BURN();
+        cooldownKey = mainnetController.LIMIT_SUSDE_COOLDOWN();
+        depositKey  = RateLimitHelpers.makeAssetKey(mainnetController.LIMIT_4626_DEPOSIT(), address(susde));
+        mintKey     = mainnetController.LIMIT_USDE_MINT();
 
-        rateLimits.setRateLimitData(depositKey,        5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(mintKey,           5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
-        rateLimits.setRateLimitData(burnKey,           5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(cooldownAssetsKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(cooldownSharesKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(burnKey,     5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(cooldownKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(depositKey,  5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(mintKey,     5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
 
         vm.stopPrank();
     }
@@ -669,12 +683,12 @@ contract MainnetControllerEthenaE2ETests is ForkTestBase {
 
         assertEq(usde.balanceOf(silo), startingSiloBalance);
 
-        assertEq(rateLimits.getCurrentRateLimit(cooldownAssetsKey), 5_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(cooldownKey), 5_000_000e18);
 
         vm.prank(relayer);
         mainnetController.cooldownAssetsSUSDe(500_000e18 - 2);
 
-        assertEq(rateLimits.getCurrentRateLimit(cooldownAssetsKey), 4_500_000e18 + 2);
+        assertEq(rateLimits.getCurrentRateLimit(cooldownKey), 4_500_000e18 + 2);
 
         assertEq(susde.convertToAssets(susde.balanceOf(address(almProxy))), 0);
 
@@ -788,12 +802,12 @@ contract MainnetControllerEthenaE2ETests is ForkTestBase {
 
         assertEq(usde.balanceOf(silo), startingSiloBalance);
 
-        assertEq(rateLimits.getCurrentRateLimit(cooldownSharesKey), 5_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(cooldownKey), 5_000_000e18);
 
         vm.prank(relayer);
         mainnetController.cooldownSharesSUSDe(susdeShares);
 
-        assertEq(rateLimits.getCurrentRateLimit(cooldownSharesKey), 5_000_000e18 - susdeShares);
+        assertEq(rateLimits.getCurrentRateLimit(cooldownKey), 4_500_000e18 + 2);
 
         assertEq(susde.convertToAssets(susde.balanceOf(address(almProxy))), 0);
 
@@ -838,6 +852,31 @@ contract MainnetControllerEthenaE2ETests is ForkTestBase {
         assertEq(usde.balanceOf(ETHENA_MINTER),     startingMinterBalance + 1_000_000e18 - 2);
 
         assertEq(usdc.balanceOf(address(almProxy)), 1_000_000e6 - 1);  // Rounding
+    }
+
+    function test_e2e_cooldownSharesAndAssets_sameRateLimit() public {
+        // Exchange rate is more than 1:1
+        deal(address(susde), address(almProxy), 5_000_000e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(cooldownKey), 5_000_000e18);
+
+        vm.prank(relayer);
+        mainnetController.cooldownAssetsSUSDe(4_000_000e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(cooldownKey), 1_000_000e18);
+
+        skip(4 hours);
+
+        assertEq(rateLimits.getCurrentRateLimit(cooldownKey), 1_000_000e18 + (1_000_000e18 - 6400));  // Rounding
+
+        vm.prank(relayer);
+        mainnetController.cooldownSharesSUSDe(600_000e18);
+
+        uint256 assets2 = susde.convertToAssets(600_000e18);
+
+        assertGe(assets2, 600_000e18);
+
+        assertEq(rateLimits.getCurrentRateLimit(cooldownKey), 1_000_000e18 + (1_000_000e18 - 6400) - assets2);
     }
 
 }
