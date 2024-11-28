@@ -322,7 +322,8 @@ contract StagingDeploymentBase is Script {
                 usdsMintData         : rateLimitData18,
                 usdsToUsdcData       : rateLimitData6,
                 usdcToCctpData       : unlimitedRateLimit,
-                cctpToBaseDomainData : rateLimitData6
+                cctpToBaseDomainData : rateLimitData6,
+                susdsDepositData     : rateLimitData18
             }),
             mintRecipients: mintRecipients
         });
