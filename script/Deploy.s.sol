@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
 
-import { Base }     from "lib/spark-address-registry/src/Base.sol";
-import { Ethereum } from "lib/spark-address-registry/src/Ethereum.sol";
+import { Base }     from "spark-address-registry/src/Base.sol";
+import { Ethereum } from "spark-address-registry/src/Ethereum.sol";
 
 import { ControllerInstance } from "../deploy/ControllerInstance.sol";
 

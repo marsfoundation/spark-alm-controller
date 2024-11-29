@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
+import { IAToken }            from "aave-v3-origin/src/core/contracts/interfaces/IAToken.sol";
+import { IPool as IAavePool } from "aave-v3-origin/src/core/contracts/interfaces/IPool.sol";
+
 import { IERC20 }   from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
-import { Ethereum } from "lib/spark-address-registry/src/Ethereum.sol";
+import { Ethereum } from "spark-address-registry/src/Ethereum.sol";
 
 import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
 import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
@@ -49,6 +52,10 @@ interface IPSMLike {
     function to18ConversionFactor() external view returns (uint256);
 }
 
+interface IATokenWithPool is IAToken {
+    function POOL() external view returns(address);
+}
+
 contract MainnetController is AccessControl {
 
     /**********************************************************************************************/
@@ -84,6 +91,7 @@ contract MainnetController is AccessControl {
     bytes32 public constant LIMIT_USDE_MINT      = keccak256("LIMIT_USDE_MINT");
     bytes32 public constant LIMIT_USDS_MINT      = keccak256("LIMIT_USDS_MINT");
     bytes32 public constant LIMIT_USDS_TO_USDC   = keccak256("LIMIT_USDS_TO_USDC");
+    bytes32 public constant LIMIT_AAVE_DEPOSIT   = keccak256("LIMIT_AAVE_DEPOSIT");
 
     address public immutable buffer;
 
@@ -288,7 +296,55 @@ contract MainnetController is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Ethena functions                                                                       ***/
+    /*** Relayer Aave functions                                                                 ***/
+    /**********************************************************************************************/
+
+    function depositAave(address aToken, uint256 amount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(
+            RateLimitHelpers.makeAssetKey(LIMIT_AAVE_DEPOSIT, aToken),
+            amount
+        )
+    {
+        IERC20    underlying = IERC20(IATokenWithPool(aToken).UNDERLYING_ASSET_ADDRESS());
+        IAavePool pool       = IAavePool(IATokenWithPool(aToken).POOL());
+
+        // Approve underlying to Aave pool from the proxy (assumes the proxy has enough underlying).
+        proxy.doCall(
+            address(underlying),
+            abi.encodeCall(underlying.approve, (address(pool), amount))
+        );
+
+        // Deposit underlying into Aave pool, proxy receives aTokens
+        proxy.doCall(
+            address(pool),
+            abi.encodeCall(pool.supply, (address(underlying), amount, address(proxy), 0))
+        );
+    }
+
+    function withdrawAave(address aToken, uint256 amount)
+        external onlyRole(RELAYER) isActive returns (uint256 amountWithdrawn)
+    {
+        IAavePool pool = IAavePool(IATokenWithPool(aToken).POOL());
+
+        // Withdraw underlying from Aave pool, decode resulting amount withdrawn.
+        // Assumes proxy has adequate aTokens.
+        amountWithdrawn = abi.decode(
+            proxy.doCall(
+                address(pool),
+                abi.encodeCall(
+                    pool.withdraw,
+                    (IATokenWithPool(aToken).UNDERLYING_ASSET_ADDRESS(), amount, address(proxy))
+                )
+            ),
+            (uint256)
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer Ethena functions                                                               ***/
     /**********************************************************************************************/
 
     function setDelegatedSigner(address delegatedSigner) external onlyRole(RELAYER) isActive {
