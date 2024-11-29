@@ -24,7 +24,7 @@ contract SUSDSTestBase is ForkTestBase {
 
         // Setting this value directly because susds.drip() fails in setUp with
         // StateChangeDuringStaticCall and it is unclear why, something related to foundry.
-        SUSDS_DRIP_AMOUNT = 849.454677397481388011e18;
+        SUSDS_DRIP_AMOUNT = 539.150267439391689329e18;
 
         assertEq(SUSDS_CONVERTED_ASSETS, 1.013160914035707569e18);
         assertEq(SUSDS_CONVERTED_SHARES, 0.987010045636991747e18);
