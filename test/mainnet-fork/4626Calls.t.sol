@@ -26,11 +26,11 @@ contract SUSDSTestBase is ForkTestBase {
         // StateChangeDuringStaticCall and it is unclear why, something related to foundry.
         SUSDS_DRIP_AMOUNT = 849.454677397481388011e18;
 
-        assertEq(SUSDS_CONVERTED_ASSETS, 1.003430776383974596e18);
-        assertEq(SUSDS_CONVERTED_SHARES, 0.996580953599671364e18);
+        assertEq(SUSDS_CONVERTED_ASSETS, 1.013160914035707569e18);
+        assertEq(SUSDS_CONVERTED_SHARES, 0.987010045636991747e18);
 
-        assertEq(SUSDS_TOTAL_ASSETS, 485_597_342.757158870618550128e18);
-        assertEq(SUSDS_TOTAL_SUPPLY, 483_937_062.910395855928183397e18);
+        assertEq(SUSDS_TOTAL_ASSETS, 304_703_247.331893334231672178e18);
+        assertEq(SUSDS_TOTAL_SUPPLY, 300_745_166.054791623613789142e18);
     }
 
 }
@@ -58,6 +58,8 @@ contract MainnetControllerDepositERC4626FailureTests is SUSDSTestBase {
 }
 
 contract MainnetControllerDepositERC4626Tests is SUSDSTestBase {
+
+    // TODO: Add rate limit coverage
 
     function test_depositERC4626() external {
         vm.prank(relayer);
