@@ -71,12 +71,11 @@ contract ForkTestBase is DssTest {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 constant ilk                = "ILK-A";
+    bytes32 constant ilk                = "ALLOCATOR-SPARK-A";
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     bytes32 constant PSM_ILK = 0x4c4954452d50534d2d555344432d410000000000000000000000000000000000;
 
-    uint256 constant INK           = 1e12 * 1e18;  // Ink initialization amount
     uint256 constant SEVEN_PCT_APY = 1.000000002145441671308778766e27;  // 7% APY (current DSR)
     uint256 constant EIGHT_PCT_APY = 1.000000002440418608258400030e27;  // 8% APY (current DSR + 1%)
 
@@ -148,9 +147,11 @@ contract ForkTestBase is DssTest {
     uint256 DAI_SUPPLY;
     uint256 USDC_BAL_PSM;
     uint256 USDC_SUPPLY;
-    uint256 USDS_SUPPLY;
     uint256 USDS_BAL_SUSDS;
+    uint256 USDS_SUPPLY;
+    uint256 VAT_ART;
     uint256 VAT_DAI_USDS_JOIN;
+    uint256 VAT_INK;
 
     /**********************************************************************************************/
     /*** Test setup                                                                             ***/
@@ -160,12 +161,18 @@ contract ForkTestBase is DssTest {
 
         /*** Step 1: Set up environment, cast addresses ***/
 
-        source = getChain("mainnet").createSelectFork(21294900);  //  November 29, 2024
+        source = getChain("mainnet").createSelectFork(_getBlock());
 
         dss = MCD.loadFromChainlog(LOG);
 
         USDS_JOIN = IChainlogLike(LOG).getAddress("USDS_JOIN");
         POCKET    = IChainlogLike(LOG).getAddress("MCD_LITE_PSM_USDC_A_POCKET");
+
+        buffer = Ethereum.ALLOCATOR_BUFFER;
+        vault  = Ethereum.ALLOCATOR_VAULT;
+
+        almProxy   = ALMProxy(payable(Ethereum.ALM_PROXY));
+        rateLimits = RateLimits(Ethereum.ALM_RATE_LIMITS);
 
         DAI_BAL_PSM       = dai.balanceOf(PSM);
         DAI_SUPPLY        = dai.totalSupply();
@@ -175,11 +182,7 @@ contract ForkTestBase is DssTest {
         USDS_BAL_SUSDS    = usds.balanceOf(address(susds));
         VAT_DAI_USDS_JOIN = dss.vat.dai(USDS_JOIN);
 
-        buffer = Ethereum.ALLOCATOR_BUFFER;
-        vault  = Ethereum.ALLOCATOR_VAULT;
-
-        almProxy   = ALMProxy(payable(Ethereum.ALM_PROXY));
-        rateLimits = RateLimits(Ethereum.ALM_RATE_LIMITS);
+        ( VAT_INK, VAT_ART ) = dss.vat.urns(ilk, vault);
 
         /*** Step 3: Deploy latest controller and upgrade ***/
 
@@ -247,17 +250,17 @@ contract ForkTestBase is DssTest {
             mintRecipients
         );
 
-        usdeBurnKey         = mainnetController.LIMIT_USDE_BURN();
-        susdeCooldownKey     = mainnetController.LIMIT_SUSDE_COOLDOWN();
-        susdeDepositKey = RateLimitHelpers.makeAssetKey(mainnetController.LIMIT_4626_DEPOSIT(), address(susde));
-        susdsDepositKey = RateLimitHelpers.makeAssetKey(mainnetController.LIMIT_4626_DEPOSIT(), address(susds));
-        usdeMintKey         = mainnetController.LIMIT_USDE_MINT();
+        usdeBurnKey      = mainnetController.LIMIT_USDE_BURN();
+        susdeCooldownKey = mainnetController.LIMIT_SUSDE_COOLDOWN();
+        susdeDepositKey  = RateLimitHelpers.makeAssetKey(mainnetController.LIMIT_4626_DEPOSIT(), address(susde));
+        susdsDepositKey  = RateLimitHelpers.makeAssetKey(mainnetController.LIMIT_4626_DEPOSIT(), address(susds));
+        usdeMintKey      = mainnetController.LIMIT_USDE_MINT();
 
-        rateLimits.setRateLimitData(usdeBurnKey,         5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(susdeCooldownKey,     5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(susdeDepositKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(susdsDepositKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
-        rateLimits.setRateLimitData(usdeMintKey,         5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
+        rateLimits.setRateLimitData(usdeBurnKey,      5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(susdeCooldownKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(susdeDepositKey,  5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(susdsDepositKey,  5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(usdeMintKey,      5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
 
         vm.stopPrank();
 
@@ -268,6 +271,16 @@ contract ForkTestBase is DssTest {
         vm.label(address(usdc),  "usdc");
         vm.label(address(usds),  "usds");
         vm.label(vault,          "vault");
+    }
+
+    // Default for all testing, can be overridden if needed
+    function _getBlock() internal virtual view returns (uint256) {
+        return 21310000;  // Dec 2, 2024
+    }
+
+    function _overwriteDebtCeiling(uint256 newLine) internal {
+        vm.prank(Ethereum.PAUSE_PROXY);
+        dss.vat.file(ilk, "line", newLine);
     }
 
 }
