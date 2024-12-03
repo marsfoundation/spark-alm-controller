@@ -11,7 +11,8 @@ import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 
-import { Base } from "spark-address-registry/src/Base.sol";
+import { Base }     from "spark-address-registry/src/Base.sol";
+import { Ethereum } from "spark-address-registry/src/Ethereum.sol";
 
 import { PSM3Deploy } from "spark-psm/deploy/PSM3Deploy.sol";
 import { IPSM3 }      from "spark-psm/src/PSM3.sol";
@@ -39,6 +40,7 @@ import {
 import { ALMProxy }          from "src/ALMProxy.sol";
 import { ForeignController } from "src/ForeignController.sol";
 import { RateLimits }        from "src/RateLimits.sol";
+import { RateLimitHelpers }  from "src/RateLimitHelpers.sol";
 
 contract ForkTestBase is Test {
 
@@ -85,6 +87,10 @@ contract ForkTestBase is Test {
     RateLimits        rateLimits;
     ForeignController foreignController;
 
+    bytes32 aaveUsdcDepositKey;
+    bytes32 morphoUsdcDepositKey;
+    bytes32 morphoUsdsDepositKey;
+
     /**********************************************************************************************/
     /*** Casted addresses for testing                                                           ***/
     /**********************************************************************************************/
@@ -102,7 +108,7 @@ contract ForkTestBase is Test {
     function setUp() public virtual {
         /*** Step 1: Set up environment, deploy mock addresses ***/
 
-        destination = getChain("base").createSelectFork(_getBlock());
+        vm.createSelectFork(getChain('base').rpcUrl, _getBlock());
 
         susdsBase = IERC20(Base.SUSDS);
         usdcBase  = IERC20(Base.USDC);
@@ -129,8 +135,12 @@ contract ForkTestBase is Test {
             cctp       : Base.CCTP_TOKEN_MESSENGER
         }));
 
-        foreignAlmProxy   = ALMProxy(payable(Base.ALM_PROXY));
-        foreignRateLimits = RateLimits(Base.ALM_RATE_LIMITS);
+        almProxy   = ALMProxy(payable(Base.ALM_PROXY));
+        rateLimits = RateLimits(Base.ALM_RATE_LIMITS);
+
+        CONTROLLER = almProxy.CONTROLLER();
+        FREEZER    = foreignController.FREEZER();
+        RELAYER    = foreignController.RELAYER();
 
         ForeignControllerInit.ConfigAddressParams memory configAddresses
             = ForeignControllerInit.ConfigAddressParams({
@@ -181,18 +191,6 @@ contract ForkTestBase is Test {
         rateLimits.setRateLimitData(morphoUsdsDepositKey, 25_000_000e18, uint256(5_000_000e18) / 1 days);
 
         vm.stopPrank();
-
-        USDC_BASE_SUPPLY = usdcBase.totalSupply();
-
-        source.selectFork();
-
-        bridge = CCTPBridgeTesting.createCircleBridge(source, destination);
-
-        vm.prank(SPARK_PROXY);
-        mainnetController.setMintRecipient(
-            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            bytes32(uint256(uint160(address(foreignAlmProxy))))
-        );
     }
 
     function _getBlock() internal virtual pure returns (uint256) {
