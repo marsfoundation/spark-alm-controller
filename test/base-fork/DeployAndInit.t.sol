@@ -415,183 +415,137 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
 
 }
 
-// contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAndInitTestBase {
+contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAndInitTestBase {
 
-//     function test_deployAllAndInit() external {
-//         // Perform new deployments against existing fork environment
+    function test_deployAllAndInit() external {
+        // Perform new deployments against existing fork environment
 
-//         ControllerInstance memory controllerInst = ForeignControllerDeploy.deployFull(
-//             SPARK_EXECUTOR,
-//             address(psmBase),
-//             USDC_BASE,
-//             CCTP_MESSENGER_BASE
-//         );
+        ControllerInstance memory controllerInst = ForeignControllerDeploy.deployFull(
+            SPARK_EXECUTOR,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
 
-//         // Overwrite storage for all previous deployments in setUp and assert deployment
+        // Overwrite storage for all previous deployments in setUp and assert deployment
 
-//         almProxy          = ALMProxy(payable(controllerInst.almProxy));
-//         foreignController = ForeignController(controllerInst.controller);
-//         rateLimits        = RateLimits(controllerInst.rateLimits);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
+        foreignController = ForeignController(controllerInst.controller);
+        rateLimits        = RateLimits(controllerInst.rateLimits);
 
-//         assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR),          true);
-//         assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR),        true);
-//         assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR), true);
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR),          true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR),        true);
+        assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, SPARK_EXECUTOR), true);
 
-//         assertEq(address(foreignController.proxy()),      controllerInst.almProxy);
-//         assertEq(address(foreignController.rateLimits()), controllerInst.rateLimits);
-//         assertEq(address(foreignController.psm()),        address(psmBase));
-//         assertEq(address(foreignController.usdc()),       USDC_BASE);
-//         assertEq(address(foreignController.cctp()),       CCTP_MESSENGER_BASE);
+        assertEq(address(foreignController.proxy()),      controllerInst.almProxy);
+        assertEq(address(foreignController.rateLimits()), controllerInst.rateLimits);
+        assertEq(address(foreignController.psm()),        address(psmBase));
+        assertEq(address(foreignController.usdc()),       USDC_BASE);
+        assertEq(address(foreignController.cctp()),       CCTP_MESSENGER_BASE);
 
-//         assertEq(foreignController.active(), true);
+        assertEq(foreignController.active(), true);
 
-//         // Perform SubDAO initialization (from governance relay during spell)
-//         // Setting rate limits to different values from setUp to make assertions more robust
+        // Perform SubDAO initialization (from governance relay during spell)
+        // Setting rate limits to different values from setUp to make assertions more robust
 
-//         (
-//             ForeignControllerInit.AddressParams     memory addresses,
-//             ForeignControllerInit.InitRateLimitData memory rateLimitData,
-//             MintRecipient[]                         memory mintRecipients
-//         ) = _getDefaultParams();
+        (
+            ForeignControllerInit.ConfigAddressParams memory configAddresses,
+            ForeignControllerInit.AddressCheckParams  memory checkAddresses,
+            MintRecipient[]                           memory mintRecipients
+        ) = _getDefaultParams();
 
-//         vm.startPrank(SPARK_EXECUTOR);
-//         ForeignControllerInit.init(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-//         vm.stopPrank();
+        vm.startPrank(SPARK_EXECUTOR);
+        ForeignControllerInit.init(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+        vm.stopPrank();
 
-//         // Assert SubDAO initialization
+        // Assert SubDAO initialization
 
-//         assertEq(foreignController.hasRole(foreignController.FREEZER(), freezer), true);
-//         assertEq(foreignController.hasRole(foreignController.RELAYER(), relayer), true);
+        assertEq(foreignController.hasRole(foreignController.FREEZER(), freezer), true);
+        assertEq(foreignController.hasRole(foreignController.RELAYER(), relayer), true);
 
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)), true);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)), true);
 
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), true);
 
-//         bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
-//             foreignController.LIMIT_USDC_TO_DOMAIN(),
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
-//         );
+        assertEq(
+            foreignController.mintRecipients(mintRecipients[0].domain),
+            mintRecipients[0].mintRecipient
+        );
 
-//         _assertDepositRateLimitData(usdcBase,  rateLimitData.usdcDepositData);
-//         _assertDepositRateLimitData(usdsBase,  rateLimitData.usdsDepositData);
-//         _assertDepositRateLimitData(susdsBase, rateLimitData.susdsDepositData);
+        assertEq(
+            foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
+            bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
+        );
+    }
 
-//         _assertWithdrawRateLimitData(usdcBase,  rateLimitData.usdcWithdrawData);
-//         _assertWithdrawRateLimitData(usdsBase,  rateLimitData.usdsWithdrawData);
-//         _assertWithdrawRateLimitData(susdsBase, rateLimitData.susdsWithdrawData);
+    function test_init_transferAclToNewController() public {
+        ControllerInstance memory controllerInst = ForeignControllerDeploy.deployFull(
+            SPARK_EXECUTOR,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
 
-//         _assertRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
+        (
+            ForeignControllerInit.ConfigAddressParams memory configAddresses,
+            ForeignControllerInit.AddressCheckParams  memory checkAddresses,
+            MintRecipient[]                           memory mintRecipients
+        ) = _getDefaultParams();
 
-//         _assertRateLimitData(domainKeyEthereum, rateLimitData.cctpToEthereumDomainData);
+        vm.startPrank(SPARK_EXECUTOR);
+        ForeignControllerInit.init(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+        vm.stopPrank();
 
-//         assertEq(
-//             foreignController.mintRecipients(mintRecipients[0].domain),
-//             mintRecipients[0].mintRecipient
-//         );
+        // Example of how an upgrade would work
+        address newController = ForeignControllerDeploy.deployController(
+            SPARK_EXECUTOR,
+            controllerInst.almProxy,
+            controllerInst.rateLimits,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
 
-//         assertEq(
-//             foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
-//             bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
-//         );
-//     }
+        // Overwrite storage of previous deployments in setUp
 
-//     function test_init_transferAclToNewController() public {
-//         ControllerInstance memory controllerInst = ForeignControllerDeploy.deployFull(
-//             SPARK_EXECUTOR,
-//             address(psmBase),
-//             USDC_BASE,
-//             CCTP_MESSENGER_BASE
-//         );
+        almProxy   = ALMProxy(payable(controllerInst.almProxy));
+        rateLimits = RateLimits(controllerInst.rateLimits);
 
-//         (
-//             ForeignControllerInit.AddressParams     memory addresses,
-//             ForeignControllerInit.InitRateLimitData memory rateLimitData,
-//             MintRecipient[]                         memory mintRecipients
-//         ) = _getDefaultParams();
+        address oldController = address(controllerInst.controller);
 
-//         vm.startPrank(SPARK_EXECUTOR);
-//         ForeignControllerInit.init(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-//         vm.stopPrank();
+        controllerInst.controller = newController;  // Overwrite struct for param
 
-//         // Example of how an upgrade would work
-//         address newController = ForeignControllerDeploy.deployController(
-//             SPARK_EXECUTOR,
-//             controllerInst.almProxy,
-//             controllerInst.rateLimits,
-//             address(psmBase),
-//             USDC_BASE,
-//             CCTP_MESSENGER_BASE
-//         );
+        // All other info is the same, just need to transfer ACL
+        configAddresses.oldController = oldController;
 
-//         // Overwrite storage of previous deployments in setUp
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
 
-//         almProxy   = ALMProxy(payable(controllerInst.almProxy));
-//         rateLimits = RateLimits(controllerInst.rateLimits);
+        vm.startPrank(SPARK_EXECUTOR);
+        ForeignControllerInit.init(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+        vm.stopPrank();
 
-//         address oldController = address(controllerInst.controller);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
+    }
 
-//         controllerInst.controller = newController;  // Overwrite struct for param
-
-//         // All other info is the same, just need to transfer ACL
-//         addresses.oldController = oldController;
-
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
-
-//         vm.startPrank(SPARK_EXECUTOR);
-//         ForeignControllerInit.init(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-//         vm.stopPrank();
-
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
-//     }
-
-//     function _assertDepositRateLimitData(IERC20 asset, RateLimitData memory expectedData) internal {
-//         bytes32 assetKey = RateLimitHelpers.makeAssetKey(
-//             foreignController.LIMIT_PSM_DEPOSIT(),
-//             address(asset)
-//         );
-
-//         _assertRateLimitData(assetKey, expectedData);
-//     }
-
-//     function _assertWithdrawRateLimitData(IERC20 asset, RateLimitData memory expectedData) internal {
-//         bytes32 assetKey = RateLimitHelpers.makeAssetKey(
-//             foreignController.LIMIT_PSM_WITHDRAW(),
-//             address(asset)
-//         );
-
-//         _assertRateLimitData(assetKey, expectedData);
-//     }
-
-//     function _assertRateLimitData(bytes32 domainKey, RateLimitData memory expectedData) internal {
-//         IRateLimits.RateLimitData memory data = rateLimits.getRateLimitData(domainKey);
-
-//         assertEq(data.maxAmount,   expectedData.maxAmount);
-//         assertEq(data.slope,       expectedData.slope);
-//         assertEq(data.lastAmount,  expectedData.maxAmount);  // `lastAmount` should be `maxAmount`
-//         assertEq(data.lastUpdated, block.timestamp);
-
-//         assertEq(rateLimits.getCurrentRateLimit(domainKey), expectedData.maxAmount);
-//     }
-
-// }
+}
