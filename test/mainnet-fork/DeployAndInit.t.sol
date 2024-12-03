@@ -90,373 +90,270 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
 
 }
 
-// contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployInitTestBase {
+contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployInitTestBase {
 
-//     LibraryWrapper wrapper;
+    LibraryWrapper wrapper;
 
-//     ControllerInstance public controllerInst;
+    ControllerInstance public controllerInst;
 
-//     address public mismatchAddress = makeAddr("mismatchAddress");
+    address public mismatchAddress = makeAddr("mismatchAddress");
 
-//     MainnetControllerInit.AddressParams     addresses;
-//     MainnetControllerInit.InitRateLimitData rateLimitData;
-//     MintRecipient[]                         mintRecipients;
+    MainnetControllerInit.ConfigAddressParams configAddresses;
+    MainnetControllerInit.AddressCheckParams  checkAddresses;
+    MintRecipient[]                           mintRecipients;
 
-//     function setUp() public override {
-//         super.setUp();
+    function setUp() public override {
+        super.setUp();
+
+        mainnetController = MainnetController(MainnetControllerDeploy.deployController({
+            admin      : Ethereum.SPARK_PROXY,
+            almProxy   : Ethereum.ALM_PROXY,
+            rateLimits : Ethereum.ALM_RATE_LIMITS,
+            vault      : Ethereum.ALLOCATOR_VAULT,
+            psm        : Ethereum.PSM,
+            daiUsds    : Ethereum.DAI_USDS,
+            cctp       : Ethereum.CCTP_TOKEN_MESSENGER,
+            susds      : Ethereum.SUSDS
+        }));
+
+        almProxy   = ALMProxy(payable(Ethereum.ALM_PROXY));
+        rateLimits = RateLimits(Ethereum.ALM_RATE_LIMITS);
+
+        MintRecipient[] memory mintRecipients_ = new MintRecipient[](1);
+
+        ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
+
+        // NOTE: This would need to be refactored to a for loop if more than one recipient
+        mintRecipients.push(mintRecipients_[0]);
+
+        controllerInst = ControllerInstance({
+            almProxy   : Ethereum.ALM_PROXY,
+            controller : address(mainnetController),
+            rateLimits : Ethereum.ALM_RATE_LIMITS
+        });
+
+        // Admin will be calling the library from its own address
+        vm.etch(SPARK_PROXY, address(new LibraryWrapper()).code);
+
+        wrapper = LibraryWrapper(SPARK_PROXY);
+    }
+
+    /**********************************************************************************************/
+    /*** ACL tests                                                                              ***/
+    /**********************************************************************************************/
+
+    function test_init_incorrectAdminAlmProxy() external {
+        // Isolate different contracts instead of setting param so can get three different failures
+        vm.startPrank(SPARK_PROXY);
+        almProxy.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+        almProxy.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
+        vm.stopPrank();
+
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-almProxy"));
+    }
+
+    function test_init_incorrectAdminRateLimits() external {
+        // Isolate different contracts instead of setting param so can get three different failures
+        vm.startPrank(SPARK_PROXY);
+        rateLimits.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+        rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
+        vm.stopPrank();
+
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-rateLimits"));
+    }
+
+    function test_init_incorrectAdminController() external {
+        // Isolate different contracts instead of setting param so can get three different failures
+        vm.startPrank(SPARK_PROXY);
+        mainnetController.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+        mainnetController.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
+        vm.stopPrank();
+
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-controller"));
+    }
+
+    /**********************************************************************************************/
+    /*** Constructor tests                                                                      ***/
+    /**********************************************************************************************/
 
-//         controllerInst = MainnetControllerDeploy.deployFull(
-//             SPARK_PROXY,
-//             vault,
-//             PSM,
-//             DAI_USDS,
-//             CCTP_MESSENGER,
-//             address(susds)
-//         );
+    function test_init_incorrectAlmProxy() external {
+        // Deploy new address that will not EVM revert on OZ ACL check
+        controllerInst.almProxy = address(new ALMProxy(SPARK_PROXY));
 
-//         MintRecipient[] memory mintRecipients_ = new MintRecipient[](1);
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-almProxy"));
+    }
 
-//         ( addresses, rateLimitData, mintRecipients_ ) = _getDefaultParams();
+    function test_init_incorrectRateLimits() external {
+        // Deploy new address that will not EVM revert on OZ ACL check
+        controllerInst.rateLimits = address(new RateLimits(SPARK_PROXY));
 
-//         // NOTE: This would need to be refactored to a for loop if more than one recipient
-//         mintRecipients.push(mintRecipients_[0]);
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-rateLimits"));
+    }
 
-//         // Overwrite storage for all previous deployments in setUp and assert deployment
+    function test_init_incorrectVault() external {
+        checkAddresses.vault = mismatchAddress;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-vault"));
+    }
 
-//         almProxy          = ALMProxy(payable(controllerInst.almProxy));
-//         mainnetController = MainnetController(controllerInst.controller);
-//         rateLimits        = RateLimits(controllerInst.rateLimits);
+    function test_init_incorrectBuffer() external {
+        checkAddresses.buffer = mismatchAddress;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-buffer"));
+    }
+
+    function test_init_incorrectPsm() external {
+        checkAddresses.psm = mismatchAddress;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-psm"));
+    }
 
-//         // Admin will be calling the library from its own address
-//         vm.etch(SPARK_PROXY, address(new LibraryWrapper()).code);
-
-//         wrapper = LibraryWrapper(SPARK_PROXY);
-//     }
-
-//     /**********************************************************************************************/
-//     /*** ACL tests                                                                              ***/
-//     /**********************************************************************************************/
-
-//     function test_init_incorrectAdminAlmProxy() external {
-//         // Isolate different contracts instead of setting param so can get three different failures
-//         vm.startPrank(SPARK_PROXY);
-//         almProxy.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
-//         almProxy.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
-//         vm.stopPrank();
-
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-almProxy"));
-//     }
-
-//     function test_init_incorrectAdminRateLimits() external {
-//         // Isolate different contracts instead of setting param so can get three different failures
-//         vm.startPrank(SPARK_PROXY);
-//         rateLimits.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
-//         rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
-//         vm.stopPrank();
-
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-rateLimits"));
-//     }
-
-//     function test_init_incorrectAdminController() external {
-//         // Isolate different contracts instead of setting param so can get three different failures
-//         vm.startPrank(SPARK_PROXY);
-//         mainnetController.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
-//         mainnetController.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
-//         vm.stopPrank();
-
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-controller"));
-//     }
-
-//     /**********************************************************************************************/
-//     /*** Constructor tests                                                                      ***/
-//     /**********************************************************************************************/
-
-//     function test_init_incorrectAlmProxy() external {
-//         // Deploy new address that will not EVM revert on OZ ACL check
-//         controllerInst.almProxy = address(new ALMProxy(SPARK_PROXY));
-
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-almProxy"));
-//     }
-
-//     function test_init_incorrectRateLimits() external {
-//         // Deploy new address that will not EVM revert on OZ ACL check
-//         controllerInst.rateLimits = address(new RateLimits(SPARK_PROXY));
-
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-rateLimits"));
-//     }
-
-//     function test_init_incorrectVault() external {
-//         addresses.vault = mismatchAddress;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-vault"));
-//     }
-
-//     function test_init_incorrectBuffer() external {
-//         addresses.buffer = mismatchAddress;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-buffer"));
-//     }
-
-//     function test_init_incorrectPsm() external {
-//         addresses.psm = mismatchAddress;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-psm"));
-//     }
-
-//     function test_init_incorrectDaiUsds() external {
-//         addresses.daiUsds = mismatchAddress;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-daiUsds"));
-//     }
-
-//     function test_init_incorrectCctp() external {
-//         addresses.cctpMessenger = mismatchAddress;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-cctpMessenger"));
-//     }
-
-//     function test_init_incorrectSUsds() external {
-//         addresses.susds = mismatchAddress;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-susds"));
-//     }
-
-//     function test_init_incorrectDai() external {
-//         addresses.dai = mismatchAddress;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-dai"));
-//     }
-
-//     function test_init_incorrectUsdc() external {
-//         addresses.usdc = mismatchAddress;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-usdc"));
-//     }
-
-//     function test_init_incorrectUsds() external {
-//         addresses.usds = mismatchAddress;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-usds"));
-//     }
-
-//     function test_init_controllerInactive() external {
-//         // Cheating to set this outside of init scripts so that the controller can be frozen
-//         vm.startPrank(SPARK_PROXY);
-//         mainnetController.grantRole(FREEZER, freezer);
-
-//         vm.startPrank(freezer);
-//         mainnetController.freeze();
-//         vm.stopPrank();
-
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/controller-not-active"));
-//     }
-
-//     function test_init_oldControllerIsNewController() external {
-//         addresses.oldController = controllerInst.controller;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-is-new-controller"));
-//     }
-
-//     // TODO: Skipping conversion factor test, can add later if needed
-
-//     /**********************************************************************************************/
-//     /*** Unlimited `maxAmount` rate limit boundary tests                                        ***/
-//     /**********************************************************************************************/
-
-//     function test_init_incorrectUsdsMintData_unlimitedBoundary() external {
-//         rateLimitData.usdsMintData.maxAmount = type(uint256).max;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdsMintData"));
-
-//         rateLimitData.usdsMintData.slope = 0;
-//         _checkBothInitsSucceed();
-//     }
-
-//     function test_init_incorrectUsdcToUsdsData_unlimitedBoundary() external {
-//         rateLimitData.usdsToUsdcData.maxAmount = type(uint256).max;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdsToUsdcData"));
-
-//         rateLimitData.usdsToUsdcData.slope = 0;
-//         _checkBothInitsSucceed();
-//     }
-
-//     function test_init_incorrectUsdcToCctpData_unlimitedBoundary() external {
-//         rateLimitData.usdcToCctpData.maxAmount = type(uint256).max;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdcToCctpData"));
-
-//         rateLimitData.usdcToCctpData.slope = 0;
-//         _checkBothInitsSucceed();
-//     }
-
-//     function test_init_incorrectCctpToBaseDomain_unlimitedBoundary() external {
-//         rateLimitData.cctpToBaseDomainData.maxAmount = type(uint256).max;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-cctpToBaseDomainData"));
-
-//         rateLimitData.cctpToBaseDomainData.slope = 0;
-//         _checkBothInitsSucceed();
-//     }
-
-//     /**********************************************************************************************/
-//     /*** `maxAmount` rate limit precision boundary tests                                        ***/
-//     /**********************************************************************************************/
-
-//     function test_init_incorrectUsdsMintData_maxAmountPrecisionBoundary() external {
-//         rateLimitData.usdsMintData.maxAmount = 1e12 * 1e18 + 1;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdsMintData"));
-
-//         rateLimitData.usdsMintData.maxAmount = 1e12 * 1e18;
-//         _checkBothInitsSucceed();
-//     }
-
-//     function test_init_incorrectUsdcToUsdsData_maxAmountPrecisionBoundary() external {
-//         rateLimitData.usdsToUsdcData.maxAmount = 1e12 * 1e6 + 1;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdsToUsdcData"));
-
-//         rateLimitData.usdsToUsdcData.maxAmount = 1e12 * 1e6;
-//         _checkBothInitsSucceed();
-//     }
-
-//     function test_init_incorrectUsdcToCctpData_maxAmountPrecisionBoundary() external {
-//         rateLimitData.usdcToCctpData.maxAmount = 1e12 * 1e6 + 1;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdcToCctpData"));
-
-//         rateLimitData.usdcToCctpData.maxAmount = 1e12 * 1e6;
-//         _checkBothInitsSucceed();
-//     }
-
-//     function test_init_incorrectCctpToBaseDomain_maxAmountPrecisionBoundary() external {
-//         rateLimitData.cctpToBaseDomainData.maxAmount = 1e12 * 1e6 + 1;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-cctpToBaseDomainData"));
-
-//         rateLimitData.cctpToBaseDomainData.maxAmount = 1e12 * 1e6;
-//         _checkBothInitsSucceed();
-//     }
-
-//     /**********************************************************************************************/
-//     /*** `slope` rate limit precision boundary tests                                            ***/
-//     /**********************************************************************************************/
-
-//     function test_init_incorrectUsdsMintData_slopePrecisionBoundary() external {
-//         rateLimitData.usdsMintData.slope = uint256(1e12 * 1e18) / 1 hours + 1;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdsMintData"));
-
-//         rateLimitData.usdsMintData.slope = uint256(1e12 * 1e18) / 1 hours;
-//         _checkBothInitsSucceed();
-//     }
-
-//     function test_init_incorrectUsdcToUsdsData_slopePrecisionBoundary() external {
-//         rateLimitData.usdsToUsdcData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdsToUsdcData"));
-
-//         rateLimitData.usdsToUsdcData.slope = uint256(1e12 * 1e6) / 1 hours;
-//         _checkBothInitsSucceed();
-//     }
-
-//     function test_init_incorrectUsdcToCctpData_slopePrecisionBoundary() external {
-//         rateLimitData.usdcToCctpData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdcToCctpData"));
-
-//         rateLimitData.usdcToCctpData.slope = uint256(1e12 * 1e6) / 1 hours;
-//         _checkBothInitsSucceed();
-//     }
-
-//     function test_init_incorrectCctpToBaseDomain_slopePrecisionBoundary() external {
-//         rateLimitData.cctpToBaseDomainData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-cctpToBaseDomainData"));
-
-//         rateLimitData.cctpToBaseDomainData.slope = uint256(1e12 * 1e6) / 1 hours;
-//         _checkBothInitsSucceed();
-//     }
-
-//     /**********************************************************************************************/
-//     /*** Old controller role check tests                                                        ***/
-//     /**********************************************************************************************/
-
-//     function test_init_oldControllerDoesNotHaveRoleInAlmProxy() external {
-//         _deployNewControllerAfterExistingControllerInit();
-
-//         // Revoke the old controller address in ALM proxy
-
-//         vm.startPrank(SPARK_PROXY);
-//         almProxy.revokeRole(almProxy.CONTROLLER(), addresses.oldController);
-//         vm.stopPrank();
-
-//         // Try to init with the old controller address that is doesn't have the CONTROLLER role
-
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-not-almProxy-controller"));
-//     }
-
-//     function test_init_oldControllerDoesNotHaveRoleInRateLimits() external {
-//         _deployNewControllerAfterExistingControllerInit();
-
-//         // Revoke the old controller address
-
-//         vm.startPrank(SPARK_PROXY);
-//         rateLimits.revokeRole(rateLimits.CONTROLLER(), addresses.oldController);
-//         vm.stopPrank();
-
-//         // Try to init with the old controller address that is doesn't have the CONTROLLER role
-
-//         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-not-rateLimits-controller"));
-//     }
-
-//     /**********************************************************************************************/
-//     /*** Helper functions                                                                       ***/
-//     /**********************************************************************************************/
-
-//     function _deployNewControllerAfterExistingControllerInit() internal {
-//         // Successfully init first controller
-
-//         vm.startPrank(SPARK_PROXY);
-//         MainnetControllerInit.subDaoInitFull(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-//         vm.stopPrank();
-
-//         // Deploy a new controller (controllerInst is used in init with new controller address)
-
-//         controllerInst.controller = MainnetControllerDeploy.deployController(
-//             SPARK_PROXY,
-//             address(almProxy),
-//             address(rateLimits),
-//             vault,
-//             PSM,
-//             DAI_USDS,
-//             CCTP_MESSENGER,
-//             address(susds)
-//         );
-
-//         addresses.oldController = address(mainnetController);
-//     }
-
-//     // Added this function to ensure that all the failure modes from `subDaoInitController`
-//     // are also covered by `subDaoInitFull` calls
-//     function _checkBothInitsFail(bytes memory expectedError) internal {
-//         vm.expectRevert(expectedError);
-//         wrapper.subDaoInitController(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-
-//         vm.expectRevert(expectedError);
-//         wrapper.subDaoInitFull(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-//     }
-
-//     function _checkBothInitsSucceed() internal {
-//         wrapper.subDaoInitController(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-
-//         wrapper.subDaoInitFull(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-//     }
-// }
+    function test_init_incorrectDaiUsds() external {
+        checkAddresses.daiUsds = mismatchAddress;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-daiUsds"));
+    }
+
+    function test_init_incorrectCctp() external {
+        checkAddresses.cctp = mismatchAddress;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-cctpMessenger"));
+    }
+
+    function test_init_incorrectSUsds() external {
+        checkAddresses.susds = mismatchAddress;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-susds"));
+    }
+
+    function test_init_incorrectDai() external {
+        checkAddresses.dai = mismatchAddress;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-dai"));
+    }
+
+    function test_init_incorrectUsdc() external {
+        checkAddresses.usdc = mismatchAddress;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-usdc"));
+    }
+
+    function test_init_incorrectUsds() external {
+        checkAddresses.usds = mismatchAddress;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-usds"));
+    }
+
+    function test_init_controllerInactive() external {
+        // Cheating to set this outside of init scripts so that the controller can be frozen
+        vm.startPrank(SPARK_PROXY);
+        mainnetController.grantRole(FREEZER, freezer);
+
+        vm.startPrank(freezer);
+        mainnetController.freeze();
+        vm.stopPrank();
+
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/controller-not-active"));
+    }
+
+    function test_init_oldControllerIsNewController() external {
+        configAddresses.oldController = controllerInst.controller;
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-is-new-controller"));
+    }
+
+    // TODO: Skipping conversion factor test, can add later if needed
+
+    /**********************************************************************************************/
+    /*** Old controller role check tests                                                        ***/
+    /**********************************************************************************************/
+
+    function test_init_oldControllerDoesNotHaveRoleInAlmProxy() external {
+        _deployNewControllerAfterExistingControllerInit();
+
+        // Revoke the old controller address in ALM proxy
+
+        vm.startPrank(SPARK_PROXY);
+        almProxy.revokeRole(almProxy.CONTROLLER(), configAddresses.oldController);
+        vm.stopPrank();
+
+        // Try to init with the old controller address that is doesn't have the CONTROLLER role
+
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-not-almProxy-controller"));
+    }
+
+    function test_init_oldControllerDoesNotHaveRoleInRateLimits() external {
+        _deployNewControllerAfterExistingControllerInit();
+
+        // Revoke the old controller address
+
+        vm.startPrank(SPARK_PROXY);
+        rateLimits.revokeRole(rateLimits.CONTROLLER(), configAddresses.oldController);
+        vm.stopPrank();
+
+        // Try to init with the old controller address that is doesn't have the CONTROLLER role
+
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-not-rateLimits-controller"));
+    }
+
+    /**********************************************************************************************/
+    /*** Helper functions                                                                       ***/
+    /**********************************************************************************************/
+
+    function _deployNewControllerAfterExistingControllerInit() internal {
+        // Successfully init first controller
+
+        vm.startPrank(SPARK_PROXY);
+        MainnetControllerInit.subDaoInitController(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+        vm.stopPrank();
+
+        // Deploy a new controller (controllerInst is used in init with new controller address)
+
+        controllerInst.controller = MainnetControllerDeploy.deployController({
+            admin      : Ethereum.SPARK_PROXY,
+            almProxy   : Ethereum.ALM_PROXY,
+            rateLimits : Ethereum.ALM_RATE_LIMITS,
+            vault      : Ethereum.ALLOCATOR_VAULT,
+            psm        : Ethereum.PSM,
+            daiUsds    : Ethereum.DAI_USDS,
+            cctp       : Ethereum.CCTP_TOKEN_MESSENGER,
+            susds      : Ethereum.SUSDS
+        });
+
+        configAddresses.oldController = address(mainnetController);
+    }
+
+    // Added this function to ensure that all the failure modes from `subDaoInitController`
+    // are also covered by `subDaoInitFull` calls
+    function _checkBothInitsFail(bytes memory expectedError) internal {
+        vm.expectRevert(expectedError);
+        wrapper.subDaoInitController(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+
+        vm.expectRevert(expectedError);
+        wrapper.subDaoInitFull(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+    }
+
+    function _checkBothInitsSucceed() internal {
+        wrapper.subDaoInitController(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+
+        wrapper.subDaoInitFull(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+    }
+}
 
 // contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployInitTestBase {
 
@@ -528,11 +425,6 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
 //             mainnetController.LIMIT_USDC_TO_DOMAIN(),
 //             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
 //         );
-
-//         _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimitData.usdsMintData);
-//         _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdsToUsdcData);
-//         _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
-//         _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
 
 //         assertEq(
 //             mainnetController.mintRecipients(mintRecipients[0].domain),
@@ -694,17 +586,6 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
 //         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
 //         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
 //         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
-//     }
-
-//     function _assertRateLimitData(bytes32 domainKey, RateLimitData memory expectedData) internal {
-//         IRateLimits.RateLimitData memory data = rateLimits.getRateLimitData(domainKey);
-
-//         assertEq(data.maxAmount,   expectedData.maxAmount);
-//         assertEq(data.slope,       expectedData.slope);
-//         assertEq(data.lastAmount,  expectedData.maxAmount);
-//         assertEq(data.lastUpdated, block.timestamp);
-
-//         assertEq(rateLimits.getCurrentRateLimit(domainKey), expectedData.maxAmount);
 //     }
 
 // }

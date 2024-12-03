@@ -103,8 +103,6 @@ contract ForeignControllerDeployAndInitFailureTests is ForeignControllerDeployAn
         // NOTE: This would need to be refactored to a for loop if more than one recipient
         mintRecipients.push(mintRecipients_[0]);
 
-        // Overwrite storage for all previous deployments in setUp and assert deployment
-
         controllerInst = ControllerInstance({
             almProxy   : Base.ALM_PROXY,
             controller : address(foreignController),
