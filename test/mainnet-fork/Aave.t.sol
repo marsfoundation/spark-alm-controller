@@ -208,7 +208,7 @@ contract AaveV3MainMarketWithdrawSuccessTests is AaveV3MainMarketBaseTest {
         assertEq(usdc.balanceOf(address(almProxy)),  0);
         assertEq(usdc.balanceOf(address(ausdc)),     startingAUSDCBalance + 1_000_000e6);
 
-        // // Partial withdraw
+        // Partial withdraw
         vm.prank(relayer);
         assertEq(mainnetController.withdrawAave(ATOKEN_USDC, 400_000e6), 400_000e6);
 

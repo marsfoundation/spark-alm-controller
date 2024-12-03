@@ -60,7 +60,7 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
             admin         : Ethereum.SPARK_PROXY,
             freezer       : freezer,
             relayer       : relayer,
-            oldController : Ethereum.ALM_CONTROLLER
+            oldController : address(0)
         });
 
         checkAddresses = MainnetControllerInit.AddressCheckParams({
@@ -180,7 +180,7 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         // Deploy new address that will not EVM revert on OZ ACL check
         controllerInst.almProxy = address(new ALMProxy(SPARK_PROXY));
 
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-almProxy"));
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-proxy"));
     }
 
     function test_init_incorrectRateLimits() external {
@@ -212,7 +212,7 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
 
     function test_init_incorrectCctp() external {
         checkAddresses.cctp = mismatchAddress;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-cctpMessenger"));
+        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-cctp"));
     }
 
     function test_init_incorrectSUsds() external {
@@ -500,7 +500,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         );
     }
 
-    function test_init_transferAclToNewController() public {
+    function test_init_transferAclToNewController_Test() public {
         // Deploy and init a controller
 
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
