@@ -186,9 +186,7 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
         usdcBase  = IERC20(Base.USDC);
         usdsBase  = IERC20(Base.USDS);
 
-        /*** Step 2: Deploy and configure PSM with a pocket ***/
-
-        deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
+        /*** Step 2: Update live PSM with a pocket for more comprehensive testing ***/
 
         psmBase = IPSM3(Base.PSM3);
 

@@ -13,14 +13,6 @@ import { IMorpho, MarketParams } from "morpho-blue/src/interfaces/IMorpho.sol";
 
 contract MorphoBaseTest is ForkTestBase {
 
-    address constant MORPHO = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
-
-    address constant MORPHO_VAULT_USDS = 0x0fFDeCe791C5a2cb947F8ddBab489E5C02c6d4F7;
-    address constant MORPHO_VAULT_USDC = 0x305E03Ed9ADaAB22F4A58c24515D79f2B1E2FD5D;
-
-    IERC4626 usdsVault = IERC4626(MORPHO_VAULT_USDS);
-    IERC4626 usdcVault = IERC4626(MORPHO_VAULT_USDC);
-
     function setUp() public override {
         super.setUp();
 

@@ -22,6 +22,7 @@ contract AaveV3MainMarketBaseTest is ForkTestBase {
 
         vm.startPrank(Ethereum.SPARK_PROXY);
 
+        // TODO: Move this to setup
         rateLimits.setRateLimitData(
             RateLimitHelpers.makeAssetKey(
                 mainnetController.LIMIT_AAVE_DEPOSIT(),

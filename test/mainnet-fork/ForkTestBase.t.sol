@@ -184,7 +184,7 @@ contract ForkTestBase is DssTest {
 
         ( VAT_INK, VAT_ART ) = dss.vat.urns(ilk, vault);
 
-        /*** Step 3: Deploy latest controller and upgrade ***/
+        /*** Step 2: Deploy latest controller and upgrade ***/
 
         mainnetController = MainnetController(MainnetControllerDeploy.deployController({
             admin      : Ethereum.SPARK_PROXY,
@@ -240,7 +240,7 @@ contract ForkTestBase is DssTest {
             mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         });
 
-        // Actions performed by spell
+        // NOTE: These are the actions performed by the spell
         vm.startPrank(Ethereum.SPARK_PROXY);
 
         MainnetControllerInit.subDaoInitController(
