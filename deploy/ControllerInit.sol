@@ -182,6 +182,7 @@ library ForeignControllerInit {
 
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
+    // TODO: Add full init script for ForeignController with base set of rate limits
     function init(
         ConfigAddressParams memory configAddresses,
         AddressCheckParams  memory checkAddresses,
