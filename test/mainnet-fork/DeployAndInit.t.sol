@@ -355,237 +355,222 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     }
 }
 
-// contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployInitTestBase {
+contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployInitTestBase {
 
-//     function test_deployAllAndInitFull() external {
-//         // Perform new deployments against existing fork environment
+    function test_deployAllAndInitFull() external {
+        // Perform new deployments against existing fork environment
 
-//         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
-//             SPARK_PROXY,
-//             vault,
-//             PSM,
-//             DAI_USDS,
-//             CCTP_MESSENGER,
-//             address(susds)
-//         );
+        ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
+            SPARK_PROXY,
+            vault,
+            PSM,
+            DAI_USDS,
+            CCTP_MESSENGER,
+            address(susds)
+        );
 
-//         // Overwrite storage for all previous deployments in setUp and assert deployment
+        // Overwrite storage for all previous deployments in setUp and assert deployment
 
-//         almProxy          = ALMProxy(payable(controllerInst.almProxy));
-//         mainnetController = MainnetController(controllerInst.controller);
-//         rateLimits        = RateLimits(controllerInst.rateLimits);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
+        mainnetController = MainnetController(controllerInst.controller);
+        rateLimits        = RateLimits(controllerInst.rateLimits);
 
-//         assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),          true);
-//         assertEq(mainnetController.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY), true);
-//         assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),        true);
+        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),          true);
+        assertEq(mainnetController.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY), true);
+        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),        true);
 
-//         assertEq(address(mainnetController.proxy()),      controllerInst.almProxy);
-//         assertEq(address(mainnetController.rateLimits()), controllerInst.rateLimits);
-//         assertEq(address(mainnetController.vault()),      vault);
-//         assertEq(address(mainnetController.buffer()),     buffer);
-//         assertEq(address(mainnetController.psm()),        PSM);
-//         assertEq(address(mainnetController.daiUsds()),    DAI_USDS);
-//         assertEq(address(mainnetController.cctp()),       CCTP_MESSENGER);
-//         assertEq(address(mainnetController.susds()),      address(susds));
-//         assertEq(address(mainnetController.dai()),        address(dai));
-//         assertEq(address(mainnetController.usdc()),       address(usdc));
-//         assertEq(address(mainnetController.usds()),       address(usds));
+        assertEq(address(mainnetController.proxy()),      controllerInst.almProxy);
+        assertEq(address(mainnetController.rateLimits()), controllerInst.rateLimits);
+        assertEq(address(mainnetController.vault()),      vault);
+        assertEq(address(mainnetController.buffer()),     buffer);
+        assertEq(address(mainnetController.psm()),        PSM);
+        assertEq(address(mainnetController.daiUsds()),    DAI_USDS);
+        assertEq(address(mainnetController.cctp()),       CCTP_MESSENGER);
+        assertEq(address(mainnetController.susds()),      address(susds));
+        assertEq(address(mainnetController.dai()),        address(dai));
+        assertEq(address(mainnetController.usdc()),       address(usdc));
+        assertEq(address(mainnetController.usds()),       address(usds));
 
-//         assertEq(mainnetController.psmTo18ConversionFactor(), 1e12);
-//         assertEq(mainnetController.active(),                  true);
+        assertEq(mainnetController.psmTo18ConversionFactor(), 1e12);
+        assertEq(mainnetController.active(),                  true);
 
-//         // Perform SubDAO initialization (from SPARK_PROXY during spell)
-//         // Setting rate limits to different values from setUp to make assertions more robust
+        // Perform SubDAO initialization (from SPARK_PROXY during spell)
+        // Setting rate limits to different values from setUp to make assertions more robust
 
-//         (
-//             MainnetControllerInit.AddressParams     memory addresses,
-//             MainnetControllerInit.InitRateLimitData memory rateLimitData,
-//             MintRecipient[]                         memory mintRecipients
-//         ) = _getDefaultParams();
+        (
+            MainnetControllerInit.ConfigAddressParams memory configAddresses,
+            MainnetControllerInit.AddressCheckParams  memory checkAddresses,
+            MintRecipient[]                           memory mintRecipients
+        ) = _getDefaultParams();
 
-//         vm.startPrank(SPARK_PROXY);
-//         MainnetControllerInit.subDaoInitFull(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-//         vm.stopPrank();
+        vm.startPrank(SPARK_PROXY);
+        MainnetControllerInit.subDaoInitFull(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+        vm.stopPrank();
 
-//         // Assert SubDAO initialization
+        // Assert SubDAO initialization
 
-//         assertEq(mainnetController.hasRole(mainnetController.FREEZER(), freezer), true);
-//         assertEq(mainnetController.hasRole(mainnetController.RELAYER(), relayer), true);
+        assertEq(mainnetController.hasRole(mainnetController.FREEZER(), freezer), true);
+        assertEq(mainnetController.hasRole(mainnetController.RELAYER(), relayer), true);
 
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)), true);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)), true);
 
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), true);
 
-//         bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
-//             mainnetController.LIMIT_USDC_TO_DOMAIN(),
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
-//         );
+        assertEq(
+            mainnetController.mintRecipients(mintRecipients[0].domain),
+            mintRecipients[0].mintRecipient
+        );
 
-//         assertEq(
-//             mainnetController.mintRecipients(mintRecipients[0].domain),
-//             mintRecipients[0].mintRecipient
-//         );
+        assertEq(
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
+        );
 
-//         assertEq(
-//             mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
-//             bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
-//         );
+        assertEq(IVaultLike(vault).wards(controllerInst.almProxy), 1);
 
-//         assertEq(IVaultLike(vault).wards(controllerInst.almProxy), 1);
+        assertEq(usds.allowance(buffer, controllerInst.almProxy), type(uint256).max);
 
-//         assertEq(usds.allowance(buffer, controllerInst.almProxy), type(uint256).max);
+        // Perform Maker initialization (from PAUSE_PROXY during spell)
 
-//         // Perform Maker initialization (from PAUSE_PROXY during spell)
+        vm.startPrank(PAUSE_PROXY);
+        MainnetControllerInit.pauseProxyInit(PSM, controllerInst.almProxy);
+        vm.stopPrank();
 
-//         vm.startPrank(PAUSE_PROXY);
-//         MainnetControllerInit.pauseProxyInit(PSM, controllerInst.almProxy);
-//         vm.stopPrank();
+        // Assert Maker initialization
 
-//         // Assert Maker initialization
+        assertEq(IPSMLike(PSM).bud(controllerInst.almProxy), 1);
+    }
 
-//         assertEq(IPSMLike(PSM).bud(controllerInst.almProxy), 1);
-//     }
+    function test_deployAllAndInitController() external {
+        // Perform new deployments against existing fork environment
 
-//     function test_deployAllAndInitController() external {
-//         // Perform new deployments against existing fork environment
+        ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
+            SPARK_PROXY,
+            vault,
+            PSM,
+            DAI_USDS,
+            CCTP_MESSENGER,
+            address(susds)
+        );
 
-//         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
-//             SPARK_PROXY,
-//             vault,
-//             PSM,
-//             DAI_USDS,
-//             CCTP_MESSENGER,
-//             address(susds)
-//         );
+        // Overwrite storage for all previous deployments in setUp and assert deployment
 
-//         // Overwrite storage for all previous deployments in setUp and assert deployment
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
+        mainnetController = MainnetController(controllerInst.controller);
+        rateLimits        = RateLimits(controllerInst.rateLimits);
 
-//         almProxy          = ALMProxy(payable(controllerInst.almProxy));
-//         mainnetController = MainnetController(controllerInst.controller);
-//         rateLimits        = RateLimits(controllerInst.rateLimits);
+        (
+            MainnetControllerInit.ConfigAddressParams memory configAddresses,
+            MainnetControllerInit.AddressCheckParams  memory checkAddresses,
+            MintRecipient[]                           memory mintRecipients
+        ) = _getDefaultParams();
 
-//         (
-//             MainnetControllerInit.AddressParams     memory addresses,
-//             MainnetControllerInit.InitRateLimitData memory rateLimitData,
-//             MintRecipient[]                         memory mintRecipients
-//         ) = _getDefaultParams();
+        // Perform ONLY controller initialization, setting rate limits and updating ACL
+        // Setting rate limits to different values from setUp to make assertions more robust
 
-//         // Perform ONLY controller initialization, setting rate limits and updating ACL
-//         // Setting rate limits to different values from setUp to make assertions more robust
+        vm.startPrank(SPARK_PROXY);
+        MainnetControllerInit.subDaoInitController(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+        vm.stopPrank();
 
-//         vm.startPrank(SPARK_PROXY);
-//         MainnetControllerInit.subDaoInitController(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-//         vm.stopPrank();
+        assertEq(mainnetController.hasRole(mainnetController.FREEZER(), freezer), true);
+        assertEq(mainnetController.hasRole(mainnetController.RELAYER(), relayer), true);
 
-//         assertEq(mainnetController.hasRole(mainnetController.FREEZER(), freezer), true);
-//         assertEq(mainnetController.hasRole(mainnetController.RELAYER(), relayer), true);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)), true);
 
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)), true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), true);
 
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), true);
+        assertEq(
+            mainnetController.mintRecipients(mintRecipients[0].domain),
+            mintRecipients[0].mintRecipient
+        );
 
-//         bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
-//             mainnetController.LIMIT_USDC_TO_DOMAIN(),
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
-//         );
+        assertEq(
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
+        );
+    }
 
-//         _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimitData.usdsMintData);
-//         _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdsToUsdcData);
-//         _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
-//         _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
+    function test_init_transferAclToNewController() public {
+        // Deploy and init a controller
 
-//         assertEq(
-//             mainnetController.mintRecipients(mintRecipients[0].domain),
-//             mintRecipients[0].mintRecipient
-//         );
+        ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
+            SPARK_PROXY,
+            vault,
+            PSM,
+            DAI_USDS,
+            CCTP_MESSENGER,
+            address(susds)
+        );
 
-//         assertEq(
-//             mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
-//             bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
-//         );
-//     }
+        (
+            MainnetControllerInit.ConfigAddressParams memory configAddresses,
+            MainnetControllerInit.AddressCheckParams  memory checkAddresses,
+            MintRecipient[]                           memory mintRecipients
+        ) = _getDefaultParams();
 
-//     function test_init_transferAclToNewController() public {
-//         // Deploy and init a controller
+        vm.startPrank(SPARK_PROXY);
+        MainnetControllerInit.subDaoInitController(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+        vm.stopPrank();
 
-//         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
-//             SPARK_PROXY,
-//             vault,
-//             PSM,
-//             DAI_USDS,
-//             CCTP_MESSENGER,
-//             address(susds)
-//         );
+        // Deploy a new controller (example of how an upgrade would work)
 
-//         (
-//             MainnetControllerInit.AddressParams     memory addresses,
-//             MainnetControllerInit.InitRateLimitData memory rateLimitData,
-//             MintRecipient[]                         memory mintRecipients
-//         ) = _getDefaultParams();
+        address newController = MainnetControllerDeploy.deployController(
+            SPARK_PROXY,
+            controllerInst.almProxy,
+            controllerInst.rateLimits,
+            vault,
+            PSM,
+            DAI_USDS,
+            CCTP_MESSENGER,
+            address(susds)
+        );
 
-//         vm.startPrank(SPARK_PROXY);
-//         MainnetControllerInit.subDaoInitController(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-//         vm.stopPrank();
+        // Overwrite storage for all previous deployments in setUp and assert deployment
 
-//         // Deploy a new controller (example of how an upgrade would work)
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
+        mainnetController = MainnetController(controllerInst.controller);
+        rateLimits        = RateLimits(controllerInst.rateLimits);
 
-//         address newController = MainnetControllerDeploy.deployController(
-//             SPARK_PROXY,
-//             controllerInst.almProxy,
-//             controllerInst.rateLimits,
-//             vault,
-//             PSM,
-//             DAI_USDS,
-//             CCTP_MESSENGER,
-//             address(susds)
-//         );
+        address oldController = address(controllerInst.controller);
 
-//         // Overwrite storage for all previous deployments in setUp and assert deployment
+        controllerInst.controller = newController;  // Overwrite struct for param
 
-//         almProxy          = ALMProxy(payable(controllerInst.almProxy));
-//         mainnetController = MainnetController(controllerInst.controller);
-//         rateLimits        = RateLimits(controllerInst.rateLimits);
+        // All other info is the same, just need to transfer ACL
+        configAddresses.oldController = oldController;
 
-//         address oldController = address(controllerInst.controller);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
 
-//         controllerInst.controller = newController;  // Overwrite struct for param
+        vm.startPrank(SPARK_PROXY);
+        MainnetControllerInit.subDaoInitController(
+            configAddresses,
+            checkAddresses,
+            controllerInst,
+            mintRecipients
+        );
+        vm.stopPrank();
 
-//         // All other info is the same, just need to transfer ACL
-//         addresses.oldController = oldController;
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
+    }
 
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
-
-//         vm.startPrank(SPARK_PROXY);
-//         MainnetControllerInit.subDaoInitController(
-//             addresses,
-//             controllerInst,
-//             rateLimitData,
-//             mintRecipients
-//         );
-//         vm.stopPrank();
-
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
-//     }
-
-// }
+}
