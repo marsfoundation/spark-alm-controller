@@ -33,7 +33,7 @@ struct Domain {
     address admin;
 }
 
-contract DeployEthereumStaging is Script {
+contract DeployStaging is Script {
 
     address deployer;
     bytes32 ilk;
@@ -89,7 +89,7 @@ contract DeployEthereumStaging is Script {
             admin      : mainnet.config.readAddress(".admin"),
             almProxy   : mainnet.config.readAddress(".almProxy"),
             rateLimits : mainnet.config.readAddress(".rateLimits"),
-            vault      : mainnet.config.readAddress(".almProxy"),
+            vault      : mainnet.config.readAddress(".allocatorVault"),
             psm        : Ethereum.PSM,
             daiUsds    : Ethereum.DAI_USDS,
             cctp       : Ethereum.CCTP_TOKEN_MESSENGER,
@@ -144,7 +144,7 @@ contract DeployEthereumStaging is Script {
         bytes32 susdsDepositKey  = RateLimitHelpers.makeAssetKey(mainnetController.LIMIT_4626_DEPOSIT(), Ethereum.SUSDS);
         bytes32 usdeMintKey      = mainnetController.LIMIT_USDE_MINT();
 
-        RateLimits rateLimits = RateLimits(base.config.readAddress(".rateLimits"));
+        RateLimits rateLimits = RateLimits(mainnet.config.readAddress(".rateLimits"));
 
         rateLimits.setRateLimitData(usdeBurnKey,      5_000_000e18, uint256(1_000_000e18) / 4 hours);
         rateLimits.setRateLimitData(susdeCooldownKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
@@ -153,6 +153,8 @@ contract DeployEthereumStaging is Script {
         rateLimits.setRateLimitData(usdeMintKey,      5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
 
         ScriptTools.exportContract(mainnet.name, "controller", address(mainnetController));
+
+        vm.stopBroadcast();
     }
 
     function _upgradeALMControllerBase() internal {
@@ -186,9 +188,9 @@ contract DeployEthereumStaging is Script {
             });
 
         ControllerInstance memory controllerInst = ControllerInstance({
-            almProxy   : Base.ALM_PROXY,
+            almProxy   : base.config.readAddress(".almProxy"),
             controller : address(foreignController),
-            rateLimits : Base.ALM_RATE_LIMITS
+            rateLimits : base.config.readAddress(".rateLimits")
         });
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
@@ -215,7 +217,7 @@ contract DeployEthereumStaging is Script {
         rateLimits.setRateLimitData(morphoUsdcDepositKey, 25_000_000e6,  uint256(5_000_000e6)  / 1 days);
         rateLimits.setRateLimitData(morphoUsdsDepositKey, 25_000_000e18, uint256(5_000_000e18) / 1 days);
 
-        vm.stopPrank();
+        vm.stopBroadcast();
     }
 
 }
