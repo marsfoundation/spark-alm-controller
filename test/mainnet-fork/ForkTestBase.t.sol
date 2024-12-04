@@ -28,8 +28,7 @@ import { ControllerInstance }      from "deploy/ControllerInstance.sol";
 
 import {
     MainnetControllerInit,
-    MintRecipient,
-    RateLimitData
+    MintRecipient
 } from "deploy/ControllerInit.sol";
 
 import { ALMProxy }          from "src/ALMProxy.sol";
@@ -72,12 +71,11 @@ contract ForkTestBase is DssTest {
     /*** Constants/state variables                                                              ***/
     /**********************************************************************************************/
 
-    bytes32 constant ilk                = "ILK-A";
+    bytes32 constant ilk                = "ALLOCATOR-SPARK-A";
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
     bytes32 constant PSM_ILK = 0x4c4954452d50534d2d555344432d410000000000000000000000000000000000;
 
-    uint256 constant INK           = 1e12 * 1e18;  // Ink initialization amount
     uint256 constant SEVEN_PCT_APY = 1.000000002145441671308778766e27;  // 7% APY (current DSR)
     uint256 constant EIGHT_PCT_APY = 1.000000002440418608258400030e27;  // 8% APY (current DSR + 1%)
 
@@ -87,6 +85,12 @@ contract ForkTestBase is DssTest {
     bytes32 CONTROLLER;
     bytes32 FREEZER;
     bytes32 RELAYER;
+
+    bytes32 usdeBurnKey;
+    bytes32 susdeCooldownKey;
+    bytes32 susdeDepositKey;
+    bytes32 susdsDepositKey;
+    bytes32 usdeMintKey;
 
     /**********************************************************************************************/
     /*** Mainnet addresses/constants                                                            ***/
@@ -143,9 +147,11 @@ contract ForkTestBase is DssTest {
     uint256 DAI_SUPPLY;
     uint256 USDC_BAL_PSM;
     uint256 USDC_SUPPLY;
-    uint256 USDS_SUPPLY;
     uint256 USDS_BAL_SUSDS;
+    uint256 USDS_SUPPLY;
+    uint256 VAT_ART;
     uint256 VAT_DAI_USDS_JOIN;
+    uint256 VAT_INK;
 
     /**********************************************************************************************/
     /*** Test setup                                                                             ***/
@@ -155,12 +161,18 @@ contract ForkTestBase is DssTest {
 
         /*** Step 1: Set up environment, cast addresses ***/
 
-        source = getChain("mainnet").createSelectFork(20917850);  //  October 7, 2024
+        source = getChain("mainnet").createSelectFork(_getBlock());
 
         dss = MCD.loadFromChainlog(LOG);
 
         USDS_JOIN = IChainlogLike(LOG).getAddress("USDS_JOIN");
         POCKET    = IChainlogLike(LOG).getAddress("MCD_LITE_PSM_USDC_A_POCKET");
+
+        buffer = Ethereum.ALLOCATOR_BUFFER;
+        vault  = Ethereum.ALLOCATOR_VAULT;
+
+        almProxy   = ALMProxy(payable(Ethereum.ALM_PROXY));
+        rateLimits = RateLimits(Ethereum.ALM_RATE_LIMITS);
 
         DAI_BAL_PSM       = dai.balanceOf(PSM);
         DAI_SUPPLY        = dai.totalSupply();
@@ -170,90 +182,56 @@ contract ForkTestBase is DssTest {
         USDS_BAL_SUSDS    = usds.balanceOf(address(susds));
         VAT_DAI_USDS_JOIN = dss.vat.dai(USDS_JOIN);
 
-        /*** Step 2: Deploy and configure allocation system ***/
+        ( VAT_INK, VAT_ART ) = dss.vat.urns(ilk, vault);
 
-        AllocatorSharedInstance memory sharedInst
-            = AllocatorDeploy.deployShared(address(this), Ethereum.PAUSE_PROXY);
+        /*** Step 2: Deploy latest controller and upgrade ***/
 
-        AllocatorIlkInstance memory ilkInst = AllocatorDeploy.deployIlk({
-            deployer : address(this),
-            owner    : Ethereum.PAUSE_PROXY,
-            roles    : sharedInst.roles,
-            ilk      : ilk,
-            usdsJoin : USDS_JOIN
-        });
-
-        AllocatorIlkConfig memory ilkConfig = AllocatorIlkConfig({
-            ilk            : ilk,
-            duty           : EIGHT_PCT_APY,
-            maxLine        : 100_000_000 * RAD,
-            gap            : 10_000_000 * RAD,
-            ttl            : 6 hours,
-            allocatorProxy : Ethereum.SPARK_PROXY,
-            ilkRegistry    : IChainlogLike(LOG).getAddress("ILK_REGISTRY")
-        });
-
-        vm.startPrank(Ethereum.PAUSE_PROXY);
-        AllocatorInit.initShared(dss, sharedInst);
-        AllocatorInit.initIlk(dss, sharedInst, ilkInst, ilkConfig);
-        vm.stopPrank();
-
-        buffer = ilkInst.buffer;
-        vault  = ilkInst.vault;
-
-        /*** Step 3: Deploy and configure ALM system ***/
-
-        ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull({
-            admin  : Ethereum.SPARK_PROXY,
-            vault  : ilkInst.vault,
-            psm    : Ethereum.PSM,
-            daiUsds: Ethereum.DAI_USDS,
-            cctp   : Ethereum.CCTP_TOKEN_MESSENGER,
-            susds  : Ethereum.SUSDS
-        });
-
-        almProxy          = ALMProxy(payable(controllerInst.almProxy));
-        rateLimits        = RateLimits(controllerInst.rateLimits);
-        mainnetController = MainnetController(controllerInst.controller);
+        mainnetController = MainnetController(MainnetControllerDeploy.deployController({
+            admin      : Ethereum.SPARK_PROXY,
+            almProxy   : Ethereum.ALM_PROXY,
+            rateLimits : Ethereum.ALM_RATE_LIMITS,
+            vault      : Ethereum.ALLOCATOR_VAULT,
+            psm        : Ethereum.PSM,
+            daiUsds    : Ethereum.DAI_USDS,
+            cctp       : Ethereum.CCTP_TOKEN_MESSENGER,
+            susds      : Ethereum.SUSDS
+        }));
 
         CONTROLLER = almProxy.CONTROLLER();
         FREEZER    = mainnetController.FREEZER();
         RELAYER    = mainnetController.RELAYER();
 
-        MainnetControllerInit.AddressParams memory addresses = MainnetControllerInit.AddressParams({
-            admin         : Ethereum.SPARK_PROXY,
-            freezer       : freezer,
-            relayer       : relayer,
-            oldController : address(0),
-            psm           : Ethereum.PSM,
-            vault         : vault,
-            buffer        : buffer,
-            cctpMessenger : Ethereum.CCTP_TOKEN_MESSENGER,
-            dai           : Ethereum.DAI,
-            daiUsds       : Ethereum.DAI_USDS,
-            usdc          : Ethereum.USDC,
-            usds          : Ethereum.USDS,
-            susds         : Ethereum.SUSDS
-        });
-
-        RateLimitData memory standardUsdsData = RateLimitData({
-            maxAmount : 5_000_000e18,
-            slope     : uint256(1_000_000e18) / 4 hours
-        });
-
-        RateLimitData memory standardUsdcData = RateLimitData({
-            maxAmount : 5_000_000e6,
-            slope     : uint256(1_000_000e6) / 4 hours
-        });
-
-        MainnetControllerInit.InitRateLimitData memory rateLimitData
-            = MainnetControllerInit.InitRateLimitData({
-                usdsMintData         : standardUsdsData,
-                usdsToUsdcData       : standardUsdcData,
-                usdcToCctpData       : standardUsdcData,
-                cctpToBaseDomainData : standardUsdcData,
-                susdsDepositData     : standardUsdsData
+        MainnetControllerInit.ConfigAddressParams memory configAddresses
+            = MainnetControllerInit.ConfigAddressParams({
+                admin         : Ethereum.SPARK_PROXY,
+                freezer       : freezer,
+                relayer       : relayer,
+                oldController : Ethereum.ALM_CONTROLLER
             });
+
+        MainnetControllerInit.AddressCheckParams memory checkAddresses
+            = MainnetControllerInit.AddressCheckParams({
+                proxy        : Ethereum.ALM_PROXY,
+                rateLimits   : Ethereum.ALM_RATE_LIMITS,
+                buffer       : buffer,
+                cctp         : Ethereum.CCTP_TOKEN_MESSENGER,
+                daiUsds      : Ethereum.DAI_USDS,
+                ethenaMinter : Ethereum.ETHENA_MINTER,
+                psm          : Ethereum.PSM,
+                vault        : vault,
+                dai          : Ethereum.DAI,
+                usds         : Ethereum.USDS,
+                usde         : Ethereum.USDE,
+                usdc         : Ethereum.USDC,
+                susde        : Ethereum.SUSDE,
+                susds        : Ethereum.SUSDS
+            });
+
+        ControllerInstance memory controllerInst = ControllerInstance({
+            almProxy   : Ethereum.ALM_PROXY,
+            controller : address(mainnetController),
+            rateLimits : Ethereum.ALM_RATE_LIMITS
+        });
 
         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
 
@@ -262,16 +240,28 @@ contract ForkTestBase is DssTest {
             mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         });
 
-        vm.prank(Ethereum.PAUSE_PROXY);
-        MainnetControllerInit.pauseProxyInit(Ethereum.PSM, controllerInst.almProxy);
-
+        // NOTE: These are the actions performed by the spell
         vm.startPrank(Ethereum.SPARK_PROXY);
-        MainnetControllerInit.subDaoInitFull(
-            addresses,
+
+        MainnetControllerInit.subDaoInitController(
+            configAddresses,
+            checkAddresses,
             controllerInst,
-            rateLimitData,
             mintRecipients
         );
+
+        usdeBurnKey      = mainnetController.LIMIT_USDE_BURN();
+        susdeCooldownKey = mainnetController.LIMIT_SUSDE_COOLDOWN();
+        susdeDepositKey  = RateLimitHelpers.makeAssetKey(mainnetController.LIMIT_4626_DEPOSIT(), address(susde));
+        susdsDepositKey  = RateLimitHelpers.makeAssetKey(mainnetController.LIMIT_4626_DEPOSIT(), address(susds));
+        usdeMintKey      = mainnetController.LIMIT_USDE_MINT();
+
+        rateLimits.setRateLimitData(usdeBurnKey,      5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(susdeCooldownKey, 5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(susdeDepositKey,  5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(susdsDepositKey,  5_000_000e18, uint256(1_000_000e18) / 4 hours);
+        rateLimits.setRateLimitData(usdeMintKey,      5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
+
         vm.stopPrank();
 
         /*** Step 4: Label addresses ***/
@@ -281,6 +271,16 @@ contract ForkTestBase is DssTest {
         vm.label(address(usdc),  "usdc");
         vm.label(address(usds),  "usds");
         vm.label(vault,          "vault");
+    }
+
+    // Default for all testing, can be overridden if needed
+    function _getBlock() internal virtual view returns (uint256) {
+        return 21310000;  // Dec 2, 2024
+    }
+
+    function _overwriteDebtCeiling(uint256 newLine) internal {
+        vm.prank(Ethereum.PAUSE_PROXY);
+        dss.vat.file(ilk, "line", newLine);
     }
 
 }

@@ -9,11 +9,6 @@ import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
 
 contract AaveV3BaseMarketTestBase is ForkTestBase {
 
-    address constant ATOKEN_USDC = 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB;
-    address constant POOL        = 0xA238Dd80C259a72e81d7e4664a9801593F98d1c5;
-
-    IAToken ausdc = IAToken(ATOKEN_USDC);
-
     uint256 startingAUSDCBalance;
 
     function setUp() public override {
@@ -75,7 +70,7 @@ contract AaveV3BaseMarketDepositSuccessTests is AaveV3BaseMarketTestBase {
     function test_depositAave_usdc() public {
         deal(Base.USDC, address(almProxy), 1_000_000e6);
 
-        assertEq(usdcBase.allowance(address(almProxy), POOL), 0);
+        assertEq(usdcBase.allowance(address(almProxy), AAVE_POOL), 0);
 
         assertEq(ausdc.balanceOf(address(almProxy)),    0);
         assertEq(usdcBase.balanceOf(address(almProxy)), 1_000_000e6);
@@ -84,7 +79,7 @@ contract AaveV3BaseMarketDepositSuccessTests is AaveV3BaseMarketTestBase {
         vm.prank(relayer);
         foreignController.depositAave(ATOKEN_USDC, 1_000_000e6);
 
-        assertEq(usdcBase.allowance(address(almProxy), POOL), 0);
+        assertEq(usdcBase.allowance(address(almProxy), AAVE_POOL), 0);
 
         assertEq(ausdc.balanceOf(address(almProxy)),    1_000_000e6);
         assertEq(usdcBase.balanceOf(address(almProxy)), 0);

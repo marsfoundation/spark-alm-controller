@@ -24,13 +24,13 @@ contract SUSDSTestBase is ForkTestBase {
 
         // Setting this value directly because susds.drip() fails in setUp with
         // StateChangeDuringStaticCall and it is unclear why, something related to foundry.
-        SUSDS_DRIP_AMOUNT = 849.454677397481388011e18;
+        SUSDS_DRIP_AMOUNT = 1343.213438248550472589e18;
 
-        assertEq(SUSDS_CONVERTED_ASSETS, 1.003430776383974596e18);
-        assertEq(SUSDS_CONVERTED_SHARES, 0.996580953599671364e18);
+        assertEq(SUSDS_CONVERTED_ASSETS, 1.013670128364379405e18);
+        assertEq(SUSDS_CONVERTED_SHARES, 0.986514223925650231e18);
 
-        assertEq(SUSDS_TOTAL_ASSETS, 485_597_342.757158870618550128e18);
-        assertEq(SUSDS_TOTAL_SUPPLY, 483_937_062.910395855928183397e18);
+        assertEq(SUSDS_TOTAL_ASSETS, 492_352_759.040803292313384969e18);
+        assertEq(SUSDS_TOTAL_SUPPLY, 485_712_999.982790730833378634e18);
     }
 
 }
@@ -58,6 +58,8 @@ contract MainnetControllerDepositERC4626FailureTests is SUSDSTestBase {
 }
 
 contract MainnetControllerDepositERC4626Tests is SUSDSTestBase {
+
+    // TODO: Add rate limit coverage
 
     function test_depositERC4626() external {
         vm.prank(relayer);
@@ -87,7 +89,7 @@ contract MainnetControllerDepositERC4626Tests is SUSDSTestBase {
         assertEq(usds.allowance(address(almProxy), address(susds)), 0);
 
         assertEq(susds.totalSupply(),                SUSDS_TOTAL_SUPPLY + shares);
-        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18);
+        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18 - 1);  // Rounding
         assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
     }
 
@@ -131,7 +133,7 @@ contract MainnetControllerWithdrawERC4626Tests is SUSDSTestBase {
         assertEq(usds.allowance(address(almProxy), address(susds)),  0);
 
         assertEq(susds.totalSupply(),                SUSDS_TOTAL_SUPPLY + SUSDS_CONVERTED_SHARES);
-        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18);
+        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18 - 1);  // Rounding
         assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
 
         // Max available with rounding
@@ -192,7 +194,7 @@ contract MainnetControllerRedeemERC4626Tests is SUSDSTestBase {
         assertEq(usds.allowance(address(almProxy), address(susds)),  0);
 
         assertEq(susds.totalSupply(),                SUSDS_TOTAL_SUPPLY + SUSDS_CONVERTED_SHARES);
-        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18);
+        assertEq(susds.totalAssets(),                SUSDS_TOTAL_ASSETS + 1e18 - 1);  // Rounding
         assertEq(susds.balanceOf(address(almProxy)), SUSDS_CONVERTED_SHARES);
 
         vm.prank(relayer);

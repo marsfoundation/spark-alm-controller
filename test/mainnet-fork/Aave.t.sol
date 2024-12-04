@@ -22,6 +22,7 @@ contract AaveV3MainMarketBaseTest is ForkTestBase {
 
         vm.startPrank(Ethereum.SPARK_PROXY);
 
+        // TODO: Move this to setup
         rateLimits.setRateLimitData(
             RateLimitHelpers.makeAssetKey(
                 mainnetController.LIMIT_AAVE_DEPOSIT(),
@@ -176,17 +177,17 @@ contract AaveV3MainMarketWithdrawSuccessTests is AaveV3MainMarketBaseTest {
         vm.prank(relayer);
         assertEq(mainnetController.withdrawAave(ATOKEN_USDS, 400_000e18), 400_000e18);
 
-        assertEq(ausds.balanceOf(address(almProxy)), fullBalance - 400_000e18);
+        assertEq(ausds.balanceOf(address(almProxy)), fullBalance - 400_000e18 - 1);  // Rounding
         assertEq(usds.balanceOf(address(almProxy)),  400_000e18);
         assertEq(usds.balanceOf(address(ausds)),     startingAUSDSBalance + 600_000e18);  // 1m - 400k
 
         // Withdraw all
         vm.prank(relayer);
-        assertEq(mainnetController.withdrawAave(ATOKEN_USDS, type(uint256).max), fullBalance - 400_000e18);
+        assertEq(mainnetController.withdrawAave(ATOKEN_USDS, type(uint256).max), fullBalance - 400_000e18 - 1);  // Rounding
 
         assertEq(ausds.balanceOf(address(almProxy)), 0);
-        assertEq(usds.balanceOf(address(almProxy)),  fullBalance);
-        assertEq(usds.balanceOf(address(ausds)),     startingAUSDSBalance + 1_000_000e18 - fullBalance);
+        assertEq(usds.balanceOf(address(almProxy)),  fullBalance - 1);
+        assertEq(usds.balanceOf(address(ausds)),     startingAUSDSBalance + 1_000_000e18 - fullBalance + 1);
 
         // Interest accrued was withdrawn, reducing cash balance
         assertLe(usds.balanceOf(address(ausds)), startingAUSDSBalance);

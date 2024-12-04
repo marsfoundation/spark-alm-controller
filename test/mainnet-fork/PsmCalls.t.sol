@@ -73,6 +73,8 @@ contract MainnetControllerSwapUSDSToUSDCTests is ForkTestBase {
     }
 
     function test_swapUSDSToUSDC_rateLimited() external {
+        _overwriteDebtCeiling(200_000_000e45);
+
         vm.startPrank(SPARK_PROXY);
         rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDS_MINT());
         vm.stopPrank();
@@ -82,27 +84,30 @@ contract MainnetControllerSwapUSDSToUSDCTests is ForkTestBase {
 
         mainnetController.mintUSDS(9_000_000e18);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 4_000_000e6);
         assertEq(usds.balanceOf(address(almProxy)),   9_000_000e18);
         assertEq(usdc.balanceOf(address(almProxy)),   0);
 
         mainnetController.swapUSDSToUSDC(1_000_000e6);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 4_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 3_000_000e6);
         assertEq(usds.balanceOf(address(almProxy)),   8_000_000e18);
         assertEq(usdc.balanceOf(address(almProxy)),   1_000_000e6);
 
-        skip(1 hours);
+        skip(4 hours);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 4_249_999.9984e6);
+        uint256 remainingLimit = 3_000_000e6 + 2_000_000e6 / uint256(24 hours) * 4 hours;
+
+        assertEq(rateLimits.getCurrentRateLimit(key), remainingLimit);
         assertEq(usds.balanceOf(address(almProxy)),   8_000_000e18);
         assertEq(usdc.balanceOf(address(almProxy)),   1_000_000e6);
 
-        mainnetController.swapUSDSToUSDC(4_249_999.9984e6);
+        mainnetController.swapUSDSToUSDC(remainingLimit);
 
         assertEq(rateLimits.getCurrentRateLimit(key), 0);
-        assertEq(usds.balanceOf(address(almProxy)),   3_750_000.0016e18);
-        assertEq(usdc.balanceOf(address(almProxy)),   5_249_999.9984e6);
+        assertEq(usds.balanceOf(address(almProxy)),   9_000_000e18 - 1_000_000e18 - remainingLimit * 1e12);
+        assertEq(usdc.balanceOf(address(almProxy)),   1_000_000e6 + remainingLimit);
+        assertEq(usdc.balanceOf(address(almProxy)),   4_333_333.3312e6);
 
         vm.expectRevert("RateLimits/rate-limit-exceeded");
         mainnetController.swapUSDSToUSDC(1);
@@ -133,32 +138,29 @@ contract MainnetControllerSwapUSDCToUSDSFailureTests is ForkTestBase {
     }
 
     function test_swapUSDCToUSDS_incompleteFillBoundary() external {
-        // The line is just over 2.1 billion, this condition will allow DAI to get minted to get to
-        // 2 billion in Art, and then another fill to get to the `line`.
-        deal(address(usdc), address(POCKET), 2_000_000_000e6);
+        // This will bring USDC balance + buffer over Art
+        deal(address(usdc), address(POCKET), 1_200_000_000e6);
 
         uint256 fillAmount = psm.rush();
-
-        assertEq(fillAmount, 3_008_396.9118e18); // Only first fill amount
 
         // NOTE: Art == dai here because rate is 1 for PSM ilk
         ( uint256 Art,,, uint256 line, ) = dss.vat.ilks(PSM_ILK);
 
-        assertEq(Art,              2_396_991_603.0882e18);
-        assertEq(Art + fillAmount, 2_400_000_000e18);
-        assertEq(line / 1e27,      2_796_991_603.0882e18);
+        assertEq(fillAmount,  95_861_379.449004e18);
+        assertEq(fillAmount,  1_600_000_000e18 - Art);  // NOTE: This is just the first fill amount
+        assertEq(line / 1e27, 1_895_215_390.668458e18);
 
-        // The first fill increases the Art to 2.4 billion and the USDC balance of the PSM to roughly 2.4 billion.
-        // For the second fill, the USDC balance + buffer option is over 2.8 billion so it instead fills to the line
-        // which is 2.796 billion.
-        uint256 expectedFillAmount2 = line / 1e27 - 2_400_000_000e18;
+        // The first fill increases the Art to 1.6 billion and the USDC balance of the PSM to roughly 1.6 billion.
+        // For the second fill, the USDC balance + buffer option is over 2 billion so it instead fills to the line
+        // which is 1.89 billion.
+        uint256 expectedFillAmount2 = line / 1e27 - 1_600_000_000e18;
 
-        assertEq(expectedFillAmount2, 396_991_603.0882e18);
+        assertEq(expectedFillAmount2, 295_215_390.668458e18);
 
         // Max amount of DAI that can be swapped, converted to USDC precision
         uint256 maxSwapAmount = (DAI_BAL_PSM + fillAmount + expectedFillAmount2) / 1e12;
 
-        assertEq(maxSwapAmount, 813_630_294.354574e6);
+        assertEq(maxSwapAmount, 795_507_442.326123e6);
 
         deal(address(usdc), address(almProxy), maxSwapAmount + 1);
 
@@ -174,7 +176,7 @@ contract MainnetControllerSwapUSDCToUSDSFailureTests is ForkTestBase {
 
         // Art has now been filled to the debt ceiling and there is no DAI left in the PSM.
         assertEq(Art, line / 1e27);
-        assertEq(Art, 2_796_991_603.0882e18);
+        assertEq(Art, 1_895_215_390.668458e18);
 
         assertEq(dai.balanceOf(address(PSM)), 0);
     }
@@ -272,7 +274,7 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
     }
 
     function test_swapUSDCToUSDS_partialRefill() external {
-        assertEq(DAI_BAL_PSM, 413_630_294.354574e18);
+        assertEq(DAI_BAL_PSM, 404_430_672.208661e18);
 
         // PSM is not fillable at current fork so need to deal USDC
         uint256 fillAmount = psm.rush();
@@ -282,23 +284,23 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         ( uint256 Art,,, uint256 line, ) = dss.vat.ilks(PSM_ILK);
 
         // Art is less than line, but USDC balance needs to increase to allow minting
-        assertEq(usdc.balanceOf(POCKET) * 1e12 + IPSM(PSM).buf(), 2_383_361_309.129139e18);
-        assertEq(Art,                                             2_396_991_603.0882e18);
-        assertEq(line / 1e27,                                     2_796_991_603.0882e18);
+        assertEq(usdc.balanceOf(POCKET) * 1e12 + IPSM(PSM).buf(), 1_499_707_951.110638e18);
+        assertEq(Art,                                             1_504_138_620.550996e18);
+        assertEq(line / 1e27,                                     1_895_215_390.668458e18);
 
         // This will bring USDC balance + buffer over Art
-        deal(address(usdc), address(POCKET), 2_000_000_000e6);
+        deal(address(usdc), address(POCKET), 1_200_000_000e6);
 
-        assertEq(usdc.balanceOf(POCKET) * 1e12 + IPSM(PSM).buf(), 2_400_000_000e18);
-        assertEq(Art,                                             2_396_991_603.0882e18);
-        assertEq(line / 1e27,                                     2_796_991_603.0882e18);
+        assertEq(usdc.balanceOf(POCKET) * 1e12 + IPSM(PSM).buf(), 1_600_000_000e18);
+        assertEq(Art,                                             1_504_138_620.550996e18);
+        assertEq(line / 1e27,                                     1_895_215_390.668458e18);
 
         ( Art,,, line, ) = dss.vat.ilks(PSM_ILK);
 
         fillAmount = psm.rush();
 
-        assertEq(fillAmount, 3_008_396.9118e18);
-        assertEq(fillAmount, 2_400_000_000e18 - Art);
+        assertEq(fillAmount, 95_861_379.449004e18);
+        assertEq(fillAmount, 1_600_000_000e18 - Art);
 
         // Higher than balance of DAI, less than fillAmount + balance
         deal(address(usdc), address(almProxy), 415_000_000e6);
@@ -313,7 +315,7 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
 
         assertEq(usdc.balanceOf(address(almProxy)),          415_000_000e6);
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-        assertEq(usdc.balanceOf(address(POCKET)),            2_000_000_000e6);
+        assertEq(usdc.balanceOf(address(POCKET)),            1_200_000_000e6);
 
         assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(usds.allowance(address(almProxy), DAI_USDS),       0);
@@ -327,7 +329,7 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         ( Art,,,, ) = dss.vat.ilks(PSM_ILK);
 
         // Amount minted brings Art to usdc balance + buffer
-        assertEq(Art, 2_400_000_000e18);
+        assertEq(Art, 1_600_000_000e18);
 
         assertEq(usds.balanceOf(address(almProxy)),          415_000_000e18);
         assertEq(usds.balanceOf(address(mainnetController)), 0);
@@ -335,12 +337,12 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
 
         assertEq(dai.balanceOf(address(almProxy)), 0);
         assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM + fillAmount - 415_000_000e18);
-        assertEq(dai.balanceOf(address(PSM)),      1_638_691.266374e18);
+        assertEq(dai.balanceOf(address(PSM)),      85_292_051.657665e18);
         assertEq(dai.totalSupply(),                DAI_SUPPLY + fillAmount - 415_000_000e18);
 
         assertEq(usdc.balanceOf(address(almProxy)),          0);
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-        assertEq(usdc.balanceOf(address(POCKET)),            2_415_000_000e6);  // 2 billion + 415 million
+        assertEq(usdc.balanceOf(address(POCKET)),            1_615_000_000e6);  // 1.2 billion + 415 million
 
         assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(usds.allowance(address(almProxy), DAI_USDS),       0);
@@ -348,7 +350,7 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
     }
 
     function test_swapUSDCToUSDS_multipleRefills() external {
-        assertEq(DAI_BAL_PSM, 413_630_294.354574e18);
+        assertEq(DAI_BAL_PSM, 404_430_672.208661e18);
 
         // PSM is not fillable at current fork so need to deal USDC
         uint256 fillAmount = psm.rush();
@@ -358,32 +360,33 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         ( uint256 Art,,, uint256 line, ) = dss.vat.ilks(PSM_ILK);
 
         // Art is less than line, but USDC balance needs to increase to allow minting
-        assertEq(usdc.balanceOf(POCKET) * 1e12 + IPSM(PSM).buf(), 2_383_361_309.129139e18);
-        assertEq(Art,                                             2_396_991_603.0882e18);
-        assertEq(line / 1e27,                                     2_796_991_603.0882e18);
+        assertEq(usdc.balanceOf(POCKET) * 1e12 + IPSM(PSM).buf(), 1_499_707_951.110638e18);
+        assertEq(Art,                                             1_504_138_620.550996e18);
+        assertEq(line / 1e27,                                     1_895_215_390.668458e18);
 
         // This will bring USDC balance + buffer over Art
-        deal(address(usdc), address(POCKET), 2_000_000_000e6);
+        deal(address(usdc), address(POCKET), 1_200_000_000e6);
 
-        assertEq(usdc.balanceOf(POCKET) * 1e12 + IPSM(PSM).buf(), 2_400_000_000e18);
-        assertEq(Art,                                             2_396_991_603.0882e18);
-        assertEq(line / 1e27,                                     2_796_991_603.0882e18);
+        assertEq(usdc.balanceOf(POCKET) * 1e12 + IPSM(PSM).buf(), 1_600_000_000e18);
+        assertEq(Art,                                             1_504_138_620.550996e18);
+        assertEq(line / 1e27,                                     1_895_215_390.668458e18);
 
         ( Art,,, line, ) = dss.vat.ilks(PSM_ILK);
 
         fillAmount = psm.rush();
 
-        assertEq(fillAmount, 3_008_396.9118e18);
-        assertEq(fillAmount, 2_400_000_000e18 - Art);  // NOTE: This is just the first fill amount
+        assertEq(fillAmount, 95_861_379.449004e18);
+        assertEq(fillAmount, 1_600_000_000e18 - Art);  // NOTE: This is just the first fill amount
 
-        // The first fill increases the Art to 2.4 billion and the USDC balance of the PSM to roughly 2.4 billion.
-        // For the second fill, the USDC balance + buffer option is over 2.8 billion so it instead fills to the line
-        // which is 2.796 billion.
-        uint256 expectedFillAmount2 = line / 1e27 - 2_400_000_000e18;
+        // The first fill increases the Art to 1.6 billion and the USDC balance of the PSM to roughly 1.6 billion.
+        // For the second fill, the USDC balance + buffer option is over 2 billion so it instead fills to the line
+        // which is 1.89 billion.
+        uint256 expectedFillAmount2 = line / 1e27 - 1_600_000_000e18;
 
-        assertEq(expectedFillAmount2, 396_991_603.0882e18);
+        assertEq(expectedFillAmount2, 295_215_390.668458e18);
 
-        deal(address(usdc), address(almProxy), 500_000_000e6);  // Higher than balance of DAI + fillAmount
+        // Higher than balance of DAI plus first fillAmount, less than second fillAmount
+        deal(address(usdc), address(almProxy), 600_000_000e6);
 
         assertEq(usds.balanceOf(address(almProxy)),          0);
         assertEq(usds.balanceOf(address(mainnetController)), 0);
@@ -393,9 +396,9 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
         assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM);
         assertEq(dai.totalSupply(),                DAI_SUPPLY);
 
-        assertEq(usdc.balanceOf(address(almProxy)),          500_000_000e6);
+        assertEq(usdc.balanceOf(address(almProxy)),          600_000_000e6);
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-        assertEq(usdc.balanceOf(address(POCKET)),            2_000_000_000e6);
+        assertEq(usdc.balanceOf(address(POCKET)),            1_200_000_000e6);
 
         assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(usds.allowance(address(almProxy), DAI_USDS),       0);
@@ -403,30 +406,32 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
 
         assertEq(Art + fillAmount + expectedFillAmount2, line / 1e27);  // Two fills will increase Art to the debt ceiling
 
-        vm.prank(relayer);
         vm.expectEmit(PSM);
         emit Fill(fillAmount);
+        vm.expectEmit(PSM);
         emit Fill(expectedFillAmount2);
-        mainnetController.swapUSDCToUSDS(500_000_000e6);
+
+        vm.prank(relayer);
+        mainnetController.swapUSDCToUSDS(600_000_000e6);
 
         ( Art,,,, ) = dss.vat.ilks(PSM_ILK);
 
         // Art has now been filled to the debt ceiling.
         assertEq(Art, line / 1e27);
-        assertEq(Art, 2_796_991_603.0882e18);
+        assertEq(Art, 1_895_215_390.668458e18);
 
-        assertEq(usds.balanceOf(address(almProxy)),          500_000_000e18);
+        assertEq(usds.balanceOf(address(almProxy)),          600_000_000e18);
         assertEq(usds.balanceOf(address(mainnetController)), 0);
-        assertEq(usds.totalSupply(),                         USDS_SUPPLY + 500_000_000e18);
+        assertEq(usds.totalSupply(),                         USDS_SUPPLY + 600_000_000e18);
 
         assertEq(dai.balanceOf(address(almProxy)), 0);
-        assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM + fillAmount + expectedFillAmount2 - 500_000_000e18);
-        assertEq(dai.balanceOf(address(PSM)),      313_630_294.354574e18);
-        assertEq(dai.totalSupply(),                DAI_SUPPLY + fillAmount + expectedFillAmount2 - 500_000_000e18);
+        assertEq(dai.balanceOf(address(PSM)),      DAI_BAL_PSM + fillAmount + expectedFillAmount2 - 600_000_000e18);
+        assertEq(dai.balanceOf(address(PSM)),      195_507_442.326123e18);
+        assertEq(dai.totalSupply(),                DAI_SUPPLY + fillAmount + expectedFillAmount2 - 600_000_000e18);
 
         assertEq(usdc.balanceOf(address(almProxy)),          0);
         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-        assertEq(usdc.balanceOf(address(POCKET)),            2_500_000_000e6);  // 2 billion + 500 millions
+        assertEq(usdc.balanceOf(address(POCKET)),            1_800_000_000e6);  // 1.2 billion + 600 million
 
         assertEq(usds.allowance(address(buffer),   address(vault)), type(uint256).max);
         assertEq(usds.allowance(address(almProxy), DAI_USDS),       0);
@@ -434,33 +439,38 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
     }
 
     function test_swapUSDCToUSDS_rateLimited() external {
+        _overwriteDebtCeiling(200_000_000e45);
+
         bytes32 key = mainnetController.LIMIT_USDS_TO_USDC();
         vm.startPrank(relayer);
 
-        mainnetController.mintUSDS(5_000_000e18);
+        mainnetController.mintUSDS(4_000_000e18);
 
         mainnetController.swapUSDSToUSDC(1_000_000e6);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 4_000_000e6);
-        assertEq(usds.balanceOf(address(almProxy)),   4_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(key), 3_000_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   3_000_000e18);
         assertEq(usdc.balanceOf(address(almProxy)),   1_000_000e6);
 
         mainnetController.swapUSDCToUSDS(400_000e6);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 4_400_000e6);
-        assertEq(usds.balanceOf(address(almProxy)),   4_400_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(key), 3_400_000e6);
+        assertEq(usds.balanceOf(address(almProxy)),   3_400_000e18);
         assertEq(usdc.balanceOf(address(almProxy)),   600_000e6);
 
         skip(4 hours);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
-        assertEq(usds.balanceOf(address(almProxy)),   4_400_000e18);
+        uint256 newLimit = 3_400_000e6 + 2_000_000e6 / uint256(24 hours) * 4 hours;
+
+        assertEq(rateLimits.getCurrentRateLimit(key), newLimit);
+        assertEq(rateLimits.getCurrentRateLimit(key), 3_733_333.3312e6);
+        assertEq(usds.balanceOf(address(almProxy)),   3_400_000e18);
         assertEq(usdc.balanceOf(address(almProxy)),   600_000e6);
 
         mainnetController.swapUSDCToUSDS(600_000e6);
 
-        assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
-        assertEq(usds.balanceOf(address(almProxy)),   5_000_000e18);
+        assertEq(rateLimits.getCurrentRateLimit(key), 4_000_000e6);  // Back to max amount
+        assertEq(usds.balanceOf(address(almProxy)),   4_000_000e18);
         assertEq(usdc.balanceOf(address(almProxy)),   0);
 
         vm.stopPrank();
@@ -485,4 +495,3 @@ contract MainnetControllerSwapUSDCToUSDSTests is ForkTestBase {
     }
 
 }
-
