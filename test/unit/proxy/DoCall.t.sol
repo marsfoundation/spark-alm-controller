@@ -3,9 +3,9 @@ pragma solidity ^0.8.21;
 
 import { ALMProxy } from "../../../src/ALMProxy.sol";
 
-import "test/unit/UnitTestBase.t.sol";
+import { MockTarget } from "../mocks/MockTarget.sol";
 
-import { MockTarget } from "test/unit/mocks/MockTarget.sol";
+import "../UnitTestBase.t.sol";
 
 contract ALMProxyCallTestBase is UnitTestBase {
 

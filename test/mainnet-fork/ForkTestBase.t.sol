@@ -23,14 +23,14 @@ import { Bridge }                from "xchain-helpers/src/testing/Bridge.sol";
 import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
 
-import { MainnetControllerDeploy } from "deploy/ControllerDeploy.sol";
-import { ControllerInstance }      from "deploy/ControllerInstance.sol";
+import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
+import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 
 import {
     MainnetControllerInit,
     MintRecipient,
     RateLimitData
-} from "deploy/ControllerInit.sol";
+} from "../../deploy/ControllerInit.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";

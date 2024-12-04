@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import "test/mainnet-fork/ForkTestBase.t.sol";
-
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
@@ -16,18 +14,20 @@ import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
 import { CCTPBridgeTesting } from "xchain-helpers/src/testing/bridges/CCTPBridgeTesting.sol";
 import { CCTPForwarder }     from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
-import { ForeignControllerDeploy } from "deploy/ControllerDeploy.sol";
-import { ControllerInstance }      from "deploy/ControllerInstance.sol";
+import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
+import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 
 import { ForeignControllerInit,
     MintRecipient,
     RateLimitData
-} from "deploy/ControllerInit.sol";
+} from "../../deploy/ControllerInit.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { ForeignController } from "../../src/ForeignController.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
 import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
+
+import "./ForkTestBase.t.sol";
 
 contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
 

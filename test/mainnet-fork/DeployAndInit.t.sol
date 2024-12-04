@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import "test/mainnet-fork/ForkTestBase.t.sol";
-
-import { IRateLimits } from "../../src/interfaces/IRateLimits.sol";
-
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 
@@ -13,6 +9,10 @@ import {
     RateLimitData,
     MintRecipient
 } from "../../deploy/ControllerInit.sol";
+
+import { IRateLimits } from "../../src/interfaces/IRateLimits.sol";
+
+import "./ForkTestBase.t.sol";
 
 // Necessary to get error message assertions to work
 contract LibraryWrapper {

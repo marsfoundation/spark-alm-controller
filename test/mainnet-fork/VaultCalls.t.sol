@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import "test/mainnet-fork/ForkTestBase.t.sol";
+import "./ForkTestBase.t.sol";
 
 contract MainnetControllerMintUSDSTests is ForkTestBase {
 

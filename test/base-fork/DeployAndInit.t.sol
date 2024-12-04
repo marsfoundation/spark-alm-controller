@@ -5,16 +5,16 @@ import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Moc
 
 import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
-import "test/base-fork/ForkTestBase.t.sol";
+import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
+import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
+
+import { ForeignControllerInit, RateLimitData, MintRecipient } from "../../deploy/ControllerInit.sol";
 
 import { IRateLimits } from "../../src/interfaces/IRateLimits.sol";
 
-import { ControllerInstance }      from "deploy/ControllerInstance.sol";
-import { ForeignControllerDeploy } from "deploy/ControllerDeploy.sol";
-
-import { ForeignControllerInit, RateLimitData, MintRecipient } from "deploy/ControllerInit.sol";
-
 import { RateLimitHelpers } from "../../src/RateLimitHelpers.sol";
+
+import "./ForkTestBase.t.sol";
 
 // Necessary to get error message assertions to work
 contract LibraryWrapper {
