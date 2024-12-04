@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import { ALMProxy } from "src/ALMProxy.sol";
+import { ALMProxy } from "../../../src/ALMProxy.sol";
 
 import "test/unit/UnitTestBase.t.sol";
 

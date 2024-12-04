@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "test/base-fork/ForkTestBase.t.sol";
 
-import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
+import { RateLimitHelpers } from "../../src/RateLimitHelpers.sol";
 
 contract ForeignControllerPSMSuccessTestBase is ForkTestBase {
 

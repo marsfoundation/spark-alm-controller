@@ -32,9 +32,9 @@ import { ForeignControllerInit,
     RateLimitData
 } from "deploy/ControllerInit.sol";
 
-import { ALMProxy }          from "src/ALMProxy.sol";
-import { ForeignController } from "src/ForeignController.sol";
-import { RateLimits }        from "src/RateLimits.sol";
+import { ALMProxy }          from "../../src/ALMProxy.sol";
+import { ForeignController } from "../../src/ForeignController.sol";
+import { RateLimits }        from "../../src/RateLimits.sol";
 
 contract ForkTestBase is Test {
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import "test/unit/UnitTestBase.t.sol";
 
-import { ALMProxy } from "src/ALMProxy.sol";
+import { ALMProxy } from "../../../src/ALMProxy.sol";
 
 contract ALMProxyConstructorTests is UnitTestBase {
 

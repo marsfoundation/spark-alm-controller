@@ -32,10 +32,10 @@ import {
     RateLimitData
 } from "deploy/ControllerInit.sol";
 
-import { ALMProxy }          from "src/ALMProxy.sol";
-import { RateLimits }        from "src/RateLimits.sol";
-import { RateLimitHelpers }  from "src/RateLimitHelpers.sol";
-import { MainnetController } from "src/MainnetController.sol";
+import { ALMProxy }          from "../../src/ALMProxy.sol";
+import { RateLimits }        from "../../src/RateLimits.sol";
+import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
+import { MainnetController } from "../../src/MainnetController.sol";
 
 interface IChainlogLike {
     function getAddress(bytes32) external view returns (address);

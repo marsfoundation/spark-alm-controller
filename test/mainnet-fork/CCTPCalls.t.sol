@@ -24,10 +24,10 @@ import { ForeignControllerInit,
     RateLimitData
 } from "deploy/ControllerInit.sol";
 
-import { ALMProxy }          from "src/ALMProxy.sol";
-import { ForeignController } from "src/ForeignController.sol";
-import { RateLimits }        from "src/RateLimits.sol";
-import { RateLimitHelpers }  from "src/RateLimitHelpers.sol";
+import { ALMProxy }          from "../../src/ALMProxy.sol";
+import { ForeignController } from "../../src/ForeignController.sol";
+import { RateLimits }        from "../../src/RateLimits.sol";
+import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 
 contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
 

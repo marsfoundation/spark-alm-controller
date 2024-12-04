@@ -11,11 +11,11 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 
 import { Ethereum } from "spark-address-registry/src/Ethereum.sol";
 
-import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
-import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
-import { IRateLimits } from "src/interfaces/IRateLimits.sol";
+import { IALMProxy }   from "./interfaces/IALMProxy.sol";
+import { ICCTPLike }   from "./interfaces/CCTPInterfaces.sol";
+import { IRateLimits } from "./interfaces/IRateLimits.sol";
 
-import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
+import { RateLimitHelpers } from "./RateLimitHelpers.sol";
 
 interface IDaiUsdsLike {
     function dai() external view returns(address);

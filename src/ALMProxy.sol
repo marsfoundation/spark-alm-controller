@@ -4,7 +4,7 @@ pragma solidity ^0.8.21;
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 import { Address }       from "openzeppelin-contracts/contracts/utils/Address.sol";
 
-import { IALMProxy } from "src/interfaces/IALMProxy.sol";
+import { IALMProxy } from "./interfaces/IALMProxy.sol";
 
 contract ALMProxy is IALMProxy, AccessControl {
 
