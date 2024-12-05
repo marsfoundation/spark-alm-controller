@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import "test/mainnet-fork/ForkTestBase.t.sol";
+import "./ForkTestBase.t.sol";
 
 interface IEthenaMinterLike {
     function delegatedSigner(address signer, address owner) external view returns (uint8);

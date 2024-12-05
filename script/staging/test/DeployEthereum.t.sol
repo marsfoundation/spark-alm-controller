@@ -18,13 +18,13 @@ import { AllocatorBuffer }   from "dss-allocator/src/AllocatorBuffer.sol";
 import { AllocatorRegistry } from "dss-allocator/src/AllocatorRegistry.sol";
 import { AllocatorRoles }    from "dss-allocator/src/AllocatorRoles.sol";
 
-import { IRateLimits } from "src/interfaces/IRateLimits.sol";
+import { IRateLimits } from "../../../src/interfaces/IRateLimits.sol";
 
-import { ALMProxy }          from "src/ALMProxy.sol";
-import { ForeignController } from "src/ForeignController.sol";
-import { MainnetController } from "src/MainnetController.sol";
-import { RateLimits }        from "src/RateLimits.sol";
-import { RateLimitHelpers }  from "src/RateLimitHelpers.sol";
+import { ALMProxy }          from "../../../src/ALMProxy.sol";
+import { ForeignController } from "../../../src/ForeignController.sol";
+import { MainnetController } from "../../../src/MainnetController.sol";
+import { RateLimits }        from "../../../src/RateLimits.sol";
+import { RateLimitHelpers }  from "../../../src/RateLimitHelpers.sol";
 
 import { PSM3, IERC20 }      from "spark-psm/src/PSM3.sol";
 import { IRateProviderLike } from "spark-psm/src/interfaces/IRateProviderLike.sol";

@@ -3,12 +3,12 @@ pragma solidity >=0.8.0;
 
 import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
-import { ForeignController } from "src/ForeignController.sol";
-import { MainnetController } from "src/MainnetController.sol";
-import { RateLimitHelpers }  from "src/RateLimitHelpers.sol";
+import { ForeignController } from "../src/ForeignController.sol";
+import { MainnetController } from "../src/MainnetController.sol";
+import { RateLimitHelpers }  from "../src/RateLimitHelpers.sol";
 
-import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
-import { IRateLimits } from "src/interfaces/IRateLimits.sol";
+import { IALMProxy }   from "../src/interfaces/IALMProxy.sol";
+import { IRateLimits } from "../src/interfaces/IRateLimits.sol";
 
 import { ControllerInstance } from "./ControllerInstance.sol";
 

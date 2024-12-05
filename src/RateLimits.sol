@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
-import { IRateLimits } from "src/interfaces/IRateLimits.sol";
+import { IRateLimits } from "./interfaces/IRateLimits.sol";
 
 contract RateLimits is IRateLimits, AccessControl {
 

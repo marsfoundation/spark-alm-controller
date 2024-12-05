@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import "test/unit/UnitTestBase.t.sol";
+import { ForeignController } from "../../../src/ForeignController.sol";
+import { MainnetController } from "../../../src/MainnetController.sol";
 
-import { ForeignController } from "src/ForeignController.sol";
-import { MainnetController } from "src/MainnetController.sol";
+import { MockDaiUsds } from "../mocks/MockDaiUsds.sol";
+import { MockPSM }     from "../mocks/MockPSM.sol";
+import { MockPSM3 }    from "../mocks/MockPSM3.sol";
+import { MockSUsds }   from "../mocks/MockSUsds.sol";
+import { MockVault }   from "../mocks/MockVault.sol";
 
-import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
-import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
-import { MockPSM3 }    from "test/unit/mocks/MockPSM3.sol";
-import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
-import { MockVault }   from "test/unit/mocks/MockVault.sol";
+import "../UnitTestBase.t.sol";
 
 contract MainnetControllerConstructorTests is UnitTestBase {
 
