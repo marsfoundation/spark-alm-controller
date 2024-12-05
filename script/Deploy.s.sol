@@ -104,7 +104,7 @@ contract DeployForeignFull is Script {
 
         vm.createSelectFork(getChain(chainName).rpcUrl);
 
-        console.log("Deploying Mainnet ALMProxy, Controller and RateLimits...");
+        console.log(string(abi.encodePacked("Deploying ", chainName, " ALMProxy, Controller and RateLimits...")));
 
         vm.startBroadcast();
 
@@ -143,7 +143,7 @@ contract DeployForeignController is Script {
 
         vm.createSelectFork(getChain(chainName).rpcUrl);
 
-        console.log("Deploying Mainnet ALMProxy, Controller and RateLimits...");
+        console.log(string(abi.encodePacked("Deploying ", chainName, " Controller...")));
 
         vm.startBroadcast();
 
