@@ -49,7 +49,9 @@ contract ForeignController is AccessControl {
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
     bytes32 public constant LIMIT_4626_DEPOSIT   = keccak256("LIMIT_4626_DEPOSIT");
+    bytes32 public constant LIMIT_4626_WITHDRAW  = keccak256("LIMIT_4626_WITHDRAW");
     bytes32 public constant LIMIT_AAVE_DEPOSIT   = keccak256("LIMIT_AAVE_DEPOSIT");
+    bytes32 public constant LIMIT_AAVE_WITHDRAW  = keccak256("LIMIT_AAVE_WITHDRAW");
     bytes32 public constant LIMIT_PSM_DEPOSIT    = keccak256("LIMIT_PSM_DEPOSIT");
     bytes32 public constant LIMIT_PSM_WITHDRAW   = keccak256("LIMIT_PSM_WITHDRAW");
     bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
@@ -258,7 +260,14 @@ contract ForeignController is AccessControl {
     }
 
     function withdrawERC4626(address token, uint256 amount)
-        external onlyRole(RELAYER) isActive returns (uint256 shares)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(
+            RateLimitHelpers.makeAssetKey(LIMIT_4626_WITHDRAW, token),
+            amount
+        )
+        returns (uint256 shares)
     {
         // Withdraw asset from a token, decode resulting shares.
         // Assumes proxy has adequate token shares.
@@ -271,6 +280,7 @@ contract ForeignController is AccessControl {
         );
     }
 
+    // NOTE: !!! Rate limited at end of function !!!
     function redeemERC4626(address token, uint256 shares)
         external onlyRole(RELAYER) isActive returns (uint256 assets)
     {
@@ -282,6 +292,11 @@ contract ForeignController is AccessControl {
                 abi.encodeCall(IERC4626(token).redeem, (shares, address(proxy), address(proxy)))
             ),
             (uint256)
+        );
+
+        rateLimits.triggerRateLimitDecrease(
+            RateLimitHelpers.makeAssetKey(LIMIT_4626_WITHDRAW, token),
+            assets
         );
     }
 
@@ -314,6 +329,7 @@ contract ForeignController is AccessControl {
         );
     }
 
+    // NOTE: !!! Rate limited at end of function !!!
     function withdrawAave(address aToken, uint256 amount)
         external onlyRole(RELAYER) isActive returns (uint256 amountWithdrawn)
     {
@@ -330,6 +346,11 @@ contract ForeignController is AccessControl {
                 )
             ),
             (uint256)
+        );
+
+        rateLimits.triggerRateLimitDecrease(
+            RateLimitHelpers.makeAssetKey(LIMIT_AAVE_WITHDRAW, aToken),
+            amountWithdrawn
         );
     }
 

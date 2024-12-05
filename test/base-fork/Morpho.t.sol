@@ -62,6 +62,7 @@ contract MorphoBaseTest is ForkTestBase {
         Id[] memory supplyQueueUSDS = new Id[](1);
         supplyQueueUSDS[0] = MarketParamsLib.id(usdsParams);
         IMetaMorpho(MORPHO_VAULT_USDS).setSupplyQueue(supplyQueueUSDS);
+
         Id[] memory supplyQueueUSDC = new Id[](1);
         supplyQueueUSDC[0] = MarketParamsLib.id(usdcParams);
         IMetaMorpho(MORPHO_VAULT_USDC).setSupplyQueue(supplyQueueUSDC);
@@ -80,6 +81,22 @@ contract MorphoBaseTest is ForkTestBase {
                 MORPHO_VAULT_USDC
             ),
             25_000_000e6,
+            uint256(5_000_000e6) / 1 days
+        );
+        rateLimits.setRateLimitData(
+            RateLimitHelpers.makeAssetKey(
+                foreignController.LIMIT_4626_WITHDRAW(),
+                MORPHO_VAULT_USDS
+            ),
+            10_000_000e18,
+            uint256(5_000_000e18) / 1 days
+        );
+        rateLimits.setRateLimitData(
+            RateLimitHelpers.makeAssetKey(
+                foreignController.LIMIT_4626_WITHDRAW(),
+                MORPHO_VAULT_USDC
+            ),
+            10_000_000e6,
             uint256(5_000_000e6) / 1 days
         );
 
@@ -112,6 +129,12 @@ contract MorphoDepositFailureTests is MorphoBaseTest {
         vm.prank(relayer);
         vm.expectRevert("ForeignController/not-active");
         foreignController.depositERC4626(MORPHO_VAULT_USDS, 1_000_000e18);
+    }
+
+    function test_depositERC4626_zeroMaxAmount() external {
+        vm.prank(relayer);
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        foreignController.depositERC4626(makeAddr("fake-token"), 1e18);
     }
 
     function test_morpho_usds_deposit_rateLimitedBoundary() external {
