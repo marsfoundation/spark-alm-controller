@@ -14,27 +14,18 @@ import { IPSM3 }      from "spark-psm/src/PSM3.sol";
 
 import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
-import { ForeignControllerDeploy } from "deploy/ControllerDeploy.sol";
-import { ControllerInstance }      from "deploy/ControllerInstance.sol";
+import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
+import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 
-import { ForeignControllerInit,
+import {
+    ForeignControllerInit,
     MintRecipient,
     RateLimitData
-} from "deploy/ControllerInit.sol";
+} from "../../deploy/ControllerInit.sol";
 
-import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
-
-import { ForeignControllerDeploy } from "deploy/ControllerDeploy.sol";
-import { ControllerInstance }      from "deploy/ControllerInstance.sol";
-
-import { ForeignControllerInit,
-    MintRecipient,
-    RateLimitData
-} from "deploy/ControllerInit.sol";
-
-import { ALMProxy }          from "src/ALMProxy.sol";
-import { ForeignController } from "src/ForeignController.sol";
-import { RateLimits }        from "src/RateLimits.sol";
+import { ALMProxy }          from "../../src/ALMProxy.sol";
+import { ForeignController } from "../../src/ForeignController.sol";
+import { RateLimits }        from "../../src/RateLimits.sol";
 
 contract ForkTestBase is Test {
 

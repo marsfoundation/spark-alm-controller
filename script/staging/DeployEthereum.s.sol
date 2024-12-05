@@ -5,7 +5,7 @@ import { ScriptTools } from "dss-test/ScriptTools.sol";
 
 import { stdJson } from "forge-std/StdJson.sol";
 
-import { Domain, StagingDeploymentBase } from "script/staging/StagingDeploymentBase.sol";
+import { Domain, StagingDeploymentBase } from "./StagingDeploymentBase.sol";
 
 contract DeployEthereumStaging is StagingDeploymentBase {
 
