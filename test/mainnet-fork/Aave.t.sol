@@ -38,6 +38,22 @@ contract AaveV3MainMarketBaseTest is ForkTestBase {
             25_000_000e6,
             uint256(5_000_000e6) / 1 days
         );
+        rateLimits.setRateLimitData(
+            RateLimitHelpers.makeAssetKey(
+                mainnetController.LIMIT_AAVE_WITHDRAW(),
+                ATOKEN_USDS
+            ),
+            10_000_000e18,
+            uint256(5_000_000e18) / 1 days
+        );
+        rateLimits.setRateLimitData(
+            RateLimitHelpers.makeAssetKey(
+                mainnetController.LIMIT_AAVE_WITHDRAW(),
+                ATOKEN_USDC
+            ),
+            10_000_000e6,
+            uint256(5_000_000e6) / 1 days
+        );
 
         vm.stopPrank();
 
@@ -67,6 +83,12 @@ contract AaveV3MainMarketDepositFailureTests is AaveV3MainMarketBaseTest {
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
         mainnetController.depositAave(ATOKEN_USDS, 1_000_000e18);
+    }
+
+    function test_depositAave_zeroMaxAmount() external {
+        vm.prank(relayer);
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        mainnetController.depositAave(makeAddr("fake-token"), 1e18);
     }
 
     function test_depositAave_usdsRateLimitedBoundary() external {
@@ -151,6 +173,55 @@ contract AaveV3MainMarketWithdrawFailureTests is AaveV3MainMarketBaseTest {
         vm.prank(relayer);
         vm.expectRevert("MainnetController/not-active");
         mainnetController.withdrawAave(ATOKEN_USDS, 1_000_000e18);
+    }
+
+    function test_withdrawAave_zeroMaxAmount() external {
+        // Longer setup because rate limit revert is at the end of the function
+        vm.startPrank(Ethereum.SPARK_PROXY);
+        rateLimits.setRateLimitData(
+            RateLimitHelpers.makeAssetKey(
+                mainnetController.LIMIT_AAVE_WITHDRAW(),
+                ATOKEN_USDC
+            ),
+            0,
+            0
+        );
+        vm.stopPrank();
+
+        deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
+
+        vm.startPrank(relayer);
+
+        mainnetController.depositAave(ATOKEN_USDC, 1_000_000e6);
+
+        vm.expectRevert("RateLimits/zero-maxAmount");
+        mainnetController.withdrawAave(ATOKEN_USDC, 1_000_000e6);
+    }
+
+    function test_withdrawAave_usdsRateLimitedBoundary() external {
+        deal(Ethereum.USDS, address(almProxy), 15_000_000e18);
+
+        vm.startPrank(relayer);
+
+        mainnetController.depositAave(ATOKEN_USDS, 15_000_000e18);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.withdrawAave(ATOKEN_USDS, 10_000_000e18 + 1);
+
+        mainnetController.withdrawAave(ATOKEN_USDS, 10_000_000e18);
+    }
+
+    function test_withdrawAave_usdcRateLimitedBoundary() external {
+        deal(Ethereum.USDC, address(almProxy), 15_000_000e6);
+
+        vm.startPrank(relayer);
+
+        mainnetController.depositAave(ATOKEN_USDC, 15_000_000e6);
+
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.withdrawAave(ATOKEN_USDC, 10_000_000e6 + 1);
+
+        mainnetController.withdrawAave(ATOKEN_USDC, 10_000_000e6);
     }
 
 }

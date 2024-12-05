@@ -84,6 +84,9 @@ contract MainnetController is AccessControl {
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
     bytes32 public constant LIMIT_4626_DEPOSIT   = keccak256("LIMIT_4626_DEPOSIT");
+    bytes32 public constant LIMIT_4626_WITHDRAW  = keccak256("LIMIT_4626_WITHDRAW");
+    bytes32 public constant LIMIT_AAVE_DEPOSIT   = keccak256("LIMIT_AAVE_DEPOSIT");
+    bytes32 public constant LIMIT_AAVE_WITHDRAW  = keccak256("LIMIT_AAVE_WITHDRAW");
     bytes32 public constant LIMIT_SUSDE_COOLDOWN = keccak256("LIMIT_SUSDE_COOLDOWN");
     bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
@@ -91,7 +94,6 @@ contract MainnetController is AccessControl {
     bytes32 public constant LIMIT_USDE_MINT      = keccak256("LIMIT_USDE_MINT");
     bytes32 public constant LIMIT_USDS_MINT      = keccak256("LIMIT_USDS_MINT");
     bytes32 public constant LIMIT_USDS_TO_USDC   = keccak256("LIMIT_USDS_TO_USDC");
-    bytes32 public constant LIMIT_AAVE_DEPOSIT   = keccak256("LIMIT_AAVE_DEPOSIT");
 
     address public immutable buffer;
 
@@ -268,7 +270,14 @@ contract MainnetController is AccessControl {
     }
 
     function withdrawERC4626(address token, uint256 amount)
-        external onlyRole(RELAYER) isActive returns (uint256 shares)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(
+            RateLimitHelpers.makeAssetKey(LIMIT_4626_WITHDRAW, token),
+            amount
+        )
+        returns (uint256 shares)
     {
         // Withdraw asset from a token, decode resulting shares.
         // Assumes proxy has adequate token shares.
@@ -281,6 +290,7 @@ contract MainnetController is AccessControl {
         );
     }
 
+    // NOTE: !!! Rate limited at end of function !!!
     function redeemERC4626(address token, uint256 shares)
         external onlyRole(RELAYER) isActive returns (uint256 assets)
     {
@@ -292,6 +302,11 @@ contract MainnetController is AccessControl {
                 abi.encodeCall(IERC4626(token).redeem, (shares, address(proxy), address(proxy)))
             ),
             (uint256)
+        );
+
+        rateLimits.triggerRateLimitDecrease(
+            RateLimitHelpers.makeAssetKey(LIMIT_4626_WITHDRAW, token),
+            assets
         );
     }
 
@@ -324,6 +339,7 @@ contract MainnetController is AccessControl {
         );
     }
 
+    // NOTE: !!! Rate limited at end of function !!!
     function withdrawAave(address aToken, uint256 amount)
         external onlyRole(RELAYER) isActive returns (uint256 amountWithdrawn)
     {
@@ -340,6 +356,11 @@ contract MainnetController is AccessControl {
                 )
             ),
             (uint256)
+        );
+
+        rateLimits.triggerRateLimitDecrease(
+            RateLimitHelpers.makeAssetKey(LIMIT_AAVE_WITHDRAW, aToken),
+            amountWithdrawn
         );
     }
 
