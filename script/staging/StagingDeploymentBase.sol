@@ -35,14 +35,14 @@ import {
     ForeignControllerDeploy,
     MainnetController,
     MainnetControllerDeploy
-} from "deploy/ControllerDeploy.sol";
+} from "../../deploy/ControllerDeploy.sol";
 
 import {
     ForeignControllerInit,
     MainnetControllerInit,
     MintRecipient,
     RateLimitData
-} from "deploy/ControllerInit.sol";
+} from "../../deploy/ControllerInit.sol";
 
 import { MockDaiUsds }      from "./mocks/MockDaiUsds.sol";
 import { MockJug }          from "./mocks/MockJug.sol";

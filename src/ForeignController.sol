@@ -11,11 +11,11 @@ import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessCon
 
 import { IPSM3 } from "spark-psm/src/interfaces/IPSM3.sol";
 
-import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
-import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
-import { IRateLimits } from "src/interfaces/IRateLimits.sol";
+import { IALMProxy }   from "./interfaces/IALMProxy.sol";
+import { ICCTPLike }   from "./interfaces/CCTPInterfaces.sol";
+import { IRateLimits } from "./interfaces/IRateLimits.sol";
 
-import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
+import { RateLimitHelpers } from "./RateLimitHelpers.sol";
 
 interface IATokenWithPool is IAToken {
     function POOL() external view returns(address);
