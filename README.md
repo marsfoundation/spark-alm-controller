@@ -68,6 +68,8 @@ The rate limit is calculated as follows:
 
 This is a linear rate limit that increases over time with a maximum limit. This rate limit is derived from these values which can be set by and admin OR updated by the `CONTROLLER` role. The `CONTROLLER` updates these values to increase/decrease the rate limit based on the functionality within the contract (e.g., decrease the rate limit after minting USDS by the minted amount by decrementing `lastAmount` and setting `lastUpdated` to `block.timestamp`).
 
+## TODO ADD AREA ABOUT DEPLOYMENTS AND USING MAINNET_RPC_URL
+
 ## Testing
 
 To run all tests, run the following command:

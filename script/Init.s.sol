@@ -20,7 +20,7 @@ import { MainnetController } from "../src/MainnetController.sol";
 import { RateLimitHelpers }  from "../src/RateLimitHelpers.sol";
 import { RateLimits }        from "../src/RateLimits.sol";
 
-contract InitMainnetFull is Script {
+contract InitMainnetController is Script {
 
     using stdJson     for string;
     using ScriptTools for string;
@@ -43,16 +43,16 @@ contract InitMainnetFull is Script {
             admin         : config.readAddress(".admin"),
             freezer       : config.readAddress(".freezer"),
             relayer       : config.readAddress(".relayer"),
-            oldController : config.readAddress(".controller"),
+            oldController : config.readAddress(".liveController"),
             psm           : config.readAddress(".psm"),
             vault         : config.readAddress(".allocatorVault"),
-            buffer        : config.readAddress(".buffer"),
-            cctpMessenger : config.readAddress(".cctpMessenger"),
+            buffer        : config.readAddress(".allocatorBuffer"),
+            cctpMessenger : config.readAddress(".cctpTokenMessenger"),
             dai           : config.readAddress(".dai"),
             daiUsds       : config.readAddress(".daiUsds"),
             usdc          : config.readAddress(".usdc"),
             usds          : config.readAddress(".usds"),
-            susds         : config.readAddress("susds")
+            susds         : config.readAddress(".susds")
         });
 
         RateLimitData memory standardUsdsData = RateLimitData({
@@ -78,12 +78,12 @@ contract InitMainnetFull is Script {
 
         mintRecipients[0] = MintRecipient({
             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
+            mintRecipient : bytes32(uint256(uint160(config.readAddress(".almProxyBase"))))
         });
 
         ControllerInstance memory controllerInst = ControllerInstance({
             almProxy   : config.readAddress(".almProxy"),
-            controller : config.readAddress(".controller"),
+            controller : config.readAddress(".newController"),
             rateLimits : config.readAddress(".rateLimits")
         });
 
@@ -95,6 +95,15 @@ contract InitMainnetFull is Script {
             mintRecipients
         );
 
+        // Step 2: Set the rate limits
+        _setRateLimits(controllerInst, config);
+
+        vm.stopBroadcast();
+
+        console.log("Controller initialized at", controllerInst.controller);
+    }
+
+    function _setRateLimits(ControllerInstance memory controllerInst, string memory config) internal {
         MainnetController controller = MainnetController(controllerInst.controller);
         RateLimits        rateLimits = RateLimits(controllerInst.rateLimits);
 
@@ -109,10 +118,6 @@ contract InitMainnetFull is Script {
         rateLimits.setRateLimitData(susdeDepositKey,  5_000_000e18, uint256(1_000_000e18) / 4 hours);
         rateLimits.setRateLimitData(susdsDepositKey,  5_000_000e18, uint256(1_000_000e18) / 4 hours);
         rateLimits.setRateLimitData(usdeMintKey,      5_000_000e6,  uint256(1_000_000e6)  / 4 hours);
-
-        vm.stopBroadcast();
-
-        console.log("Controller initialized at", controllerInst.controller);
     }
 
 }
