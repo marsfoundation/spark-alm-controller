@@ -19,13 +19,9 @@ import { AllocatorVault }  from "dss-allocator/src/AllocatorVault.sol";
 
 import { ScriptTools } from "dss-test/ScriptTools.sol";
 
-import { MockERC20 } from "erc20-helpers/MockERC20.sol";
-
 import { IERC20 }  from "forge-std/interfaces/IERC20.sol";
 import { Script }  from "forge-std/Script.sol";
 import { stdJson } from "forge-std/StdJson.sol";
-
-import { PSM3Deploy } from "spark-psm/deploy/PSM3Deploy.sol";
 
 import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
@@ -44,7 +40,8 @@ import {
     RateLimitData
 } from "../../deploy/ControllerInit.sol";
 
-import { IRateLimits } from "../../src/interfaces/IRateLimits.sol";
+import { IRateLimits }      from "../../src/interfaces/IRateLimits.sol";
+import { RateLimitHelpers } from "../../src/RateLimitHelpers.sol";
 
 import { MockJug }          from "./mocks/MockJug.sol";
 import { MockUsdsJoin }     from "./mocks/MockUsdsJoin.sol";
@@ -294,6 +291,26 @@ contract FullStagingDeploy is Script {
             rateLimits: IRateLimits(instance.rateLimits),
             data:       rateLimitData18,
             name:       "usdeBurnData",
+            decimals:   18
+        });
+        MainnetControllerInit.setRateLimitData({
+            key:        RateLimitHelpers.makeAssetKey(
+                            MainnetController(instance.controller).LIMIT_4626_DEPOSIT(),
+                            address(MainnetController(instance.controller).susde())
+                        ),
+            rateLimits: IRateLimits(instance.rateLimits),
+            data:       rateLimitData18,
+            name:       "susdsMintData",
+            decimals:   18
+        });
+        MainnetControllerInit.setRateLimitData({
+            key:        RateLimitHelpers.makeAssetKey(
+                            MainnetController(instance.controller).LIMIT_4626_WITHDRAW(),
+                            address(MainnetController(instance.controller).susde())
+                        ),
+            rateLimits: IRateLimits(instance.rateLimits),
+            data:       rateLimitData18,
+            name:       "susdsMintData",
             decimals:   18
         });
 
