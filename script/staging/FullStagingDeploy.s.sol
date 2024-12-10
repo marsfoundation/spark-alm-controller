@@ -47,7 +47,6 @@ import {
 import { IRateLimits } from "../../src/interfaces/IRateLimits.sol";
 
 import { MockJug }          from "./mocks/MockJug.sol";
-import { MockRateProvider } from "./mocks/MockRateProvider.sol";
 import { MockUsdsJoin }     from "./mocks/MockUsdsJoin.sol";
 import { MockVat }          from "./mocks/MockVat.sol";
 import { PSMWrapper }       from "./mocks/PSMWrapper.sol";
@@ -101,15 +100,6 @@ contract FullStagingDeploy is Script {
 
     address mainnetAlmProxy;
     address mainnetController;
-
-    /**********************************************************************************************/
-    /*** Base dependency deployments                                                            ***/
-    /**********************************************************************************************/
-
-    address usdsBase;
-    address susdsBase;
-
-    address psmBase;
 
     /**********************************************************************************************/
     /*** Deployment-specific variables                                                          ***/
@@ -322,32 +312,6 @@ contract FullStagingDeploy is Script {
         ScriptTools.exportContract(mainnet.name, "rateLimits", instance.rateLimits);
     }
 
-    function _setUpBasePSM() public {
-        vm.selectFork(base.forkId);
-        vm.startBroadcast();
-
-        usdsBase  = address(new MockERC20("USDS",  "USDS",  18));
-        susdsBase = address(new MockERC20("sUSDS", "sUSDS", 18));
-
-        // Mint enough for seeded deposit
-        MockERC20(usdsBase).mint(deployer, 1e18);
-
-        psmBase = PSM3Deploy.deploy({
-            owner        : deployer,
-            usdc         : base.config.readAddress(".usdc"),
-            usds         : usdsBase,
-            susds        : susdsBase,
-            rateProvider : address(new MockRateProvider())
-        });
-
-        vm.stopBroadcast();
-
-        ScriptTools.exportContract(base.name, "usds",  usdsBase);
-        ScriptTools.exportContract(base.name, "susds", susdsBase);
-        ScriptTools.exportContract(base.name, "usdc",  base.config.readAddress(".usdc"));
-        ScriptTools.exportContract(base.name, "psm",   psmBase);
-    }
-
     function _setUpBaseALMController() public {
         vm.selectFork(base.forkId);
         vm.startBroadcast();
@@ -356,7 +320,7 @@ contract FullStagingDeploy is Script {
 
         ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
             admin : base.admin,
-            psm   : address(psmBase),
+            psm   : base.config.readAddress(".psm"),
             usdc  : base.config.readAddress(".usdc"),
             cctp  : base.config.readAddress(".cctpTokenMessenger")
         });
@@ -392,11 +356,11 @@ contract FullStagingDeploy is Script {
                 freezer       : base.config.readAddress(".freezer"),
                 relayer       : base.config.readAddress(".relayer"),
                 oldController : address(0),
-                psm           : psmBase,
+                psm           : base.config.readAddress(".psm"),
                 cctpMessenger : base.config.readAddress(".cctpTokenMessenger"),
                 usdc          : base.config.readAddress(".usdc"),
-                usds          : usdsBase,
-                susds         : susdsBase
+                usds          : base.config.readAddress(".usds"),
+                susds         : base.config.readAddress(".susds")
             }),
             controllerInst: instance,
             data: ForeignControllerInit.InitRateLimitData({
@@ -412,14 +376,9 @@ contract FullStagingDeploy is Script {
             mintRecipients: mintRecipients
         });
 
-        // Step 3: Seed ALM Proxy with initial amounts of USDS and sUSDS
-
-        MockERC20(usdsBase).mint(baseAlmProxy,  USDS_UNIT_SIZE);
-        MockERC20(susdsBase).mint(baseAlmProxy, USDS_UNIT_SIZE);
-
         vm.stopBroadcast();
 
-        // Step 4: Export all deployed addresses
+        // Step 3: Export all deployed addresses
 
         ScriptTools.exportContract(base.name, "freezer",    base.config.readAddress(".freezer"));
         ScriptTools.exportContract(base.name, "relayer",    base.config.readAddress(".relayer"));
@@ -438,9 +397,6 @@ contract FullStagingDeploy is Script {
         );
 
         vm.stopBroadcast();
-    }
-
-    function _runFullDeployment() internal {
     }
 
     function run() public {
@@ -472,7 +428,6 @@ contract FullStagingDeploy is Script {
         _setUpDependencies();
         _setUpAllocationSystem();
         _setUpALMController();
-        _setUpBasePSM();
         _setUpBaseALMController();
         _setBaseMintRecipient();
 
