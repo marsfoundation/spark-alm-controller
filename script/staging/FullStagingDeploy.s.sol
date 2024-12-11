@@ -226,8 +226,7 @@ contract FullStagingDeploy is Script {
             vault   : vault,
             psm     : psm,
             daiUsds : daiUsds,
-            cctp    : mainnet.config.readAddress(".cctpTokenMessenger"),
-            susds   : susds
+            cctp    : mainnet.config.readAddress(".cctpTokenMessenger")
         });
 
         mainnetAlmProxy   = instance.almProxy;
