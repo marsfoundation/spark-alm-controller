@@ -73,19 +73,13 @@ The rate limit is calculated as follows:
 
 This is a linear rate limit that increases over time with a maximum limit. This rate limit is derived from these values which can be set by and admin OR updated by the `CONTROLLER` role. The `CONTROLLER` updates these values to increase/decrease the rate limit based on the functionality within the contract (e.g., decrease the rate limit after minting USDS by the minted amount by decrementing `lastAmount` and setting `lastUpdated` to `block.timestamp`).
 
-## Trust Assumptions
+## Trust Assumptions and Attack Mitigation
 Below are all stated trust assumptions for using this contract in production:
 - The `DEFAULT_ADMIN_ROLE` is fully trusted, to be run by governance.
-- The `RELAYER` role is assumed to be able to be fully compromised by a malicious actor. 
+- The `RELAYER` role is assumed to be able to be fully compromised by a malicious actor. **This should be a major consideration during auditing engagements.**
   - The logic in the smart contracts must prevent the movement of value anywhere outside of the ALM system of contracts.
-  - The rate limits setup must prevent the possibility of griefing or locking/burning value by a malicious actor.
-  - The `FREEZER` must be able to stop the compromised `RELAYER` from performing more harmful actions by using the `freeze()` function.
-- AAVE deposits are subject to AAVE governance changes, such as setting reserves inactive, paused or frozen. 
-- USDC holdings are subject to blacklist risk.
-- Ethena deposits are subject to USDe depeg risks, blacklist risks, and mint and burn limits.
-- The Ethena Minter is fully trusted. If it is compromised it can: 
-  - Accept orders submitted by a malicious delegated signer that would burn a large amount of USDC for a small amount of USDe (bad quote).
-  - DOS minting/burning of USDe, locking funds.
+  - Any action must be limited to "reasonable" slippage/losses/opportunity cost by rate limits. A malicious relayer should not be able to cause losses above 50bps of the principal in a 24 hours time frame.
+  - The `FREEZER` must be able to stop the compromised `RELAYER` from performing more harmful actions within the max rate limits by using the `freeze()` function.
 - A compromised `RELAYER` can DOS Ethena unstaking, but this can be mitigated by freezing the Controller and reassigning the `RELAYER`. This is outlined in a test `test_compromisedRelayer_lockingFundsInEthenaSilo`.
 
 ## Operational Requirements
@@ -95,7 +89,6 @@ Below are all stated trust assumptions for using this contract in production:
 - Rate limits must take into account:
   - Risk tolerance for a given protocol
   - Griefing attacks (e.g., repetitive transactions with high slippage by malicious relayer).
-  - Reputational attack vectors (e.g., sudden withdraws from utilization-based markets spiking interest rates).
 
 ## Testing
 
