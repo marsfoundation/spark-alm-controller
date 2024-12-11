@@ -401,8 +401,8 @@ contract MainnetControllerCooldownSharesSUSDeFailureTests is ForkTestBase {
         uint256 boundaryShares     = susde.convertToShares(100e18 + 1);
 
         // Demonstrate how rounding works
-        assertEq(susde.convertToAssets(overBoundaryShares), 100e18 + 1);
-        assertEq(susde.convertToAssets(boundaryShares),     100e18);
+        assertEq(susde.previewRedeem(overBoundaryShares), 100e18 + 1);
+        assertEq(susde.previewRedeem(boundaryShares),     100e18);
 
         vm.prank(relayer);
         vm.expectRevert("RateLimits/rate-limit-exceeded");
