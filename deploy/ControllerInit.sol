@@ -295,12 +295,12 @@ library ForeignControllerInit {
             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
         );
 
-        setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  addresses.usdc),  rateLimits, data.usdcDepositData,   "usdcDepositData",          6);
-        setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, addresses.usdc),  rateLimits, data.usdcWithdrawData,  "usdcWithdrawData",         6);
-        setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  addresses.usds),  rateLimits, data.usdsDepositData,   "usdsDepositData",          18);
-        setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, addresses.usds),  rateLimits, data.usdsWithdrawData,  "usdsWithdrawData",         18);
-        setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  addresses.susds), rateLimits, data.susdsDepositData,  "susdsDepositData",         18);
-        setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, addresses.susds), rateLimits, data.susdsWithdrawData, "susdsWithdrawData",        18);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  addresses.usdc),  rateLimits, data.usdcDepositData,   "usdcDepositData",   6);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, addresses.usdc),  rateLimits, data.usdcWithdrawData,  "usdcWithdrawData",  6);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  addresses.usds),  rateLimits, data.usdsDepositData,   "usdsDepositData",   18);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, addresses.usds),  rateLimits, data.usdsWithdrawData,  "usdsWithdrawData",  18);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  addresses.susds), rateLimits, data.susdsDepositData,  "susdsDepositData",  18);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, addresses.susds), rateLimits, data.susdsWithdrawData, "susdsWithdrawData", 18);
 
         setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, data.usdcToCctpData,           "usdcToCctpData",           6);
         setRateLimitData(domainKeyEthereum,               rateLimits, data.cctpToEthereumDomainData, "cctpToEthereumDomainData", 6);
