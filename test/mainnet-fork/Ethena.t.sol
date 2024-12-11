@@ -450,7 +450,9 @@ contract MainnetControllerCooldownSharesSUSDeSuccessTests is ForkTestBase {
         vm.prank(relayer);
         vm.expectEmit(address(susde));
         emit Withdraw(address(almProxy), silo, address(almProxy), assets, 100e18);
-        mainnetController.cooldownSharesSUSDe(100e18);
+        uint256 returnedAssets = mainnetController.cooldownSharesSUSDe(100e18);
+
+        assertEq(returnedAssets, assets);
 
         assertEq(susde.balanceOf(address(almProxy)), 0);
         assertEq(usde.balanceOf(silo),               startingSiloBalance + assets);
@@ -463,9 +465,11 @@ contract MainnetControllerCooldownSharesSUSDeSuccessTests is ForkTestBase {
         assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e18);
 
         vm.prank(relayer);
-        mainnetController.cooldownSharesSUSDe(4_000_000e18);
+        uint256 returnedAssets = mainnetController.cooldownSharesSUSDe(4_000_000e18);
 
         uint256 assets1 = susde.convertToAssets(4_000_000e18);
+
+        assertEq(returnedAssets, assets1);
 
         assertGe(assets1, 4_000_000e18);
 
@@ -476,9 +480,11 @@ contract MainnetControllerCooldownSharesSUSDeSuccessTests is ForkTestBase {
         assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e18 - assets1 + (1_000_000e18 - 6400));  // Rounding
 
         vm.prank(relayer);
-        mainnetController.cooldownSharesSUSDe(600_000e18);
+        returnedAssets = mainnetController.cooldownSharesSUSDe(600_000e18);
 
         uint256 assets2 = susde.convertToAssets(600_000e18);
+
+        assertEq(returnedAssets, assets2);
 
         assertGe(assets2, 600_000e18);
 
