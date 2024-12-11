@@ -868,7 +868,7 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
     }
 
-    function _assertDepositRateLimitData(IERC20 asset, RateLimitData memory expectedData) internal {
+    function _assertDepositRateLimitData(IERC20 asset, RateLimitData memory expectedData) internal view {
         bytes32 assetKey = RateLimitHelpers.makeAssetKey(
             foreignController.LIMIT_PSM_DEPOSIT(),
             address(asset)
@@ -877,7 +877,7 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
         _assertRateLimitData(assetKey, expectedData);
     }
 
-    function _assertWithdrawRateLimitData(IERC20 asset, RateLimitData memory expectedData) internal {
+    function _assertWithdrawRateLimitData(IERC20 asset, RateLimitData memory expectedData) internal view {
         bytes32 assetKey = RateLimitHelpers.makeAssetKey(
             foreignController.LIMIT_PSM_WITHDRAW(),
             address(asset)
@@ -886,7 +886,7 @@ contract ForeignControllerDeployAndInitSuccessTests is ForeignControllerDeployAn
         _assertRateLimitData(assetKey, expectedData);
     }
 
-    function _assertRateLimitData(bytes32 domainKey, RateLimitData memory expectedData) internal {
+    function _assertRateLimitData(bytes32 domainKey, RateLimitData memory expectedData) internal view {
         IRateLimits.RateLimitData memory data = rateLimits.getRateLimitData(domainKey);
 
         assertEq(data.maxAmount,   expectedData.maxAmount);
