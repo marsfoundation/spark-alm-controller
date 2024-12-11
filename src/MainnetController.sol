@@ -382,7 +382,7 @@ contract MainnetController is AccessControl {
         );
     }
 
-    // Note that 2m per block includes other users
+    // Note that Ethena's mint/redeem per-block limits include other users
     function prepareUSDeMint(uint256 usdcAmount)
         external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDE_MINT, usdcAmount)
     {
