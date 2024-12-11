@@ -81,6 +81,7 @@ Below are all stated trust assumptions for using this contract in production:
   - The rate limits setup must prevent the possibility of griefing or locking/burning value by a malicious actor.
   - The `FREEZER` must be able to stop the compromised `RELAYER` from performing more harmful actions by using the `freeze()` function.
 - AAVE deposits are subject to AAVE governance changes, such as setting reserves inactive, paused or frozen. 
+- USDC holdings are subject to blacklist risk.
 - Ethena deposits are subject to USDe depeg risks, blacklist risks, and mint and burn limits.
 - The Ethena Minter is fully trusted. If it is compromised it can: 
   - Accept orders submitted by a malicious delegated signer that would burn a large amount of USDC for a small amount of USDe (bad quote).
