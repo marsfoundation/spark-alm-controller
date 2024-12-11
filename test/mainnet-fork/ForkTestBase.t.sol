@@ -208,8 +208,7 @@ contract ForkTestBase is DssTest {
             vault  : ilkInst.vault,
             psm    : Ethereum.PSM,
             daiUsds: Ethereum.DAI_USDS,
-            cctp   : Ethereum.CCTP_TOKEN_MESSENGER,
-            susds  : Ethereum.SUSDS
+            cctp   : Ethereum.CCTP_TOKEN_MESSENGER
         });
 
         almProxy          = ALMProxy(payable(controllerInst.almProxy));
