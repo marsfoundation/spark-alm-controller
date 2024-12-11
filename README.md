@@ -78,7 +78,7 @@ Below are all stated trust assumptions for using this contract in production:
 - The `DEFAULT_ADMIN_ROLE` is fully trusted, to be run by governance.
 - The `RELAYER` role is assumed to be able to be fully compromised by a malicious actor. **This should be a major consideration during auditing engagements.**
   - The logic in the smart contracts must prevent the movement of value anywhere outside of the ALM system of contracts.
-  - Any action must be limited to "reasonable" slippage/losses/opportunity cost by rate limits. A malicious relayer should not be able to cause losses above 50bps of the principal in a 24 hours time frame.
+  - Any action must be limited to "reasonable" slippage/losses/opportunity cost by rate limits. **A malicious relayer should not be able to cause losses above 50bps of the principal in a 24 hours time frame.**
   - The `FREEZER` must be able to stop the compromised `RELAYER` from performing more harmful actions within the max rate limits by using the `freeze()` function.
 - A compromised `RELAYER` can DOS Ethena unstaking, but this can be mitigated by freezing the Controller and reassigning the `RELAYER`. This is outlined in a test `test_compromisedRelayer_lockingFundsInEthenaSilo`.
 
