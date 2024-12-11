@@ -134,11 +134,11 @@ library MainnetControllerInit {
             addresses.susds
         );
 
-        _setRateLimitData(controller.LIMIT_USDS_MINT(),    rateLimits, data.usdsMintData,         "usdsMintData",         18);
-        _setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, data.usdsToUsdcData,       "usdsToUsdcData",       6);
-        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, data.usdcToCctpData,       "usdcToCctpData",       6);
-        _setRateLimitData(domainKeyBase,                   rateLimits, data.cctpToBaseDomainData, "cctpToBaseDomainData", 6);
-        _setRateLimitData(susdsKey,                        rateLimits, data.susdsDepositData,     "susdsDepositData",     18);
+        setRateLimitData(controller.LIMIT_USDS_MINT(),    rateLimits, data.usdsMintData,         "usdsMintData",         18);
+        setRateLimitData(controller.LIMIT_USDS_TO_USDC(), rateLimits, data.usdsToUsdcData,       "usdsToUsdcData",       6);
+        setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, data.usdcToCctpData,       "usdcToCctpData",       6);
+        setRateLimitData(domainKeyBase,                   rateLimits, data.cctpToBaseDomainData, "cctpToBaseDomainData", 6);
+        setRateLimitData(susdsKey,                        rateLimits, data.susdsDepositData,     "susdsDepositData",     18);
 
         // Step 4: Configure the mint recipients on other domains
 
@@ -175,7 +175,7 @@ library MainnetControllerInit {
         IPSMLike(psm).kiss(almProxy);  // To allow using no fee functionality
     }
 
-    function _setRateLimitData(
+    function setRateLimitData(
         bytes32       key,
         IRateLimits   rateLimits,
         RateLimitData memory data,
@@ -295,14 +295,15 @@ library ForeignControllerInit {
             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
         );
 
-        _setRateLimitData(_makeKey(depositKey,  addresses.usdc),  rateLimits, data.usdcDepositData,          "usdcDepositData",          6);
-        _setRateLimitData(_makeKey(withdrawKey, addresses.usdc),  rateLimits, data.usdcWithdrawData,         "usdcWithdrawData",         6);
-        _setRateLimitData(_makeKey(depositKey,  addresses.usds),  rateLimits, data.usdsDepositData,          "usdsDepositData",          18);
-        _setRateLimitData(_makeKey(withdrawKey, addresses.usds),  rateLimits, data.usdsWithdrawData,         "usdsWithdrawData",         18);
-        _setRateLimitData(_makeKey(depositKey,  addresses.susds), rateLimits, data.susdsDepositData,         "susdsDepositData",         18);
-        _setRateLimitData(_makeKey(withdrawKey, addresses.susds), rateLimits, data.susdsWithdrawData,        "susdsWithdrawData",        18);
-        _setRateLimitData(controller.LIMIT_USDC_TO_CCTP(),        rateLimits, data.usdcToCctpData,           "usdcToCctpData",           6);
-        _setRateLimitData(domainKeyEthereum,                      rateLimits, data.cctpToEthereumDomainData, "cctpToEthereumDomainData", 6);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  addresses.usdc),  rateLimits, data.usdcDepositData,   "usdcDepositData",   6);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, addresses.usdc),  rateLimits, data.usdcWithdrawData,  "usdcWithdrawData",  6);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  addresses.usds),  rateLimits, data.usdsDepositData,   "usdsDepositData",   18);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, addresses.usds),  rateLimits, data.usdsWithdrawData,  "usdsWithdrawData",  18);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  addresses.susds), rateLimits, data.susdsDepositData,  "susdsDepositData",  18);
+        setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, addresses.susds), rateLimits, data.susdsWithdrawData, "susdsWithdrawData", 18);
+
+        setRateLimitData(controller.LIMIT_USDC_TO_CCTP(), rateLimits, data.usdcToCctpData,           "usdcToCctpData",           6);
+        setRateLimitData(domainKeyEthereum,               rateLimits, data.cctpToEthereumDomainData, "cctpToEthereumDomainData", 6);
 
         // Step 3: Configure the mint recipients on other domains
 
@@ -311,11 +312,7 @@ library ForeignControllerInit {
         }
     }
 
-    function _makeKey(bytes32 actionKey, address asset) internal pure returns (bytes32) {
-        return RateLimitHelpers.makeAssetKey(actionKey, asset);
-    }
-
-    function _setRateLimitData(
+    function setRateLimitData(
         bytes32       key,
         IRateLimits   rateLimits,
         RateLimitData memory data,

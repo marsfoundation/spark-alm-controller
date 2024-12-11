@@ -403,19 +403,22 @@ contract MainnetController is AccessControl {
         );
     }
 
-    function cooldownSharesSUSDe(uint256 susdeAmount)
+    // NOTE: !!! Rate limited at end of function !!!
+    function cooldownSharesSUSDe(uint256 susdeAmount) 
         external
-        onlyRole(RELAYER)
-        isActive
-        rateLimited(
-            LIMIT_SUSDE_COOLDOWN,
-            susde.convertToAssets(susdeAmount)
-        )
+        onlyRole(RELAYER) 
+        isActive 
+        returns (uint256 cooldownAmount)
     {
-        proxy.doCall(
-            address(susde),
-            abi.encodeCall(susde.cooldownShares, (susdeAmount))
+        cooldownAmount = abi.decode(
+            proxy.doCall(
+                address(susde),
+                abi.encodeCall(susde.cooldownShares, (susdeAmount))
+            ),
+            (uint256)
         );
+
+        rateLimits.triggerRateLimitDecrease(LIMIT_SUSDE_COOLDOWN, cooldownAmount);
     }
 
     function unstakeSUSDe() external onlyRole(RELAYER) isActive {
