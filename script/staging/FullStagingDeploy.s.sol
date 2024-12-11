@@ -50,6 +50,7 @@ import { PSMWrapper }       from "./mocks/PSMWrapper.sol";
 
 struct Domain {
     string  name;
+    string  nameDeps;
     string  config;
     uint256 forkId;
     address admin;
@@ -155,15 +156,15 @@ contract FullStagingDeploy is Script {
 
         // Step 4: Export all deployed addresses
 
-        ScriptTools.exportContract(mainnet.name, "dai",      dai);
-        ScriptTools.exportContract(mainnet.name, "daiUsds",  daiUsds);
-        ScriptTools.exportContract(mainnet.name, "jug",      jug);
-        ScriptTools.exportContract(mainnet.name, "psm",      psm);
-        ScriptTools.exportContract(mainnet.name, "susds",    susds);
-        ScriptTools.exportContract(mainnet.name, "usdc",     usdc);
-        ScriptTools.exportContract(mainnet.name, "usds",     usds);
-        ScriptTools.exportContract(mainnet.name, "usdsJoin", usdsJoin);
-        ScriptTools.exportContract(mainnet.name, "vat",      vat);
+        ScriptTools.exportContract(mainnet.nameDeps, "dai",      dai);
+        ScriptTools.exportContract(mainnet.nameDeps, "daiUsds",  daiUsds);
+        ScriptTools.exportContract(mainnet.nameDeps, "jug",      jug);
+        ScriptTools.exportContract(mainnet.nameDeps, "psm",      psm);
+        ScriptTools.exportContract(mainnet.nameDeps, "susds",    susds);
+        ScriptTools.exportContract(mainnet.nameDeps, "usdc",     usdc);
+        ScriptTools.exportContract(mainnet.nameDeps, "usds",     usds);
+        ScriptTools.exportContract(mainnet.nameDeps, "usdsJoin", usdsJoin);
+        ScriptTools.exportContract(mainnet.nameDeps, "vat",      vat);
     }
 
     function _setUpAllocationSystem() internal {
@@ -206,12 +207,12 @@ contract FullStagingDeploy is Script {
 
         // Step 4: Export all deployed addresses
 
-        ScriptTools.exportContract(mainnet.name, "allocatorOracle",   oracle);
-        ScriptTools.exportContract(mainnet.name, "allocatorRegistry", registry);
-        ScriptTools.exportContract(mainnet.name, "allocatorRoles",    roles);
+        ScriptTools.exportContract(mainnet.nameDeps, "allocatorOracle",   oracle);
+        ScriptTools.exportContract(mainnet.nameDeps, "allocatorRegistry", registry);
+        ScriptTools.exportContract(mainnet.nameDeps, "allocatorRoles",    roles);
 
-        ScriptTools.exportContract(mainnet.name, "allocatorBuffer", buffer);
-        ScriptTools.exportContract(mainnet.name, "allocatorVault",  vault);
+        ScriptTools.exportContract(mainnet.nameDeps, "allocatorBuffer", buffer);
+        ScriptTools.exportContract(mainnet.nameDeps, "allocatorVault",  vault);
     }
 
     function _setUpALMController() internal {
@@ -306,8 +307,9 @@ contract FullStagingDeploy is Script {
 
         // Step 4: Export all deployed addresses
 
-        ScriptTools.exportContract(mainnet.name, "freezer",    mainnet.config.readAddress(".freezer"));
-        ScriptTools.exportContract(mainnet.name, "relayer",    mainnet.config.readAddress(".relayer"));
+        ScriptTools.exportContract(mainnet.nameDeps, "freezer",    mainnet.config.readAddress(".freezer"));
+        ScriptTools.exportContract(mainnet.nameDeps, "relayer",    mainnet.config.readAddress(".relayer"));
+
         ScriptTools.exportContract(mainnet.name, "almProxy",   instance.almProxy);
         ScriptTools.exportContract(mainnet.name, "controller", instance.controller);
         ScriptTools.exportContract(mainnet.name, "rateLimits", instance.rateLimits);
@@ -381,8 +383,9 @@ contract FullStagingDeploy is Script {
 
         // Step 3: Export all deployed addresses
 
-        ScriptTools.exportContract(base.name, "freezer",    base.config.readAddress(".freezer"));
-        ScriptTools.exportContract(base.name, "relayer",    base.config.readAddress(".relayer"));
+        ScriptTools.exportContract(base.nameDeps, "freezer",    base.config.readAddress(".freezer"));
+        ScriptTools.exportContract(base.nameDeps, "relayer",    base.config.readAddress(".relayer"));
+
         ScriptTools.exportContract(base.name, "almProxy",   instance.almProxy);
         ScriptTools.exportContract(base.name, "controller", instance.controller);
         ScriptTools.exportContract(base.name, "rateLimits", instance.rateLimits);
@@ -407,16 +410,18 @@ contract FullStagingDeploy is Script {
         deployer = msg.sender;
 
         mainnet = Domain({
-            name   : "mainnet-staging",
-            config : ScriptTools.loadConfig("mainnet-staging"),
-            forkId : vm.createFork(getChain("mainnet").rpcUrl),
-            admin  : deployer
+            name     : "mainnet-staging",
+            nameDeps : "mainnet-staging-deps",
+            config   : ScriptTools.loadConfig("mainnet-staging"),
+            forkId   : vm.createFork(getChain("mainnet").rpcUrl),
+            admin    : deployer
         });
         base = Domain({
-            name   : "base-staging",
-            config : ScriptTools.loadConfig("base-staging"),
-            forkId : vm.createFork(getChain("base").rpcUrl),
-            admin  : deployer
+            name     : "base-staging",
+            nameDeps : "base-staging-deps",
+            config   : ScriptTools.loadConfig("base-staging"),
+            forkId :   vm.createFork(getChain("base").rpcUrl),
+            admin    : deployer
         });
 
         // Ballpark sizing of rate limits, tokens in PSMs, etc
@@ -432,8 +437,8 @@ contract FullStagingDeploy is Script {
         _setUpBaseALMController();
         _setBaseMintRecipient();
 
-        ScriptTools.exportContract(mainnet.name, "admin", deployer);
-        ScriptTools.exportContract(base.name,    "admin", deployer);
+        ScriptTools.exportContract(mainnet.nameDeps, "admin", deployer);
+        ScriptTools.exportContract(base.nameDeps,    "admin", deployer);
     }
 
 }
