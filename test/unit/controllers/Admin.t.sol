@@ -6,7 +6,6 @@ import { MainnetController } from "../../../src/MainnetController.sol";
 
 import { MockDaiUsds } from "../mocks/MockDaiUsds.sol";
 import { MockPSM }     from "../mocks/MockPSM.sol";
-import { MockSUsds }   from "../mocks/MockSUsds.sol";
 import { MockVault }   from "../mocks/MockVault.sol";
 
 import "../UnitTestBase.t.sol";
@@ -23,7 +22,6 @@ contract MainnetControllerAdminTests is UnitTestBase {
     function setUp() public {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
-        MockSUsds   susds   = new MockSUsds(makeAddr("susds"));
         MockVault   vault   = new MockVault(makeAddr("buffer"));
 
         mainnetController = new MainnetController(
@@ -33,8 +31,7 @@ contract MainnetControllerAdminTests is UnitTestBase {
             address(vault),
             address(psm),
             address(daiUsds),
-            makeAddr("cctp"),
-            address(susds)
+            makeAddr("cctp")
         );
     }
 
