@@ -28,10 +28,6 @@ interface IEthenaMinterLike {
     function removeDelegatedSigner(address delegateSigner) external;
 }
 
-interface ISUSDSLike is IERC4626 {
-    function usds() external view returns(address);
-}
-
 interface ISUSDELike is IERC4626 {
     function cooldownAssets(uint256 usdeAmount) external;
     function cooldownShares(uint256 susdeAmount) external;
@@ -110,7 +106,6 @@ contract MainnetController is AccessControl {
     IERC20     public immutable usde;
     IERC20     public immutable usdc;
     ISUSDELike public immutable susde;
-    ISUSDSLike public immutable susds;
 
     uint256 public immutable psmTo18ConversionFactor;
 
@@ -129,8 +124,7 @@ contract MainnetController is AccessControl {
         address vault_,
         address psm_,
         address daiUsds_,
-        address cctp_,
-        address susds_
+        address cctp_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
@@ -145,10 +139,9 @@ contract MainnetController is AccessControl {
         ethenaMinter = IEthenaMinterLike(Ethereum.ETHENA_MINTER);
 
         susde = ISUSDELike(Ethereum.SUSDE);
-        susds = ISUSDSLike(susds_);
         dai   = IERC20(daiUsds.dai());
         usdc  = IERC20(psm.gem());
-        usds  = IERC20(susds.usds());
+        usds  = IERC20(Ethereum.USDS);
         usde  = IERC20(Ethereum.USDE);
 
         psmTo18ConversionFactor = psm.to18ConversionFactor();

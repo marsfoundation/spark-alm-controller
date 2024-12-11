@@ -275,8 +275,7 @@ contract StagingDeploymentBase is Script {
             vault   : vault,
             psm     : psm,
             daiUsds : daiUsds,
-            cctp    : CCTP_TOKEN_MESSENGER_MAINNET,
-            susds   : susds
+            cctp    : CCTP_TOKEN_MESSENGER_MAINNET
         });
 
         mainnetAlmProxy   = instance.almProxy;

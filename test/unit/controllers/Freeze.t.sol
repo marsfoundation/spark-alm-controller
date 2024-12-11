@@ -7,7 +7,6 @@ import { ForeignController } from "../../../src/ForeignController.sol";
 import { MockDaiUsds } from "../mocks/MockDaiUsds.sol";
 import { MockPSM }     from "../mocks/MockPSM.sol";
 import { MockPSM3 }    from "../mocks/MockPSM3.sol";
-import { MockSUsds }   from "../mocks/MockSUsds.sol";
 import { MockVault }   from "../mocks/MockVault.sol";
 
 import "../UnitTestBase.t.sol";
@@ -26,7 +25,6 @@ contract ControllerTestBase is UnitTestBase {
     function setUp() public virtual {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
-        MockSUsds   susds   = new MockSUsds(makeAddr("susds"));
         MockVault   vault   = new MockVault(makeAddr("buffer"));
 
         // Default to mainnet controller for tests and override with foreign controller
@@ -37,8 +35,7 @@ contract ControllerTestBase is UnitTestBase {
             address(vault),
             address(psm),
             address(daiUsds),
-            makeAddr("cctp"),
-            address(susds)
+            makeAddr("cctp")
         )));
 
         _setRoles();

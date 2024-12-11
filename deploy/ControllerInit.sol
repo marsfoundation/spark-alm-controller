@@ -96,7 +96,6 @@ library MainnetControllerInit {
         require(address(controller.psm())        == addresses.psm,             "MainnetControllerInit/incorrect-psm");
         require(address(controller.daiUsds())    == addresses.daiUsds,         "MainnetControllerInit/incorrect-daiUsds");
         require(address(controller.cctp())       == addresses.cctpMessenger,   "MainnetControllerInit/incorrect-cctpMessenger");
-        require(address(controller.susds())      == addresses.susds,           "MainnetControllerInit/incorrect-susds");
         require(address(controller.dai())        == addresses.dai,             "MainnetControllerInit/incorrect-dai");
         require(address(controller.usdc())       == addresses.usdc,            "MainnetControllerInit/incorrect-usdc");
         require(address(controller.usds())       == addresses.usds,            "MainnetControllerInit/incorrect-usds");

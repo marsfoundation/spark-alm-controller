@@ -166,7 +166,6 @@ contract DeployEthereumTest is Test {
         assertEq(address(mainnetController.psm()),        outputMainnet.readAddress(".psm"));
         assertEq(address(mainnetController.daiUsds()),    outputMainnet.readAddress(".daiUsds"));
         assertEq(address(mainnetController.cctp()),       inputMainnet.readAddress(".cctpTokenMessenger"));
-        assertEq(address(mainnetController.susds()),      outputMainnet.readAddress(".susds"));
         assertEq(address(mainnetController.dai()),        outputMainnet.readAddress(".dai"));
         assertEq(address(mainnetController.usdc()),       outputMainnet.readAddress(".usdc"));
         assertEq(address(mainnetController.usds()),       outputMainnet.readAddress(".usds"));

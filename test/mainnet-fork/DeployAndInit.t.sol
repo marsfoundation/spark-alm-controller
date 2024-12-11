@@ -134,8 +134,7 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
             vault,
             PSM,
             DAI_USDS,
-            CCTP_MESSENGER,
-            address(susds)
+            CCTP_MESSENGER
         );
 
         MintRecipient[] memory mintRecipients_ = new MintRecipient[](1);
@@ -232,11 +231,6 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
     function test_init_incorrectCctp() external {
         addresses.cctpMessenger = mismatchAddress;
         _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-cctpMessenger"));
-    }
-
-    function test_init_incorrectSUsds() external {
-        addresses.susds = mismatchAddress;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-susds"));
     }
 
     function test_init_incorrectDai() external {
@@ -438,8 +432,7 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
             vault,
             PSM,
             DAI_USDS,
-            CCTP_MESSENGER,
-            address(susds)
+            CCTP_MESSENGER
         );
 
         addresses.oldController = address(mainnetController);
@@ -492,8 +485,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             vault,
             PSM,
             DAI_USDS,
-            CCTP_MESSENGER,
-            address(susds)
+            CCTP_MESSENGER
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
@@ -513,7 +505,6 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         assertEq(address(mainnetController.psm()),        PSM);
         assertEq(address(mainnetController.daiUsds()),    DAI_USDS);
         assertEq(address(mainnetController.cctp()),       CCTP_MESSENGER);
-        assertEq(address(mainnetController.susds()),      address(susds));
         assertEq(address(mainnetController.dai()),        address(dai));
         assertEq(address(mainnetController.usdc()),       address(usdc));
         assertEq(address(mainnetController.usds()),       address(usds));
@@ -591,8 +582,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             vault,
             PSM,
             DAI_USDS,
-            CCTP_MESSENGER,
-            address(susds)
+            CCTP_MESSENGER
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
@@ -655,8 +645,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             vault,
             PSM,
             DAI_USDS,
-            CCTP_MESSENGER,
-            address(susds)
+            CCTP_MESSENGER
         );
 
         (
@@ -683,8 +672,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
             vault,
             PSM,
             DAI_USDS,
-            CCTP_MESSENGER,
-            address(susds)
+            CCTP_MESSENGER
         );
 
         // Overwrite storage for all previous deployments in setUp and assert deployment
