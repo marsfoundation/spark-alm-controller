@@ -720,7 +720,7 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
     }
 
-    function _assertRateLimitData(bytes32 domainKey, RateLimitData memory expectedData) internal {
+    function _assertRateLimitData(bytes32 domainKey, RateLimitData memory expectedData) internal view {
         IRateLimits.RateLimitData memory data = rateLimits.getRateLimitData(domainKey);
 
         assertEq(data.maxAmount,   expectedData.maxAmount);

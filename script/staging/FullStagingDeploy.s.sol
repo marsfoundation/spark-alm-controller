@@ -279,40 +279,24 @@ contract FullStagingDeploy is Script {
         });
 
         // Extra rate limit configuration
-        MainnetControllerInit.setRateLimitData({
-            key:        MainnetController(instance.controller).LIMIT_USDE_MINT(),
-            rateLimits: IRateLimits(instance.rateLimits),
-            data:       rateLimitData6,
-            name:       "usdeMintData",
-            decimals:   6
-        });
-        MainnetControllerInit.setRateLimitData({
-            key:        MainnetController(instance.controller).LIMIT_USDE_BURN(),
-            rateLimits: IRateLimits(instance.rateLimits),
-            data:       rateLimitData18,
-            name:       "usdeBurnData",
-            decimals:   18
-        });
-        MainnetControllerInit.setRateLimitData({
-            key:        RateLimitHelpers.makeAssetKey(
-                            MainnetController(instance.controller).LIMIT_4626_DEPOSIT(),
-                            address(MainnetController(instance.controller).susde())
-                        ),
-            rateLimits: IRateLimits(instance.rateLimits),
-            data:       rateLimitData18,
-            name:       "susdsMintData",
-            decimals:   18
-        });
-        MainnetControllerInit.setRateLimitData({
-            key:        RateLimitHelpers.makeAssetKey(
-                            MainnetController(instance.controller).LIMIT_4626_WITHDRAW(),
-                            address(MainnetController(instance.controller).susde())
-                        ),
-            rateLimits: IRateLimits(instance.rateLimits),
-            data:       rateLimitData18,
-            name:       "susdsMintData",
-            decimals:   18
-        });
+        bytes32 mintKey = MainnetController(instance.controller).LIMIT_USDE_MINT();
+        bytes32 burnKey = MainnetController(instance.controller).LIMIT_USDE_BURN();
+    
+        bytes32 susdsDepositKey = RateLimitHelpers.makeAssetKey(
+            MainnetController(instance.controller).LIMIT_4626_DEPOSIT(),
+            address(MainnetController(instance.controller).susde())
+        );
+
+        bytes32 susdsWithdrawKey = RateLimitHelpers.makeAssetKey(
+            MainnetController(instance.controller).LIMIT_4626_WITHDRAW(),
+            address(MainnetController(instance.controller).susde())
+        );
+
+        // Extra rate limit configuration
+        MainnetControllerInit.setRateLimitData(mintKey,          IRateLimits(instance.rateLimits), rateLimitData6,  "usdeMintData",      6);
+        MainnetControllerInit.setRateLimitData(burnKey,          IRateLimits(instance.rateLimits), rateLimitData18, "usdeBurnData",      18);
+        MainnetControllerInit.setRateLimitData(susdsDepositKey,  IRateLimits(instance.rateLimits), rateLimitData18, "susdsDepositData",  18);
+        MainnetControllerInit.setRateLimitData(susdsWithdrawKey, IRateLimits(instance.rateLimits), rateLimitData18, "susdsWithdrawData", 18);
 
         // Step 3: Transfer ownership of mock usdsJoin to the vault (able to mint usds)
 
