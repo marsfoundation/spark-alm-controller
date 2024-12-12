@@ -280,7 +280,7 @@ contract AaveV3MainMarketWithdrawSuccessTests is AaveV3MainMarketBaseTest {
             ATOKEN_USDS
         );
         vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setUnlimitedRateLimitData((key));
+        rateLimits.setUnlimitedRateLimitData(key);
 
         deal(Ethereum.USDS, address(almProxy), 1_000_000e18);
         vm.prank(relayer);
@@ -360,7 +360,7 @@ contract AaveV3MainMarketWithdrawSuccessTests is AaveV3MainMarketBaseTest {
             ATOKEN_USDC
         );
         vm.prank(Ethereum.SPARK_PROXY);
-        rateLimits.setUnlimitedRateLimitData((key));
+        rateLimits.setUnlimitedRateLimitData(key);
 
         deal(Ethereum.USDC, address(almProxy), 1_000_000e6);
         vm.prank(relayer);

@@ -222,7 +222,7 @@ contract AaveV3BaseMarketWithdrawSuccessTests is AaveV3BaseMarketTestBase {
             ATOKEN_USDC
         );
         vm.prank(Base.SPARK_EXECUTOR);
-        rateLimits.setUnlimitedRateLimitData((key));
+        rateLimits.setUnlimitedRateLimitData(key);
 
         deal(Base.USDC, address(almProxy), 1_000_000e6);
         vm.prank(relayer);
