@@ -44,9 +44,14 @@ All functions below change the balance of funds in the ALMProxy contract and are
 - `ForeignController`: This contract currently implements logic to:
   - Deposit and withdraw on EVM compliant L2 PSM3 contracts (see [spark-psm](https://github.com/marsfoundation/spark-psm) for implementation).
   - Initiate a transfer of USDC to other domains using CCTP.
+  - Deposit, withdraw, and redeem from ERC4626 contracts.
+  - Deposit and withdraw from AAVE.
 - `MainnetController`: This contract currently implements logic to:
-  - Mint and burn USDS on Ethereum mainnet.
-  - Deposit, withdraw, redeem in the sUSDS contract.
+  - Mint and burn USDS.
+  - Deposit, withdraw, redeem from ERC4626 contracts.
+  - Deposit and withdraw from AAVE.
+  - Mint and burn USDe.
+  - Cooldown and unstake from sUSDe.
   - Swap USDS to USDC and vice versa using the mainnet PSM.
   - Transfer USDC to other domains using CCTP.
 
@@ -67,6 +72,23 @@ The rate limit is calculated as follows:
 </div>
 
 This is a linear rate limit that increases over time with a maximum limit. This rate limit is derived from these values which can be set by and admin OR updated by the `CONTROLLER` role. The `CONTROLLER` updates these values to increase/decrease the rate limit based on the functionality within the contract (e.g., decrease the rate limit after minting USDS by the minted amount by decrementing `lastAmount` and setting `lastUpdated` to `block.timestamp`).
+
+## Trust Assumptions and Attack Mitigation
+Below are all stated trust assumptions for using this contract in production:
+- The `DEFAULT_ADMIN_ROLE` is fully trusted, to be run by governance.
+- The `RELAYER` role is assumed to be able to be fully compromised by a malicious actor. **This should be a major consideration during auditing engagements.**
+  - The logic in the smart contracts must prevent the movement of value anywhere outside of the ALM system of contracts.
+  - Any action must be limited to "reasonable" slippage/losses/opportunity cost by rate limits.
+  - The `FREEZER` must be able to stop the compromised `RELAYER` from performing more harmful actions within the max rate limits by using the `freeze()` function.
+- A compromised `RELAYER` can DOS Ethena unstaking, but this can be mitigated by freezing the Controller and reassigning the `RELAYER`. This is outlined in a test `test_compromisedRelayer_lockingFundsInEthenaSilo`.
+
+## Operational Requirements
+- All ERC-4626 vaults that are onboarded MUST have an initial burned shares amount that prevents rounding-based frontrunning attacks. These shares have to be unrecoverable so that they cannot be removed at a later date.
+- All ERC-20 tokens are to be non-rebasing with sufficiently high decimal precision.
+- Rate limits must be configured for specific ERC-4626 vaults and AAVE aTokens (vaults without rate limits set will revert). Unlimited rate limits can be used as an onboarding tool.
+- Rate limits must take into account:
+  - Risk tolerance for a given protocol
+  - Griefing attacks (e.g., repetitive transactions with high slippage by malicious relayer).
 
 ## Testing
 
