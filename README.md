@@ -81,6 +81,7 @@ Below are all stated trust assumptions for using this contract in production:
   - Any action must be limited to "reasonable" slippage/losses/opportunity cost by rate limits.
   - The `FREEZER` must be able to stop the compromised `RELAYER` from performing more harmful actions within the max rate limits by using the `freeze()` function.
 - A compromised `RELAYER` can DOS Ethena unstaking, but this can be mitigated by freezing the Controller and reassigning the `RELAYER`. This is outlined in a test `test_compromisedRelayer_lockingFundsInEthenaSilo`.
+- Ethena USDe Mint/Burn is trusted to not honor requests with over 50bps slippage from a delegated signer.
 
 ## Operational Requirements
 - All ERC-4626 vaults that are onboarded MUST have an initial burned shares amount that prevents rounding-based frontrunning attacks. These shares have to be unrecoverable so that they cannot be removed at a later date.
