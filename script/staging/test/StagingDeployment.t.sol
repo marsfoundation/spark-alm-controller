@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import { ScriptTools } from "dss-test/ScriptTools.sol";
+
 import "forge-std/Test.sol";
 
 import { IERC20 }   from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
-import { ScriptTools } from "dss-test/ScriptTools.sol";
+import { IMetaMorpho, Id } from "metamorpho/interfaces/IMetaMorpho.sol";
 
-import { Usds }  from "usds/src/Usds.sol";
+import { MarketParamsLib }       from "morpho-blue/src/libraries/MarketParamsLib.sol";
+import { IMorpho, MarketParams } from "morpho-blue/src/interfaces/IMorpho.sol";
+
+import { Usds } from "usds/src/Usds.sol";
+
 import { SUsds } from "sdai/src/SUsds.sol";
 
+import { Base }     from "spark-address-registry/src/Base.sol";
 import { Ethereum } from "spark-address-registry/src/Ethereum.sol";
 
 import { PSM3 } from "spark-psm/src/PSM3.sol";
@@ -99,7 +106,7 @@ contract StagingDeploymentTestBase is Test {
     /**** Setup                                                                                 ***/
     /**********************************************************************************************/
 
-    function setUp() public {
+    function setUp() public virtual {
         vm.setEnv("FOUNDRY_ROOT_CHAINID", "1");
 
         // Domains and bridge
@@ -349,6 +356,8 @@ contract MainnetStagingDeploymentTests is StagingDeploymentTestBase {
     //       minting/burning USDe into the ALMProxy. Also, for the purposes of this test, 
     //       minting/burning is done 1:1 with USDC.
 
+    // TODO: Try doing ethena minting with EIP-712 signatures (vm.sign)
+
     function _simulateUsdeMint(uint256 amount) internal {
         vm.prank(Ethereum.ETHENA_MINTER);
         usdc.transferFrom(address(almProxy), Ethereum.ETHENA_MINTER, amount);
@@ -367,111 +376,248 @@ contract MainnetStagingDeploymentTests is StagingDeploymentTestBase {
 
 }
 
-// contract BaseStagingDeploymentTests is StagingDeploymentTestBase {
+contract BaseStagingDeploymentTests is StagingDeploymentTestBase {
 
-//     function test_transferCCTP() public {
-//         base.selectFork();
+    using DomainHelpers     for *;
+    using CCTPBridgeTesting for *;
 
-//         uint256 startingBalance = usdcBase.balanceOf(address(baseAlmProxy));
+    address constant AUSDC_BASE        = 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB;
+    address constant MORPHO            = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
+    address constant MORPHO_VAULT_USDC = 0x305E03Ed9ADaAB22F4A58c24515D79f2B1E2FD5D;
 
-//         mainnet.selectFork();
+    function setUp() public override {
+        super.setUp();
 
-//         vm.startPrank(relayerSafe);
-//         mainnetController.mintUSDS(10e18);
-//         mainnetController.swapUSDSToUSDC(10e6);
-//         mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-//         vm.stopPrank();
+        base.selectFork();
 
-//         cctpBridge.relayMessagesToDestination(true);
+        bytes32[] memory rateLimitKeys = new bytes32[](4);
 
-//         assertEq(usdcBase.balanceOf(address(baseAlmProxy)), startingBalance + 10e6);
-//     }
+        rateLimitKeys[0] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_AAVE_DEPOSIT(),  AUSDC_BASE);
+        rateLimitKeys[1] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_4626_DEPOSIT(),  MORPHO_VAULT_USDC);
+        rateLimitKeys[2] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_AAVE_WITHDRAW(), AUSDC_BASE);
+        rateLimitKeys[3] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_4626_WITHDRAW(), MORPHO_VAULT_USDC);
 
-//     function test_transferToPSM() public {
-//         base.selectFork();
+        vm.startPrank(admin);
+        
+        for (uint256 i; i < rateLimitKeys.length; i++) {
+            baseRateLimits.setUnlimitedRateLimitData(rateLimitKeys[i]);
+        }
 
-//         uint256 startingBalance = usdcBase.balanceOf(address(psmBase));
+        vm.stopPrank();
+    }
 
-//         mainnet.selectFork();
+    function test_transferCCTP() public {
+        base.selectFork();
 
-//         vm.startPrank(relayerSafe);
-//         mainnetController.mintUSDS(10e18);
-//         mainnetController.swapUSDSToUSDC(10e6);
-//         mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-//         vm.stopPrank();
+        uint256 startingBalance = usdcBase.balanceOf(address(baseAlmProxy));
 
-//         cctpBridge.relayMessagesToDestination(true);
+        mainnet.selectFork();
 
-//         uint256 startingShares = psmBase.shares(address(baseAlmProxy));
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
 
-//         vm.startPrank(relayerSafeBase);
-//         baseController.depositPSM(address(usdcBase), 10e6);
-//         vm.stopPrank();
+        cctpBridge.relayMessagesToDestination(true);
 
-//         assertEq(usdcBase.balanceOf(address(psmBase)), startingBalance + 10e6);
+        assertEq(usdcBase.balanceOf(address(baseAlmProxy)), startingBalance + 10e6);
+    }
 
-//         assertEq(psmBase.shares(address(baseAlmProxy)), startingShares + psmBase.convertToShares(10e18));
-//     }
+    function test_transferToPSM() public {
+        base.selectFork();
 
-//     function test_addAndRemoveFundsFromBasePSM() public {
-//         mainnet.selectFork();
+        uint256 startingBalance = usdcBase.balanceOf(address(psmBase));
 
-//         vm.startPrank(relayerSafe);
-//         mainnetController.mintUSDS(1e18);
-//         mainnetController.swapUSDSToUSDC(1e6);
-//         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-//         vm.stopPrank();
+        mainnet.selectFork();
 
-//         cctpBridge.relayMessagesToDestination(true);
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
 
-//         vm.startPrank(relayerSafeBase);
-//         baseController.depositPSM(address(usdcBase), 1e6);
-//         skip(1 days);
-//         baseController.withdrawPSM(address(usdcBase), 1e6);
-//         baseController.transferUSDCToCCTP(1e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
-//         vm.stopPrank();
+        cctpBridge.relayMessagesToDestination(true);
 
-//         // There is a bug when the messenger addresses are the same
-//         // Need to force update to skip the previous relayed message
-//         // See: https://github.com/marsfoundation/xchain-helpers/issues/24
-//         cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
-//         cctpBridge.relayMessagesToSource(true);
+        uint256 startingShares = psmBase.shares(address(baseAlmProxy));
 
-//         vm.startPrank(relayerSafe);
-//         mainnetController.swapUSDCToUSDS(1e6 - 1);
-//         mainnetController.burnUSDS((1e6 - 1) * 1e12);
-//         vm.stopPrank();
-//     }
+        vm.startPrank(relayerSafeBase);
+        baseController.depositPSM(address(usdcBase), 10e6);
+        vm.stopPrank();
 
-//     function test_addAndRemoveFundsFromBaseAAVE() public {
-//         address aUsdcBase = 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB;
+        assertEq(usdcBase.balanceOf(address(psmBase)), startingBalance + 10e6);
 
-//         mainnet.selectFork();
+        assertEq(psmBase.shares(address(baseAlmProxy)), startingShares + psmBase.convertToShares(10e18));
+    }
 
-//         vm.startPrank(relayerSafe);
-//         mainnetController.mintUSDS(1e18);
-//         mainnetController.swapUSDSToUSDC(1e6);
-//         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-//         vm.stopPrank();
+    function test_addAndRemoveFundsFromBasePSM() public {
+        mainnet.selectFork();
 
-//         cctpBridge.relayMessagesToDestination(true);
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
 
-//         vm.startPrank(relayerSafeBase);
-//         baseController.depositAave(aUsdcBase, 1e6);
-//         baseController.withdrawAave(aUsdcBase, 1e6);
-//         baseController.transferUSDCToCCTP(1e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
-//         vm.stopPrank();
+        cctpBridge.relayMessagesToDestination(true);
 
-//         // There is a bug when the messenger addresses are the same
-//         // Need to force update to skip the previous relayed message
-//         // See: https://github.com/marsfoundation/xchain-helpers/issues/24
-//         cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
-//         cctpBridge.relayMessagesToSource(true);
+        vm.startPrank(relayerSafeBase);
+        baseController.depositPSM(address(usdcBase), 10e6);
+        skip(1 days);
+        baseController.withdrawPSM(address(usdcBase), 10e6);
+        baseController.transferUSDCToCCTP(10e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
+        vm.stopPrank();
 
-//         vm.startPrank(relayerSafe);
-//         mainnetController.swapUSDCToUSDS(1e6 - 1);
-//         mainnetController.burnUSDS((1e6 - 1) * 1e12);
-//         vm.stopPrank();
-//     }
+        // There is a bug when the messenger addresses are the same
+        // Need to force update to skip the previous relayed message
+        // See: https://github.com/marsfoundation/xchain-helpers/issues/24
+        cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
+        cctpBridge.relayMessagesToSource(true);
 
-// }
+        vm.startPrank(relayerSafe);
+        mainnetController.swapUSDCToUSDS(10e6 - 1);
+        mainnetController.burnUSDS((10e6 - 1) * 1e12);
+        vm.stopPrank();
+    }
+
+    function test_addAndRemoveFundsFromBaseAAVE() public {
+        mainnet.selectFork();
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        vm.startPrank(relayerSafeBase);
+        baseController.depositAave(AUSDC_BASE, 10e6);
+        skip(1 days);
+        baseController.withdrawAave(AUSDC_BASE, 10e6);
+
+        assertEq(usdcBase.balanceOf(address(baseAlmProxy)), 10e6);
+
+        assertGe(IERC20(AUSDC_BASE).balanceOf(address(baseAlmProxy)), 0);  // Interest earned
+
+        baseController.transferUSDCToCCTP(10e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
+        vm.stopPrank();
+
+        // There is a bug when the messenger addresses are the same
+        // Need to force update to skip the previous relayed message
+        // See: https://github.com/marsfoundation/xchain-helpers/issues/24
+        cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
+        cctpBridge.relayMessagesToSource(true);
+
+        vm.startPrank(relayerSafe);
+        mainnetController.swapUSDCToUSDS(10e6 - 1);
+        mainnetController.burnUSDS((10e6 - 1) * 1e12);
+        vm.stopPrank();
+    }
+
+    function test_depositWithdrawFundsFromBaseMorphoUsdc() public {
+        _setUpMorphoMarket();
+
+        mainnet.selectFork();
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        vm.startPrank(relayerSafeBase);
+        baseController.depositERC4626(MORPHO_VAULT_USDC, 10e6);
+        skip(1 days);
+        baseController.withdrawERC4626(MORPHO_VAULT_USDC, 10e6);
+
+        assertEq(usdcBase.balanceOf(address(baseAlmProxy)), 10e6);
+
+        assertGe(IERC20(MORPHO_VAULT_USDC).balanceOf(address(baseAlmProxy)), 0);  // Interest earned
+
+        baseController.transferUSDCToCCTP(1e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
+        vm.stopPrank();
+
+        // There is a bug when the messenger addresses are the same
+        // Need to force update to skip the previous relayed message
+        // See: https://github.com/marsfoundation/xchain-helpers/issues/24
+        cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
+        cctpBridge.relayMessagesToSource(true);
+
+        vm.startPrank(relayerSafe);
+        mainnetController.swapUSDCToUSDS(1e6 - 1);
+        mainnetController.burnUSDS((1e6 - 1) * 1e12);
+        vm.stopPrank();
+    }
+
+    function test_depositRedeemFundsFromBaseMorphoUsdc() public {
+        _setUpMorphoMarket();
+
+        mainnet.selectFork();
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        vm.startPrank(relayerSafeBase);
+        baseController.depositERC4626(MORPHO_VAULT_USDC, 10e6);
+        skip(1 days);
+        baseController.redeemERC4626(MORPHO_VAULT_USDC, IERC20(MORPHO_VAULT_USDC).balanceOf(address(baseAlmProxy)));
+
+        assertGe(usdcBase.balanceOf(address(baseAlmProxy)), 10e6);  // Interest earned
+
+        assertEq(IERC20(MORPHO_VAULT_USDC).balanceOf(address(baseAlmProxy)), 0);  
+
+        baseController.transferUSDCToCCTP(1e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
+        vm.stopPrank();
+
+        // There is a bug when the messenger addresses are the same
+        // Need to force update to skip the previous relayed message
+        // See: https://github.com/marsfoundation/xchain-helpers/issues/24
+        cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
+        cctpBridge.relayMessagesToSource(true);
+
+        vm.startPrank(relayerSafe);
+        mainnetController.swapUSDCToUSDS(1e6 - 1);
+        mainnetController.burnUSDS((1e6 - 1) * 1e12);
+        vm.stopPrank();
+    }
+
+    // TODO: Replace this once market is live
+    function _setUpMorphoMarket() public {
+        vm.startPrank(Base.SPARK_EXECUTOR);
+
+        // Add in the idle markets so deposits can be made
+        MarketParams memory usdcParams = MarketParams({
+            loanToken:       Base.USDC,
+            collateralToken: address(0),
+            oracle:          address(0),
+            irm:             address(0),
+            lltv:            0
+        });
+
+        // IMorpho(MORPHO).createMarket(usdcParams);
+
+        IMetaMorpho(MORPHO_VAULT_USDC).submitCap(
+            usdcParams,
+            type(uint184).max
+        );
+
+        skip(1 days);
+
+        IMetaMorpho(MORPHO_VAULT_USDC).acceptCap(usdcParams);
+
+        Id[] memory supplyQueueUSDC = new Id[](1);
+        supplyQueueUSDC[0] = MarketParamsLib.id(usdcParams);
+        IMetaMorpho(MORPHO_VAULT_USDC).setSupplyQueue(supplyQueueUSDC);
+
+        vm.stopPrank();
+    }
+
+}
