@@ -167,6 +167,7 @@ contract ForkTestBase is Test {
         vm.stopPrank();
     }
 
+    // Default configuration for the fork, can be overridden in inheriting tests
     function _getBlock() internal virtual pure returns (uint256) {
         return 20782500;  // October 8, 2024
     }
