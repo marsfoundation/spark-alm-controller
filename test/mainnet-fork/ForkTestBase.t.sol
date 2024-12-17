@@ -155,7 +155,7 @@ contract ForkTestBase is DssTest {
 
         /*** Step 1: Set up environment, cast addresses ***/
 
-        source = getChain("mainnet").createSelectFork(20917850);  //  October 7, 2024
+        source = getChain("mainnet").createSelectFork(_getBlock());  
 
         dss = MCD.loadFromChainlog(LOG);
 
@@ -280,6 +280,11 @@ contract ForkTestBase is DssTest {
         vm.label(address(usdc),  "usdc");
         vm.label(address(usds),  "usds");
         vm.label(vault,          "vault");
+    }
+
+    // Default configuration for the fork, can be overridden in inheriting tests
+    function _getBlock() internal virtual pure returns (uint256) {
+        return 20917850; //  October 7, 2024
     }
 
 }
