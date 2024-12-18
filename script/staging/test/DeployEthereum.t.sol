@@ -1,22 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import { ScriptTools } from "dss-test/ScriptTools.sol";
+
 import "forge-std/Test.sol";
 
-import { ScriptTools } from "dss-test/ScriptTools.sol";
+import { IERC20 }   from "forge-std/interfaces/IERC20.sol";
+import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
+
+import { IMetaMorpho, Id } from "metamorpho/interfaces/IMetaMorpho.sol";
+
+import { MarketParamsLib }       from "morpho-blue/src/libraries/MarketParamsLib.sol";
+import { IMorpho, MarketParams } from "morpho-blue/src/interfaces/IMorpho.sol";
+
+import { Usds } from "usds/src/Usds.sol";
+
+import { SUsds } from "sdai/src/SUsds.sol";
+
+import { Base }     from "spark-address-registry/src/Base.sol";
+import { Ethereum } from "spark-address-registry/src/Ethereum.sol";
+
+import { PSM3 } from "spark-psm/src/PSM3.sol";
 
 import { Bridge }                from "xchain-helpers/src/testing/Bridge.sol";
 import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
 import { CCTPBridgeTesting }     from "xchain-helpers/src/testing/bridges/CCTPBridgeTesting.sol";
 import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
-
-import { Usds }  from "usds/src/Usds.sol";
-import { SUsds } from "sdai/src/SUsds.sol";
-
-import { AllocatorVault }    from "dss-allocator/src/AllocatorVault.sol";
-import { AllocatorBuffer }   from "dss-allocator/src/AllocatorBuffer.sol";
-import { AllocatorRegistry } from "dss-allocator/src/AllocatorRegistry.sol";
-import { AllocatorRoles }    from "dss-allocator/src/AllocatorRoles.sol";
 
 import { IRateLimits } from "../../../src/interfaces/IRateLimits.sol";
 
@@ -26,30 +35,38 @@ import { MainnetController } from "../../../src/MainnetController.sol";
 import { RateLimits }        from "../../../src/RateLimits.sol";
 import { RateLimitHelpers }  from "../../../src/RateLimitHelpers.sol";
 
-import { PSM3, IERC20 }      from "spark-psm/src/PSM3.sol";
-import { IRateProviderLike } from "spark-psm/src/interfaces/IRateProviderLike.sol";
+import { MainnetControllerDeploy } from "../../../deploy/ControllerDeploy.sol";
+import { MainnetControllerInit }   from "../../../deploy/ControllerInit.sol";
 
 interface IVatLike {
     function can(address, address) external view returns (uint256);
 }
 
-contract DeployEthereumTest is Test {
+contract StagingDeploymentTestBase is Test {
 
     using stdJson           for *;
     using DomainHelpers     for *;
     using CCTPBridgeTesting for *;
     using ScriptTools       for *;
 
+    // AAVE aTokens for testing
+    address constant AUSDS = 0x32a6268f9Ba3642Dda7892aDd74f1D34469A4259;
+    address constant AUSDC = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c;
+
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
+
+    uint256 constant RELEASE_DATE = 20241210;
 
     // Common variables
     address admin;
 
     // Configuration data
-    string inputMainnet;
-    string outputMainnet;
     string inputBase;
+    string inputMainnet;
     string outputBase;
+    string outputBaseDeps;
+    string outputMainnet;
+    string outputMainnetDeps;
 
     // Bridging
     Domain mainnet;
@@ -63,12 +80,8 @@ contract DeployEthereumTest is Test {
     IERC20 usdc;
     IERC20 dai;
 
-    AllocatorVault    vault;
-    AllocatorBuffer   buffer;
-    AllocatorRegistry registry;
-    AllocatorRoles    roles;
-
-    address safeMainnet;
+    address vault;
+    address relayerSafe;
     address usdsJoin;
 
     ALMProxy          almProxy;
@@ -77,7 +90,7 @@ contract DeployEthereumTest is Test {
 
     // Base contracts
 
-    address safeBase;
+    address relayerSafeBase;
 
     PSM3 psmBase;
 
@@ -85,15 +98,15 @@ contract DeployEthereumTest is Test {
     IERC20 susdsBase;
     IERC20 usdcBase;
 
-    ALMProxy          foreignAlmProxy;
-    ForeignController foreignController;
-    RateLimits        foreignRateLimits;
+    ALMProxy          baseAlmProxy;
+    ForeignController baseController;
+    RateLimits        baseRateLimits;
 
     /**********************************************************************************************/
     /**** Setup                                                                                 ***/
     /**********************************************************************************************/
 
-    function setUp() public {
+    function setUp() public virtual {
         vm.setEnv("FOUNDRY_ROOT_CHAINID", "1");
 
         // Domains and bridge
@@ -102,247 +115,120 @@ contract DeployEthereumTest is Test {
         cctpBridge = CCTPBridgeTesting.createCircleBridge(mainnet, base);
 
         // JSON data
-        inputMainnet  = ScriptTools.readInput("mainnet");
-        outputMainnet = ScriptTools.readOutput("mainnet-release", 20241022);
-        inputBase     = ScriptTools.readInput("base");
-        outputBase    = ScriptTools.readOutput("base-release", 20241022);
+        inputBase    = ScriptTools.readInput("base-staging");
+        inputMainnet = ScriptTools.readInput("mainnet-staging");
+
+        outputBase        = ScriptTools.readOutput("base-staging-release",         RELEASE_DATE);
+        outputBaseDeps    = ScriptTools.readOutput("base-staging-deps-release",    RELEASE_DATE);
+        outputMainnet     = ScriptTools.readOutput("mainnet-staging-release",      RELEASE_DATE);
+        outputMainnetDeps = ScriptTools.readOutput("mainnet-staging-deps-release", RELEASE_DATE);
 
         // Roles
-        admin       = outputMainnet.readAddress(".admin");
-        safeMainnet = outputMainnet.readAddress(".safe");
+        admin       = outputMainnetDeps.readAddress(".admin");
+        relayerSafe = outputMainnetDeps.readAddress(".relayer");
 
         // Tokens
-        usds  = Usds(outputMainnet.readAddress(".usds"));
-        susds = SUsds(outputMainnet.readAddress(".susds"));
-        usdc  = IERC20(inputMainnet.readAddress(".usdc"));
-        dai   = IERC20(inputMainnet.readAddress(".dai"));
+        usds  = Usds(outputMainnetDeps.readAddress(".usds"));
+        susds = SUsds(outputMainnetDeps.readAddress(".susds"));
+        usdc  = IERC20(outputMainnetDeps.readAddress(".usdc"));
+        dai   = IERC20(outputMainnetDeps.readAddress(".dai"));
 
-        // Allocation system and MCD
-        buffer   = AllocatorBuffer(outputMainnet.readAddress(".allocatorBuffer"));
-        registry = AllocatorRegistry(outputMainnet.readAddress(".allocatorRegistry"));
-        roles    = AllocatorRoles(outputMainnet.readAddress(".allocatorRoles"));
-        vault    = AllocatorVault(outputMainnet.readAddress(".allocatorVault"));
-        usdsJoin = outputMainnet.readAddress(".usdsJoin");
+        // Dependencies
+        vault    = outputMainnetDeps.readAddress(".allocatorVault");
+        usdsJoin = outputMainnetDeps.readAddress(".usdsJoin");
 
         // ALM system
         almProxy          = ALMProxy(payable(outputMainnet.readAddress(".almProxy")));
-        mainnetController = MainnetController(outputMainnet.readAddress(".controller"));
         rateLimits        = RateLimits(outputMainnet.readAddress(".rateLimits"));
+        mainnetController = _reconfigureMainnetController();
 
         // Base roles
-        safeBase = outputBase.readAddress(".safe");
+        relayerSafeBase = outputBaseDeps.readAddress(".relayer");
 
         // Base tokens
-        usdsBase  = IERC20(outputBase.readAddress(".usds"));
-        susdsBase = IERC20(outputBase.readAddress(".susds"));
-        usdcBase  = IERC20(outputBase.readAddress(".usdc"));
+        usdsBase  = IERC20(inputBase.readAddress(".usds"));
+        susdsBase = IERC20(inputBase.readAddress(".susds"));
+        usdcBase  = IERC20(inputBase.readAddress(".usdc"));
 
         // Base ALM system
-        foreignAlmProxy   = ALMProxy(payable(outputBase.readAddress(".almProxy")));
-        foreignController = ForeignController(outputBase.readAddress(".controller"));
-        foreignRateLimits = RateLimits(outputBase.readAddress(".rateLimits"));
+        baseAlmProxy   = ALMProxy(payable(outputBase.readAddress(".almProxy")));
+        baseController = ForeignController(outputBase.readAddress(".controller"));
+        baseRateLimits = RateLimits(outputBase.readAddress(".rateLimits"));
 
         // Base PSM
-        psmBase = PSM3(outputBase.readAddress(".psm"));
+        psmBase = PSM3(inputBase.readAddress(".psm"));
 
         mainnet.selectFork();
 
         deal(address(usds), address(usdsJoin), 1000e18);  // Ensure there is enough balance
     }
 
-    /**********************************************************************************************/
-    /**** Tests                                                                                 ***/
-    /**********************************************************************************************/
+    // TODO: Remove this once a deployment has been done on mainnet
+    function _reconfigureMainnetController() internal returns (MainnetController newController) {
+        newController = MainnetController(MainnetControllerDeploy.deployController({
+            admin      : admin,
+            almProxy   : address(almProxy),
+            rateLimits : address(rateLimits),
+            vault      : address(vault),
+            psm        : inputMainnet.readAddress(".psm"),
+            daiUsds    : inputMainnet.readAddress(".daiUsds"),
+            cctp       : inputMainnet.readAddress(".cctpTokenMessenger")
+        }));
 
-    function skip_test_mainnetConfiguration() public {
-        mainnet.selectFork();
+        vm.startPrank(admin);
 
-        // Mainnet controller initialization
+        newController.grantRole(newController.FREEZER(), inputMainnet.readAddress(".freezer"));
+        newController.grantRole(newController.RELAYER(), inputMainnet.readAddress(".relayer"));
 
-        assertEq(address(mainnetController.proxy()),      outputMainnet.readAddress(".almProxy"));
-        assertEq(address(mainnetController.rateLimits()), outputMainnet.readAddress(".rateLimits"));
-        assertEq(address(mainnetController.vault()),      outputMainnet.readAddress(".allocatorVault"));
-        assertEq(address(mainnetController.buffer()),     outputMainnet.readAddress(".allocatorBuffer"));
-        assertEq(address(mainnetController.psm()),        outputMainnet.readAddress(".psm"));
-        assertEq(address(mainnetController.daiUsds()),    outputMainnet.readAddress(".daiUsds"));
-        assertEq(address(mainnetController.cctp()),       inputMainnet.readAddress(".cctpTokenMessenger"));
-        assertEq(address(mainnetController.dai()),        outputMainnet.readAddress(".dai"));
-        assertEq(address(mainnetController.usdc()),       outputMainnet.readAddress(".usdc"));
-        assertEq(address(mainnetController.usds()),       outputMainnet.readAddress(".usds"));
+        almProxy.grantRole(almProxy.CONTROLLER(), address(newController));
+        rateLimits.grantRole(rateLimits.CONTROLLER(), address(newController));
 
-        assertEq(mainnetController.psmTo18ConversionFactor(), 1e12);
-        assertEq(mainnetController.active(),                  true);
+        almProxy.revokeRole(almProxy.CONTROLLER(), outputMainnet.readAddress(".controller"));
+        rateLimits.revokeRole(rateLimits.CONTROLLER(), outputMainnet.readAddress(".controller"));
 
-        assertEq(
-            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
-            bytes32(uint256(uint160(outputBase.readAddress(".almProxy"))))
+        newController.setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE, 
+            bytes32(uint256(uint160(address(outputBase.readAddress(".almProxy")))))
         );
 
-        // ALM system roles
+        // Set all rate limits
 
-        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),          true);
-        assertEq(mainnetController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
-        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin),        true);
+        bytes32[] memory rateLimitKeys = new bytes32[](10);
 
-        assertEq(mainnetController.hasRole(mainnetController.FREEZER(), makeAddr("freezer")), true);
-        assertEq(mainnetController.hasRole(mainnetController.RELAYER(), safeMainnet),         true);
+        rateLimitKeys[0] = RateLimitHelpers.makeAssetKey(newController.LIMIT_AAVE_DEPOSIT(),  AUSDS);
+        rateLimitKeys[1] = RateLimitHelpers.makeAssetKey(newController.LIMIT_AAVE_DEPOSIT(),  AUSDC);
+        rateLimitKeys[2] = RateLimitHelpers.makeAssetKey(newController.LIMIT_4626_DEPOSIT(),  Ethereum.SUSDS);
+        rateLimitKeys[3] = RateLimitHelpers.makeAssetKey(newController.LIMIT_4626_DEPOSIT(),  Ethereum.SUSDE);
+        rateLimitKeys[4] = RateLimitHelpers.makeAssetKey(newController.LIMIT_AAVE_WITHDRAW(), AUSDS);
+        rateLimitKeys[5] = RateLimitHelpers.makeAssetKey(newController.LIMIT_AAVE_WITHDRAW(), AUSDC);
+        rateLimitKeys[6] = RateLimitHelpers.makeAssetKey(newController.LIMIT_4626_WITHDRAW(), Ethereum.SUSDS);
+        rateLimitKeys[7] = newController.LIMIT_USDE_MINT();
+        rateLimitKeys[8] = newController.LIMIT_USDE_BURN();
+        rateLimitKeys[9] = newController.LIMIT_SUSDE_COOLDOWN();
+        
+        for (uint256 i; i < rateLimitKeys.length; i++) {
+            rateLimits.setUnlimitedRateLimitData(rateLimitKeys[i]);
+        }
 
-        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)), true);
-
-        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), true);
-
-        // Allocation system deployment and initialization
-
-        bytes32 ilk = ScriptTools.readInput("common").readString(".ilk").stringToBytes32();
-
-        assertEq(registry.buffers(ilk), address(buffer));
-        assertEq(address(vault.jug()),  outputMainnet.readAddress(".jug"));
-
-        assertEq(usds.allowance(address(buffer), address(almProxy)), type(uint256).max);
-        assertEq(usds.allowance(address(vault),  usdsJoin),          type(uint256).max);
-
-        assertEq(roles.ilkAdmins(ilk), admin);
-
-        assertEq(buffer.wards(address(admin)),   1);
-        assertEq(registry.wards(address(admin)), 1);
-        assertEq(roles.wards(address(admin)),    1);
-        assertEq(vault.wards(address(admin)),    1);
-        assertEq(vault.wards(address(almProxy)), 1);
-
-        address vat = outputMainnet.readAddress(".vat");
-
-        assertEq(address(vault.roles()),    address(roles));
-        assertEq(address(vault.buffer()),   address(buffer));
-        assertEq(bytes32(vault.ilk()),      ilk);
-        assertEq(address(vault.usdsJoin()), usdsJoin);
-        assertEq(address(vault.vat()),      vat);
-
-        // NOTE: Not asserting vat.can because vat is mocked in this deployment and storage doesn't
-        //       get updated on vat.hope in vault constructor
-
-        // Starting token balances
-
-        assertEq(usds.balanceOf(address(almProxy)),  0);
-        assertEq(usdc.balanceOf(address(almProxy)),  0);
-        assertEq(susds.balanceOf(address(almProxy)), 0);
-
-        uint256 usdsUnitSize = ScriptTools.readInput("common").readUint(".usdsUnitSize");
-        uint256 usdcUnitSize = ScriptTools.readInput("common").readUint(".usdcUnitSize");
-
-        // USDS added to join, amount added to PSM wrapper to make `fill` logic work on swaps
-        assertEq(usds.balanceOf(address(usdsJoin)),                usdsUnitSize * 1e18);
-        assertEq(dai.balanceOf(outputMainnet.readAddress(".psm")), usdsUnitSize * 1e18);
-
-        // Rate limits
-
-        uint256 max6    = usdcUnitSize * 1e6  * 5;
-        uint256 max18   = usdcUnitSize * 1e18 * 5;
-        uint256 slope6  = usdcUnitSize * 1e6  / 4 hours;
-        uint256 slope18 = usdcUnitSize * 1e18 / 4 hours;
-
-        bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
-            mainnetController.LIMIT_USDC_TO_DOMAIN(),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
-        );
-
-        _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    max18, slope18);
-        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), max6,  slope6);
-        _assertRateLimitData(domainKeyBase,                          max6,  slope6);
-
-        _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), type(uint256).max, 0);
+        vm.stopPrank();
     }
+}
 
-    function skip_test_baseConfiguration() public {
-        base.selectFork();
+contract MainnetStagingDeploymentTests is StagingDeploymentTestBase {
 
-        // PSM configuration
-
-        assertEq(address(psmBase.usdc()),   outputBase.readAddress(".usdc"));
-        assertEq(address(psmBase.usds()),   outputBase.readAddress(".usds"));
-        assertEq(address(psmBase.susds()),  outputBase.readAddress(".susds"));
-        assertEq(address(psmBase.pocket()), outputBase.readAddress(".psm"));
-
-        assertGe(psmBase.totalAssets(), 1e18);
-        assertGe(psmBase.totalShares(), 1e18);
-
-        assertEq(IRateProviderLike(psmBase.rateProvider()).getConversionRate(), 1.2e27);
-
-        // Foreign controller initialization
-
-        assertEq(address(foreignController.proxy()),      outputBase.readAddress(".almProxy"));
-        assertEq(address(foreignController.rateLimits()), outputBase.readAddress(".rateLimits"));
-        assertEq(address(foreignController.psm()),        outputBase.readAddress(".psm"));
-        assertEq(address(foreignController.usdc()),       outputBase.readAddress(".usdc"));
-        assertEq(address(foreignController.cctp()),       inputBase.readAddress(".cctpTokenMessenger"));
-
-        assertEq(foreignController.active(), true);
-
-        assertEq(
-            foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
-            bytes32(uint256(uint160(outputMainnet.readAddress(".almProxy"))))
-        );
-
-        // ALM System roles
-
-        assertEq(foreignAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, admin),   true);
-        assertEq(foreignRateLimits.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
-        assertEq(foreignController.hasRole(DEFAULT_ADMIN_ROLE, admin), true);
-
-        assertEq(foreignController.hasRole(foreignController.FREEZER(), makeAddr("freezer")), true);
-        assertEq(foreignController.hasRole(foreignController.RELAYER(), safeBase),            true);
-
-        assertEq(foreignAlmProxy.hasRole(foreignAlmProxy.CONTROLLER(), address(foreignController)), true);
-
-        assertEq(foreignRateLimits.hasRole(foreignRateLimits.CONTROLLER(), address(foreignController)), true);
-
-        // Starting token balances
-
-        uint256 usdsUnitSize = ScriptTools.readInput("common").readUint(".usdsUnitSize");
-        uint256 usdcUnitSize = ScriptTools.readInput("common").readUint(".usdcUnitSize");
-
-        assertEq(usdsBase.balanceOf(address(foreignAlmProxy)),  usdsUnitSize * 1e18);
-        assertEq(susdsBase.balanceOf(address(foreignAlmProxy)), usdsUnitSize * 1e18);
-
-        // Rate limits
-
-        uint256 max6    = usdcUnitSize * 1e6  * 5;
-        uint256 max18   = usdcUnitSize * 1e18 * 5;
-        uint256 slope6  = usdcUnitSize * 1e6  / 4 hours;
-        uint256 slope18 = usdcUnitSize * 1e18 / 4 hours;
-
-        bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
-            foreignController.LIMIT_USDC_TO_DOMAIN(),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
-        );
-
-        bytes32 cctpKey = foreignController.LIMIT_USDC_TO_CCTP();
-
-        _assertDepositRateLimitData(usdcBase,  max6,  slope6);
-        _assertDepositRateLimitData(usdsBase,  max18, slope18);
-        _assertDepositRateLimitData(susdsBase, max18, slope18);
-
-        _assertWithdrawRateLimitData(usdcBase,  max6,  slope6);
-        _assertWithdrawRateLimitData(usdsBase,  max18, slope18);
-        _assertWithdrawRateLimitData(susdsBase, max18, slope18);
-
-        _assertRateLimitData(address(foreignRateLimits), cctpKey, type(uint256).max, 0);
-
-        _assertRateLimitData(address(foreignRateLimits), domainKeyEthereum, max6, slope6);
-    }
-
-    function skip_test_mintUSDS() public {
+    function test_mintUSDS() public {
         uint256 startingBalance = usds.balanceOf(address(almProxy));
 
-        vm.prank(safeMainnet);
+        vm.prank(relayerSafe);
         mainnetController.mintUSDS(10e18);
 
         assertEq(usds.balanceOf(address(almProxy)), startingBalance + 10e18);
     }
 
-    function skip_test_mintAndSwapToUSDC() public {
+    function test_mintAndSwapToUSDC() public {
         uint256 startingBalance = usdc.balanceOf(address(almProxy));
 
-        vm.startPrank(safeMainnet);
+        vm.startPrank(relayerSafe);
         mainnetController.mintUSDS(10e18);
         mainnetController.swapUSDSToUSDC(10e6);
         vm.stopPrank();
@@ -350,126 +236,370 @@ contract DeployEthereumTest is Test {
         assertEq(usdc.balanceOf(address(almProxy)), startingBalance + 10e6);
     }
 
-    function skip_test_transferCCTP() public {
-        base.selectFork();
+    function test_depositAndWithdrawUsdsFromSUsds() public {
+        uint256 startingBalance = usds.balanceOf(address(almProxy));
 
-        uint256 startingBalance = usdcBase.balanceOf(address(foreignAlmProxy));
-
-        mainnet.selectFork();
-
-        vm.startPrank(safeMainnet);
+        vm.startPrank(relayerSafe);
         mainnetController.mintUSDS(10e18);
-        mainnetController.swapUSDSToUSDC(10e6);
-        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        mainnetController.depositERC4626(Ethereum.SUSDS, 10e18);
+        skip(1 days);
+        mainnetController.withdrawERC4626(Ethereum.SUSDS, 10e18);
         vm.stopPrank();
 
-        cctpBridge.relayMessagesToDestination(true);
+        assertEq(usds.balanceOf(address(almProxy)), startingBalance + 10e18);  
 
-        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), startingBalance + 10e6);
+        assertGe(IERC4626(Ethereum.SUSDS).balanceOf(address(almProxy)), 0);  // Interest earned
     }
 
-    function skip_test_transferToPSM() public {
-        base.selectFork();
+    function test_depositAndRedeemUsdsFromSUsds() public {
+        uint256 startingBalance = usds.balanceOf(address(almProxy));
 
-        uint256 startingBalance = usdcBase.balanceOf(address(psmBase));
-
-        mainnet.selectFork();
-
-        vm.startPrank(safeMainnet);
+        vm.startPrank(relayerSafe);
         mainnetController.mintUSDS(10e18);
-        mainnetController.swapUSDSToUSDC(10e6);
-        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        mainnetController.depositERC4626(Ethereum.SUSDS, 10e18);
+        skip(1 days);
+        mainnetController.redeemERC4626(Ethereum.SUSDS, IERC4626(Ethereum.SUSDS).balanceOf(address(almProxy)));
         vm.stopPrank();
 
-        cctpBridge.relayMessagesToDestination(true);
+        assertGe(usds.balanceOf(address(almProxy)), startingBalance + 10e18);  // Interest earned
 
-        uint256 startingShares = psmBase.shares(address(foreignAlmProxy));
-
-        vm.startPrank(safeBase);
-        foreignController.depositPSM(address(usdcBase), 10e6);
-        vm.stopPrank();
-
-        assertEq(usdcBase.balanceOf(address(psmBase)), startingBalance + 10e6);
-
-        assertEq(psmBase.shares(address(foreignAlmProxy)), startingShares + 10e18);
+        assertEq(IERC4626(Ethereum.SUSDS).balanceOf(address(almProxy)), 0);  
     }
 
-    function skip_test_fullRoundTrip() public {
-        mainnet.selectFork();
+    function test_depositAndWithdrawUsdsFromAave() public {
+        uint256 startingBalance = usds.balanceOf(address(almProxy));
 
-        vm.startPrank(safeMainnet);
-        mainnetController.mintUSDS(1e18);
-        mainnetController.swapUSDSToUSDC(1e6);
-        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.depositAave(AUSDS, 10e6);
+        skip(1 days);
+        mainnetController.withdrawAave(AUSDS, type(uint256).max);
         vm.stopPrank();
 
-        cctpBridge.relayMessagesToDestination(true);
+        assertGe(usds.balanceOf(address(almProxy)), startingBalance + 10e6);  // Interest earned
+    }
 
-        vm.startPrank(safeBase);
-        foreignController.depositPSM(address(usdcBase), 1e6);
-        foreignController.withdrawPSM(address(usdcBase), 1e6);
-        foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    function test_depositAndWithdrawUsdcFromAave() public {
+        uint256 startingBalance = usdc.balanceOf(address(almProxy));
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.depositAave(AUSDC, 10e6);
+        skip(1 days);
+        mainnetController.withdrawAave(AUSDC, type(uint256).max);
         vm.stopPrank();
 
-        // There is a bug when the messenger addresses are the same
-        // Need to force update to skip the previous relayed message
-        // See: https://github.com/marsfoundation/xchain-helpers/issues/24
-        cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
-        cctpBridge.relayMessagesToSource(true);
+        assertGe(usdc.balanceOf(address(almProxy)), startingBalance + 10e6);  // Interest earned
+    }
 
-        vm.startPrank(safeMainnet);
-        mainnetController.swapUSDCToUSDS(1e6);
-        mainnetController.burnUSDS(1e18);
+    function test_mintDepositCooldownAssetsBurnUsde() public {
+        uint256 startingBalance = usdc.balanceOf(address(almProxy));
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.prepareUSDeMint(10e6);
         vm.stopPrank();
+
+        _simulateUsdeMint(10e6);
+
+        vm.startPrank(relayerSafe);
+        mainnetController.depositERC4626(Ethereum.SUSDE, 10e18);
+        skip(1 days);
+        mainnetController.cooldownAssetsSUSDe(10e18);
+        skip(7 days);
+        mainnetController.unstakeSUSDe();
+        mainnetController.prepareUSDeBurn(10e18);
+        vm.stopPrank();
+
+        _simulateUsdeBurn(10e18);
+
+        assertEq(usdc.balanceOf(address(almProxy)), startingBalance + 10e6); 
+        
+        assertGe(IERC4626(Ethereum.SUSDE).balanceOf(address(almProxy)), 0);  // Interest earned
+    }
+
+    function test_mintDepositCooldownSharesBurnUsde() public {
+        uint256 startingBalance = usdc.balanceOf(address(almProxy));
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.prepareUSDeMint(10e6);
+        vm.stopPrank();
+
+        _simulateUsdeMint(10e6);
+
+        vm.startPrank(relayerSafe);
+        mainnetController.depositERC4626(Ethereum.SUSDE, 10e18);
+        skip(1 days);
+        uint256 usdeAmount = mainnetController.cooldownSharesSUSDe(IERC4626(Ethereum.SUSDE).balanceOf(address(almProxy)));
+        skip(7 days);
+        mainnetController.unstakeSUSDe();
+        mainnetController.prepareUSDeBurn(usdeAmount);
+        vm.stopPrank();
+
+        _simulateUsdeBurn(usdeAmount);
+
+        assertGe(usdc.balanceOf(address(almProxy)), startingBalance + 10e6);  // Interest earned
+        
+        assertEq(IERC4626(Ethereum.SUSDE).balanceOf(address(almProxy)), 0);  
     }
 
     /**********************************************************************************************/
     /**** Helper functions                                                                      ***/
     /**********************************************************************************************/
 
-    function _assertDepositRateLimitData(IERC20 asset, uint256 maxAmount, uint256 slope)
-        internal view
-    {
-        bytes32 assetKey = RateLimitHelpers.makeAssetKey(
-            foreignController.LIMIT_PSM_DEPOSIT(),
-            address(asset)
+    // NOTE: In reality these actions are performed by the signer submitting an order with an 
+    //       EIP712 signature which is verified by the ethenaMinter contract, 
+    //       minting/burning USDe into the ALMProxy. Also, for the purposes of this test, 
+    //       minting/burning is done 1:1 with USDC.
+
+    // TODO: Try doing ethena minting with EIP-712 signatures (vm.sign)
+
+    function _simulateUsdeMint(uint256 amount) internal {
+        vm.prank(Ethereum.ETHENA_MINTER);
+        usdc.transferFrom(address(almProxy), Ethereum.ETHENA_MINTER, amount);
+        deal(
+            Ethereum.USDE, 
+            address(almProxy), 
+            IERC20(Ethereum.USDE).balanceOf(address(almProxy)) + amount * 1e12
+        );
+    }
+
+    function _simulateUsdeBurn(uint256 amount) internal {
+        vm.prank(Ethereum.ETHENA_MINTER);
+        IERC20(Ethereum.USDE).transferFrom(address(almProxy), Ethereum.ETHENA_MINTER, amount);
+        deal(address(usdc), address(almProxy), usdc.balanceOf(address(almProxy)) + amount / 1e12);
+    }
+
+}
+
+contract BaseStagingDeploymentTests is StagingDeploymentTestBase {
+
+    using DomainHelpers     for *;
+    using CCTPBridgeTesting for *;
+
+    address constant AUSDC_BASE        = 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB;
+    address constant MORPHO            = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
+    address constant MORPHO_VAULT_USDC = 0x305E03Ed9ADaAB22F4A58c24515D79f2B1E2FD5D;
+
+    function setUp() public override {
+        super.setUp();
+
+        base.selectFork();
+
+        bytes32[] memory rateLimitKeys = new bytes32[](4);
+
+        rateLimitKeys[0] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_AAVE_DEPOSIT(),  AUSDC_BASE);
+        rateLimitKeys[1] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_4626_DEPOSIT(),  MORPHO_VAULT_USDC);
+        rateLimitKeys[2] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_AAVE_WITHDRAW(), AUSDC_BASE);
+        rateLimitKeys[3] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_4626_WITHDRAW(), MORPHO_VAULT_USDC);
+
+        vm.startPrank(admin);
+        
+        for (uint256 i; i < rateLimitKeys.length; i++) {
+            baseRateLimits.setUnlimitedRateLimitData(rateLimitKeys[i]);
+        }
+
+        vm.stopPrank();
+    }
+
+    function test_transferCCTP() public {
+        base.selectFork();
+
+        uint256 startingBalance = usdcBase.balanceOf(address(baseAlmProxy));
+
+        mainnet.selectFork();
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        assertEq(usdcBase.balanceOf(address(baseAlmProxy)), startingBalance + 10e6);
+    }
+
+    function test_transferToPSM() public {
+        base.selectFork();
+
+        uint256 startingBalance = usdcBase.balanceOf(address(psmBase));
+
+        mainnet.selectFork();
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        uint256 startingShares = psmBase.shares(address(baseAlmProxy));
+
+        vm.startPrank(relayerSafeBase);
+        baseController.depositPSM(address(usdcBase), 10e6);
+        vm.stopPrank();
+
+        assertEq(usdcBase.balanceOf(address(psmBase)), startingBalance + 10e6);
+
+        assertEq(psmBase.shares(address(baseAlmProxy)), startingShares + psmBase.convertToShares(10e18));
+    }
+
+    function test_addAndRemoveFundsFromBasePSM() public {
+        mainnet.selectFork();
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        vm.startPrank(relayerSafeBase);
+        baseController.depositPSM(address(usdcBase), 10e6);
+        skip(1 days);
+        baseController.withdrawPSM(address(usdcBase), 10e6);
+        baseController.transferUSDCToCCTP(10e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToSource(true);
+
+        vm.startPrank(relayerSafe);
+        mainnetController.swapUSDCToUSDS(10e6 - 1);
+        mainnetController.burnUSDS((10e6 - 1) * 1e12);
+        vm.stopPrank();
+    }
+
+    function test_addAndRemoveFundsFromBaseAAVE() public {
+        mainnet.selectFork();
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        vm.startPrank(relayerSafeBase);
+        baseController.depositAave(AUSDC_BASE, 10e6);
+        skip(1 days);
+        baseController.withdrawAave(AUSDC_BASE, 10e6);
+
+        assertEq(usdcBase.balanceOf(address(baseAlmProxy)), 10e6);
+
+        assertGe(IERC20(AUSDC_BASE).balanceOf(address(baseAlmProxy)), 0);  // Interest earned
+
+        baseController.transferUSDCToCCTP(10e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToSource(true);
+
+        vm.startPrank(relayerSafe);
+        mainnetController.swapUSDCToUSDS(10e6 - 1);
+        mainnetController.burnUSDS((10e6 - 1) * 1e12);
+        vm.stopPrank();
+    }
+
+    function test_depositWithdrawFundsFromBaseMorphoUsdc() public {
+        _setUpMorphoMarket();
+
+        mainnet.selectFork();
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        vm.startPrank(relayerSafeBase);
+        baseController.depositERC4626(MORPHO_VAULT_USDC, 10e6);
+        skip(1 days);
+        baseController.withdrawERC4626(MORPHO_VAULT_USDC, 10e6);
+
+        assertEq(usdcBase.balanceOf(address(baseAlmProxy)), 10e6);
+
+        assertGe(IERC20(MORPHO_VAULT_USDC).balanceOf(address(baseAlmProxy)), 0);  // Interest earned
+
+        baseController.transferUSDCToCCTP(1e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToSource(true);
+
+        vm.startPrank(relayerSafe);
+        mainnetController.swapUSDCToUSDS(1e6 - 1);
+        mainnetController.burnUSDS((1e6 - 1) * 1e12);
+        vm.stopPrank();
+    }
+
+    function test_depositRedeemFundsFromBaseMorphoUsdc() public {
+        _setUpMorphoMarket();
+
+        mainnet.selectFork();
+
+        vm.startPrank(relayerSafe);
+        mainnetController.mintUSDS(10e18);
+        mainnetController.swapUSDSToUSDC(10e6);
+        mainnetController.transferUSDCToCCTP(10e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToDestination(true);
+
+        vm.startPrank(relayerSafeBase);
+        baseController.depositERC4626(MORPHO_VAULT_USDC, 10e6);
+        skip(1 days);
+        baseController.redeemERC4626(MORPHO_VAULT_USDC, IERC20(MORPHO_VAULT_USDC).balanceOf(address(baseAlmProxy)));
+
+        assertGe(usdcBase.balanceOf(address(baseAlmProxy)), 10e6);  // Interest earned
+
+        assertEq(IERC20(MORPHO_VAULT_USDC).balanceOf(address(baseAlmProxy)), 0);  
+
+        baseController.transferUSDCToCCTP(1e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
+        vm.stopPrank();
+
+        cctpBridge.relayMessagesToSource(true);
+
+        vm.startPrank(relayerSafe);
+        mainnetController.swapUSDCToUSDS(1e6 - 1);
+        mainnetController.burnUSDS((1e6 - 1) * 1e12);
+        vm.stopPrank();
+    }
+
+    // TODO: Replace this once market is live
+    function _setUpMorphoMarket() public {
+        vm.startPrank(Base.SPARK_EXECUTOR);
+
+        // Add in the idle markets so deposits can be made
+        MarketParams memory usdcParams = MarketParams({
+            loanToken       : Base.USDC,
+            collateralToken : address(0),
+            oracle          : address(0),
+            irm             : address(0),
+            lltv            : 0
+        });
+
+        IMetaMorpho(MORPHO_VAULT_USDC).submitCap(
+            usdcParams,
+            type(uint184).max
         );
 
-        _assertRateLimitData(address(foreignRateLimits), assetKey, maxAmount, slope);
-    }
+        skip(1 days);
 
-    function _assertWithdrawRateLimitData(IERC20 asset, uint256 maxAmount, uint256 slope)
-        internal view
-    {
-        bytes32 assetKey = RateLimitHelpers.makeAssetKey(
-            foreignController.LIMIT_PSM_WITHDRAW(),
-            address(asset)
-        );
+        IMetaMorpho(MORPHO_VAULT_USDC).acceptCap(usdcParams);
 
-        _assertRateLimitData(address(foreignRateLimits), assetKey, maxAmount, slope);
-    }
+        Id[] memory supplyQueueUSDC = new Id[](1);
+        supplyQueueUSDC[0] = MarketParamsLib.id(usdcParams);
+        IMetaMorpho(MORPHO_VAULT_USDC).setSupplyQueue(supplyQueueUSDC);
 
-    function _assertRateLimitData(bytes32 domainKey, uint256 maxAmount, uint256 slope)
-        internal view
-    {
-        // If no rate limits address specified default to mainnet
-        _assertRateLimitData(address(rateLimits), domainKey, maxAmount, slope);
-    }
-
-    function _assertRateLimitData(address rateLimits_, bytes32 key, uint256 maxAmount, uint256 slope)
-        internal view
-    {
-        IRateLimits.RateLimitData memory data = IRateLimits(rateLimits_).getRateLimitData(key);
-
-        assertEq(data.maxAmount,  maxAmount);
-        assertEq(data.slope,      slope);
-        assertEq(data.lastAmount, maxAmount);
-
-        // Deployments are done in the past
-        assertLe(data.lastUpdated, block.timestamp);
-
-        // Deployment is assumed to be untouched
-        assertEq(IRateLimits(rateLimits_).getCurrentRateLimit(key), maxAmount);
+        vm.stopPrank();
     }
 
 }
