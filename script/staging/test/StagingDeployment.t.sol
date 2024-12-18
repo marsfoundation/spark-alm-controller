@@ -27,6 +27,9 @@ import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
 import { CCTPBridgeTesting }     from "xchain-helpers/src/testing/bridges/CCTPBridgeTesting.sol";
 import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
+import { MainnetControllerDeploy } from "../../../deploy/ControllerDeploy.sol";
+import { MainnetControllerInit }   from "../../../deploy/ControllerInit.sol";
+
 import { IRateLimits } from "../../../src/interfaces/IRateLimits.sol";
 
 import { ALMProxy }          from "../../../src/ALMProxy.sol";
@@ -34,9 +37,6 @@ import { ForeignController } from "../../../src/ForeignController.sol";
 import { MainnetController } from "../../../src/MainnetController.sol";
 import { RateLimits }        from "../../../src/RateLimits.sol";
 import { RateLimitHelpers }  from "../../../src/RateLimitHelpers.sol";
-
-import { MainnetControllerDeploy } from "../../../deploy/ControllerDeploy.sol";
-import { MainnetControllerInit }   from "../../../deploy/ControllerInit.sol";
 
 interface IVatLike {
     function can(address, address) external view returns (uint256);
@@ -468,10 +468,6 @@ contract BaseStagingDeploymentTests is StagingDeploymentTestBase {
         baseController.transferUSDCToCCTP(10e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
         vm.stopPrank();
 
-        // There is a bug when the messenger addresses are the same
-        // Need to force update to skip the previous relayed message
-        // See: https://github.com/marsfoundation/xchain-helpers/issues/24
-        cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
         cctpBridge.relayMessagesToSource(true);
 
         vm.startPrank(relayerSafe);
@@ -503,10 +499,6 @@ contract BaseStagingDeploymentTests is StagingDeploymentTestBase {
         baseController.transferUSDCToCCTP(10e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
         vm.stopPrank();
 
-        // There is a bug when the messenger addresses are the same
-        // Need to force update to skip the previous relayed message
-        // See: https://github.com/marsfoundation/xchain-helpers/issues/24
-        cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
         cctpBridge.relayMessagesToSource(true);
 
         vm.startPrank(relayerSafe);
@@ -540,10 +532,6 @@ contract BaseStagingDeploymentTests is StagingDeploymentTestBase {
         baseController.transferUSDCToCCTP(1e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
         vm.stopPrank();
 
-        // There is a bug when the messenger addresses are the same
-        // Need to force update to skip the previous relayed message
-        // See: https://github.com/marsfoundation/xchain-helpers/issues/24
-        cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
         cctpBridge.relayMessagesToSource(true);
 
         vm.startPrank(relayerSafe);
@@ -577,10 +565,6 @@ contract BaseStagingDeploymentTests is StagingDeploymentTestBase {
         baseController.transferUSDCToCCTP(1e6 - 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);  // Account for potential rounding
         vm.stopPrank();
 
-        // There is a bug when the messenger addresses are the same
-        // Need to force update to skip the previous relayed message
-        // See: https://github.com/marsfoundation/xchain-helpers/issues/24
-        cctpBridge.lastDestinationLogIndex = cctpBridge.lastSourceLogIndex;
         cctpBridge.relayMessagesToSource(true);
 
         vm.startPrank(relayerSafe);
@@ -595,14 +579,12 @@ contract BaseStagingDeploymentTests is StagingDeploymentTestBase {
 
         // Add in the idle markets so deposits can be made
         MarketParams memory usdcParams = MarketParams({
-            loanToken:       Base.USDC,
-            collateralToken: address(0),
-            oracle:          address(0),
-            irm:             address(0),
-            lltv:            0
+            loanToken       : Base.USDC,
+            collateralToken : address(0),
+            oracle          : address(0),
+            irm             : address(0),
+            lltv            : 0
         });
-
-        // IMorpho(MORPHO).createMarket(usdcParams);
 
         IMetaMorpho(MORPHO_VAULT_USDC).submitCap(
             usdcParams,
