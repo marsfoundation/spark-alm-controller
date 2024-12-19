@@ -23,6 +23,10 @@ interface IVaultLike {
 
 library MainnetControllerInit {
 
+    /**********************************************************************************************/
+    /*** Structs and constants                                                                  ***/
+    /**********************************************************************************************/
+
     struct CheckAddressParams {
         address admin;
         address proxy;
@@ -46,13 +50,64 @@ library MainnetControllerInit {
 
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
-    function initController(
+    /**********************************************************************************************/
+    /*** Internal library functions                                                             ***/
+    /**********************************************************************************************/
+
+    function initAlmSystem(
+        address vault, 
+        address usds,
         ControllerInstance  memory controllerInst,
         ConfigAddressParams memory configAddresses,
         CheckAddressParams  memory checkAddresses,
         MintRecipient[]     memory mintRecipients
     )
-        private  // Not all, add underscores
+        internal
+    {
+        // Step 1: Do sanity checks outside of the controller
+
+        require(IALMProxy(controllerInst.almProxy).hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin),     "MainnetControllerInit/incorrect-admin-almProxy");
+        require(IRateLimits(controllerInst.rateLimits).hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin), "MainnetControllerInit/incorrect-admin-rateLimits");
+
+        // Step 2: Initialize the controller
+
+        _initController(controllerInst, configAddresses, checkAddresses, mintRecipients);
+
+        // Step 3: Configure almProxy within the allocation system
+
+        require(vault == checkAddresses.vault, "MainnetControllerInit/incorrect-vault");
+
+        IVaultLike(vault).rely(controllerInst.almProxy);
+        IBufferLike(IVaultLike(vault).buffer()).approve(usds, controllerInst.almProxy, type(uint256).max);
+    }
+
+    function upgradeController(
+        ControllerInstance  memory controllerInst,
+        ConfigAddressParams memory configAddresses,
+        CheckAddressParams  memory checkAddresses,
+        MintRecipient[]     memory mintRecipients
+    )
+        internal
+    {
+        _initController(controllerInst, configAddresses, checkAddresses, mintRecipients);   
+        _revokeOldControllerRoles(controllerInst, configAddresses.oldController);
+    }
+
+    function pauseProxyInitAlmSystem(address psm, address almProxy) internal {
+        IPSMLike(psm).kiss(almProxy);  // To allow using no fee functionality
+    }
+
+    /**********************************************************************************************/
+    /*** Private helper functions                                                               ***/
+    /**********************************************************************************************/
+
+    function _initController(
+        ControllerInstance  memory controllerInst,
+        ConfigAddressParams memory configAddresses,
+        CheckAddressParams  memory checkAddresses,
+        MintRecipient[]     memory mintRecipients
+    )
+        private  
     {
         // Step 1: Perform controller sanity checks
 
@@ -91,7 +146,7 @@ library MainnetControllerInit {
         }
     }
 
-    function revokeOldControllerRoles(ControllerInstance  memory controllerInst, address oldController) private {
+    function _revokeOldControllerRoles(ControllerInstance  memory controllerInst, address oldController) private {
         IALMProxy   almProxy   = IALMProxy(controllerInst.almProxy);
         IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
 
@@ -102,49 +157,6 @@ library MainnetControllerInit {
 
         almProxy.revokeRole(almProxy.CONTROLLER(), oldController);
         rateLimits.revokeRole(rateLimits.CONTROLLER(), oldController);
-    }
-
-    function upgradeController(
-        ControllerInstance  memory controllerInst,
-        ConfigAddressParams memory configAddresses,
-        CheckAddressParams  memory checkAddresses,
-        MintRecipient[]     memory mintRecipients
-    )
-        private
-    {
-        initController(controllerInst, configAddresses, checkAddresses, mintRecipients);   
-        revokeOldControllerRoles(controllerInst, configAddresses.oldController);
-    }
-
-    function initAlmSystem(
-        address vault, 
-        address usds,
-        ControllerInstance  memory controllerInst,
-        ConfigAddressParams memory configAddresses,
-        CheckAddressParams  memory checkAddresses,
-        MintRecipient[]     memory mintRecipients
-    )
-        private
-    {
-        // Step 1: Do sanity checks outside of the controller
-
-        require(IALMProxy(controllerInst.almProxy).hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin),     "MainnetControllerInit/incorrect-admin-almProxy");
-        require(IRateLimits(controllerInst.rateLimits).hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin), "MainnetControllerInit/incorrect-admin-rateLimits");
-
-        // Step 2: Initialize the controller
-
-        initController(controllerInst, configAddresses, checkAddresses, mintRecipients);
-
-        // Step 3: Configure almProxy within the allocation system
-
-        require(vault == checkAddresses.vault, "MainnetControllerInit/incorrect-vault");
-
-        IVaultLike(vault).rely(controllerInst.almProxy);
-        IBufferLike(IVaultLike(vault).buffer()).approve(usds, controllerInst.almProxy, type(uint256).max);
-    }
-
-    function pauseProxyInit(address psm, address almProxy) private {
-        IPSMLike(psm).kiss(almProxy);  // To allow using no fee functionality
     }
 
 }
