@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
-
-import { ForeignController } from "../src/ForeignController.sol";
 import { MainnetController } from "../src/MainnetController.sol";
-import { RateLimitHelpers }  from "../src/RateLimitHelpers.sol";
 
 import { IALMProxy }   from "../src/interfaces/IALMProxy.sol";
 import { IRateLimits } from "../src/interfaces/IRateLimits.sol";
@@ -20,27 +16,15 @@ interface IPSMLike {
     function kiss(address) external;
 }
 
-interface IPSM3Like {
-    function totalAssets() external view returns (uint256);
-    function totalShares() external view returns (uint256);
-    function usdc() external view returns (address);
-    function usds() external view returns (address);
-    function susds() external view returns (address);
-}
-
 interface IVaultLike {
+    function buffer() external view returns (address);
     function rely(address) external;
 }
-
-
-
-// Move checks for almProxy and rateLimits to init
-// Remove rate limits
-// Change checks to only use constructor params
 
 library MainnetControllerInit {
 
     struct CheckAddressParams {
+        address admin;
         address proxy;
         address rateLimits;
         address vault;
@@ -68,7 +52,7 @@ library MainnetControllerInit {
         CheckAddressParams  memory checkAddresses,
         MintRecipient[]     memory mintRecipients
     )
-        internal
+        private  // Not all, add underscores
     {
         // Step 1: Perform controller sanity checks
 
@@ -79,18 +63,13 @@ library MainnetControllerInit {
         require(address(newController.proxy())      == controllerInst.almProxy,   "MainnetControllerInit/incorrect-almProxy");
         require(address(newController.rateLimits()) == controllerInst.rateLimits, "MainnetControllerInit/incorrect-rateLimits");
 
-        require(address(newController.vault())   == checkAddresses.vault,         "MainnetControllerInit/incorrect-vault");
-        require(address(newController.buffer())  == checkAddresses.buffer,        "MainnetControllerInit/incorrect-buffer");
-        require(address(newController.psm())     == checkAddresses.psm,           "MainnetControllerInit/incorrect-psm");
-        require(address(newController.daiUsds()) == checkAddresses.daiUsds,       "MainnetControllerInit/incorrect-daiUsds");
-        require(address(newController.cctp())    == checkAddresses.cctpMessenger, "MainnetControllerInit/incorrect-cctpMessenger");
-        require(address(newController.dai())     == checkAddresses.dai,           "MainnetControllerInit/incorrect-dai");
-        require(address(newController.usdc())    == checkAddresses.usdc,          "MainnetControllerInit/incorrect-usdc");
-        require(address(newController.usds())    == checkAddresses.usds,          "MainnetControllerInit/incorrect-usds");
+        require(address(newController.vault())   == checkAddresses.vault,   "MainnetControllerInit/incorrect-vault");
+        require(address(newController.psm())     == checkAddresses.psm,     "MainnetControllerInit/incorrect-psm");
+        require(address(newController.daiUsds()) == checkAddresses.daiUsds, "MainnetControllerInit/incorrect-daiUsds");
+        require(address(newController.cctp())    == checkAddresses.cctp,    "MainnetControllerInit/incorrect-cctp");
 
         require(newController.psmTo18ConversionFactor() == 1e12, "MainnetControllerInit/incorrect-psmTo18ConversionFactor");
-
-        require(newController.active(), "MainnetControllerInit/controller-not-active");
+        require(newController.active(),                          "MainnetControllerInit/controller-not-active");
 
         require(configAddresses.oldController != address(newController), "MainnetControllerInit/old-controller-is-new-controller");
 
@@ -102,8 +81,8 @@ library MainnetControllerInit {
         newController.grantRole(newController.FREEZER(), configAddresses.freezer);
         newController.grantRole(newController.RELAYER(), configAddresses.relayer);
 
-        almProxy.grantRole(almProxy.CONTROLLER(), address(controller));
-        rateLimits.grantRole(rateLimits.CONTROLLER(), address(controller));
+        almProxy.grantRole(almProxy.CONTROLLER(), address(newController));
+        rateLimits.grantRole(rateLimits.CONTROLLER(), address(newController));
 
         // Step 3: Configure the mint recipients on other domains
 
@@ -112,11 +91,11 @@ library MainnetControllerInit {
         }
     }
 
-    function transferControllerRoles(ControllerInstance  memory controllerInst, address oldController) internal {
+    function revokeOldControllerRoles(ControllerInstance  memory controllerInst, address oldController) private {
         IALMProxy   almProxy   = IALMProxy(controllerInst.almProxy);
         IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
 
-        if (oldController == address(0)) return;
+        require(oldController != address(0), "MainnetControllerInit/old-controller-zero-address"); 
 
         require(almProxy.hasRole(almProxy.CONTROLLER(), oldController),     "MainnetControllerInit/old-controller-not-almProxy-controller");
         require(rateLimits.hasRole(rateLimits.CONTROLLER(), oldController), "MainnetControllerInit/old-controller-not-rateLimits-controller");
@@ -131,66 +110,41 @@ library MainnetControllerInit {
         CheckAddressParams  memory checkAddresses,
         MintRecipient[]     memory mintRecipients
     )
-        internal
+        private
     {
         initController(controllerInst, configAddresses, checkAddresses, mintRecipients);   
-        transferControllerRoles(controllerInst, configAddresses);
+        revokeOldControllerRoles(controllerInst, configAddresses.oldController);
     }
 
     function initAlmSystem(
+        address vault, 
+        address usds,
         ControllerInstance  memory controllerInst,
         ConfigAddressParams memory configAddresses,
         CheckAddressParams  memory checkAddresses,
         MintRecipient[]     memory mintRecipients
     )
-        internal
+        private
     {
         // Step 1: Do sanity checks outside of the controller
 
-        require(IALMProxy(controllerInst.almProxy).hasRole(DEFAULT_ADMIN_ROLE, configAddresses.admin),     "MainnetControllerInit/incorrect-admin-almProxy");
-        require(IRateLimits(controllerInst.rateLimits).hasRole(DEFAULT_ADMIN_ROLE, configAddresses.admin), "MainnetControllerInit/incorrect-admin-rateLimits");
+        require(IALMProxy(controllerInst.almProxy).hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin),     "MainnetControllerInit/incorrect-admin-almProxy");
+        require(IRateLimits(controllerInst.rateLimits).hasRole(DEFAULT_ADMIN_ROLE, checkAddresses.admin), "MainnetControllerInit/incorrect-admin-rateLimits");
 
         // Step 2: Initialize the controller
 
         initController(controllerInst, configAddresses, checkAddresses, mintRecipients);
 
-        // Step 2: Configure almProxy within the allocation system
+        // Step 3: Configure almProxy within the allocation system
 
-        IVaultLike(addresses.vault).rely(controllerInst.almProxy);
-        IBufferLike(addresses.buffer).approve(addresses.usds, controllerInst.almProxy, type(uint256).max);
+        require(vault == checkAddresses.vault, "MainnetControllerInit/incorrect-vault");
+
+        IVaultLike(vault).rely(controllerInst.almProxy);
+        IBufferLike(IVaultLike(vault).buffer()).approve(usds, controllerInst.almProxy, type(uint256).max);
     }
 
-    function pauseProxyInit(address psm, address almProxy) internal {
+    function pauseProxyInit(address psm, address almProxy) private {
         IPSMLike(psm).kiss(almProxy);  // To allow using no fee functionality
-    }
-
-    function setRateLimitData(
-        bytes32       key,
-        IRateLimits   rateLimits,
-        RateLimitData memory data,
-        string        memory name,
-        uint256       decimals
-    )
-        internal
-    {
-        // Handle setting an unlimited rate limit
-        if (data.maxAmount == type(uint256).max) {
-            require(
-                data.slope == 0,
-                string(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-", name))
-            );
-        }
-        else {
-            require(
-                data.maxAmount <= 1e12 * (10 ** decimals),
-                string(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-", name))
-            );
-            require(
-                data.slope <= 1e12 * (10 ** decimals) / 1 hours,
-                string(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-", name))
-            );
-        }
-        rateLimits.setRateLimitData(key, data.maxAmount, data.slope);
     }
 
 }
