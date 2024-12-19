@@ -89,6 +89,9 @@ contract MainnetControllerInitFailureTests is MainnetControllerInitAndUpgradeTes
     function setUp() public override {
         super.setUp();
 
+        // Deploy new controller against live mainnet system
+        // NOTE: initAlmSystem will redundantly call rely and approve on already inited 
+        //       almProxy and rateLimits, this setup was chosen to easily test upgrade and init failures
         mainnetController = MainnetController(MainnetControllerDeploy.deployController({
             admin      : Ethereum.SPARK_PROXY,
             almProxy   : Ethereum.ALM_PROXY,
@@ -266,73 +269,106 @@ contract MainnetControllerInitFailureTests is MainnetControllerInitAndUpgradeTes
 
 }
 
-// contract MainnetControllerUpgradeFailureTests is MainnetControllerInitAndUpgradeTestBase {
+contract MainnetControllerUpgradeFailureTests is MainnetControllerInitAndUpgradeTestBase {
 
-//     // // TODO: Skipping conversion factor test, can add later if needed
+    LibraryWrapper wrapper;
 
-//     // /**********************************************************************************************/
-//     // /*** Old controller role check tests                                                        ***/
-//     // /**********************************************************************************************/
+    ControllerInstance public controllerInst;
 
-//     // function test_init_oldControllerDoesNotHaveRoleInAlmProxy() external {
-//     //     _deployNewControllerAfterExistingControllerInit();
+    address public mismatchAddress = makeAddr("mismatchAddress");
 
-//     //     // Revoke the old controller address in ALM proxy
+    Init.ConfigAddressParams configAddresses;
+    Init.CheckAddressParams  checkAddresses;
+    Init.MintRecipient[]     mintRecipients;
 
-//     //     vm.startPrank(SPARK_PROXY);
-//     //     almProxy.revokeRole(almProxy.CONTROLLER(), configAddresses.oldController);
-//     //     vm.stopPrank();
+    function setUp() public override {
+        super.setUp();
 
-//     //     // Try to init with the old controller address that is doesn't have the CONTROLLER role
+        // Deploy new controller against live mainnet system
+        controllerInst.controller = MainnetControllerDeploy.deployController({
+            admin      : Ethereum.SPARK_PROXY,
+            almProxy   : Ethereum.ALM_PROXY,
+            rateLimits : Ethereum.ALM_RATE_LIMITS,
+            vault      : Ethereum.ALLOCATOR_VAULT,
+            psm        : Ethereum.PSM,
+            daiUsds    : Ethereum.DAI_USDS,
+            cctp       : Ethereum.CCTP_TOKEN_MESSENGER
+        });
 
-//     //     _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-not-almProxy-controller"));
-//     // }
+        // Overwrite storage for all previous deployments in setUp and assert deployment
+        almProxy   = ALMProxy(payable(Ethereum.ALM_PROXY));
+        rateLimits = RateLimits(Ethereum.ALM_RATE_LIMITS);
 
-//     // function test_init_oldControllerDoesNotHaveRoleInRateLimits() external {
-//     //     _deployNewControllerAfterExistingControllerInit();
+        controllerInst.almProxy   = address(almProxy);
+        controllerInst.rateLimits = address(rateLimits);
 
-//     //     // Revoke the old controller address
+        Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
-//     //     vm.startPrank(SPARK_PROXY);
-//     //     rateLimits.revokeRole(rateLimits.CONTROLLER(), configAddresses.oldController);
-//     //     vm.stopPrank();
+        ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
 
-//     //     // Try to init with the old controller address that is doesn't have the CONTROLLER role
+        mintRecipients.push(mintRecipients_[0]);
 
-//     //     _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-not-rateLimits-controller"));
-//     // }
+        configAddresses.oldController = Ethereum.ALM_CONTROLLER;
 
-//     // /**********************************************************************************************/
-//     // /*** Helper functions                                                                       ***/
-//     // /**********************************************************************************************/
+        // Admin will be calling the library from its own address
+        vm.etch(SPARK_PROXY, address(new LibraryWrapper()).code);
 
-//     // function _deployNewControllerAfterExistingControllerInit() internal {
-//     //     // Successfully init first controller
+        wrapper = LibraryWrapper(SPARK_PROXY);
+    }
 
-//     //     vm.startPrank(SPARK_PROXY);
-//     //     Init.subDaoInitController(
-//     //         configAddresses,
-//     //         checkAddresses,
-//     //         controllerInst,
-//     //         mintRecipients
-//     //     );
-//     //     vm.stopPrank();
+    function _getBlock() internal pure override returns (uint256) {
+        return 21430000;  // Dec 18, 2024
+    }
 
-//     //     // Deploy a new controller (controllerInst is used in init with new controller address)
+    /**********************************************************************************************/
+    /*** Old controller role check tests                                                        ***/
+    /**********************************************************************************************/
 
-//     //     controllerInst.controller = MainnetControllerDeploy.deployController({
-//     //         admin      : Ethereum.SPARK_PROXY,
-//     //         almProxy   : Ethereum.ALM_PROXY,
-//     //         rateLimits : Ethereum.ALM_RATE_LIMITS,
-//     //         vault      : Ethereum.ALLOCATOR_VAULT,
-//     //         psm        : Ethereum.PSM,
-//     //         daiUsds    : Ethereum.DAI_USDS,
-//     //         cctp       : Ethereum.CCTP_TOKEN_MESSENGER,
-//     //         susds      : Ethereum.SUSDS
-//     //     });
+    function test_upgrade_oldControllerZeroAddress() external {
+        configAddresses.oldController = address(0);
 
-//     //     configAddresses.oldController = address(mainnetController);
-//     // }
+        vm.expectRevert("MainnetControllerInit/old-controller-zero-address");
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+    function test_upgrade_oldControllerDoesNotHaveRoleInAlmProxy() external {
+        // Revoke the old controller address in ALM proxy
+        vm.startPrank(SPARK_PROXY);
+        almProxy.revokeRole(almProxy.CONTROLLER(), configAddresses.oldController);
+        vm.stopPrank(); 
+
+        // Try to upgrade with the old controller address that is doesn't have the CONTROLLER role
+        vm.expectRevert("MainnetControllerInit/old-controller-not-almProxy-controller");
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+    function test_upgrade_oldControllerDoesNotHaveRoleInRateLimits() external {
+        // Revoke the old controller address in rate limits
+        vm.startPrank(SPARK_PROXY);
+        rateLimits.revokeRole(rateLimits.CONTROLLER(), configAddresses.oldController);
+        vm.stopPrank();
+
+        // Try to upgrade with the old controller address that is doesn't have the CONTROLLER role
+        vm.expectRevert("MainnetControllerInit/old-controller-not-rateLimits-controller");
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+}
 
 //     // Added this function to ensure that all the failure modes from `subDaoInitController`
 //     // are also covered by `subDaoInitFull` calls

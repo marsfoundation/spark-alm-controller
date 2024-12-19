@@ -26,7 +26,7 @@ contract MainnetControllerDeploySuccessTests is ForkTestBase {
         assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),   true);
         assertEq(newRateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY), true);
 
-        _assertControllerInitState(newController, address(almProxy), address(rateLimits), vault, buffer);
+        _assertControllerInitState(newController, address(newAlmProxy), address(newRateLimits), vault, buffer);
     }
 
     function test_deployController() external {

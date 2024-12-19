@@ -90,7 +90,17 @@ library MainnetControllerInit {
         internal
     {
         _initController(controllerInst, configAddresses, checkAddresses, mintRecipients);   
-        _revokeOldControllerRoles(controllerInst, configAddresses.oldController);
+        
+        IALMProxy   almProxy   = IALMProxy(controllerInst.almProxy);
+        IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
+
+        require(configAddresses.oldController != address(0), "MainnetControllerInit/old-controller-zero-address"); 
+
+        require(almProxy.hasRole(almProxy.CONTROLLER(), configAddresses.oldController),     "MainnetControllerInit/old-controller-not-almProxy-controller");
+        require(rateLimits.hasRole(rateLimits.CONTROLLER(), configAddresses.oldController), "MainnetControllerInit/old-controller-not-rateLimits-controller");
+
+        almProxy.revokeRole(almProxy.CONTROLLER(), configAddresses.oldController);
+        rateLimits.revokeRole(rateLimits.CONTROLLER(), configAddresses.oldController);
     }
 
     function pauseProxyInitAlmSystem(address psm, address almProxy) internal {
@@ -144,19 +154,6 @@ library MainnetControllerInit {
         for (uint256 i = 0; i < mintRecipients.length; i++) {
             newController.setMintRecipient(mintRecipients[i].domain, mintRecipients[i].mintRecipient);
         }
-    }
-
-    function _revokeOldControllerRoles(ControllerInstance  memory controllerInst, address oldController) private {
-        IALMProxy   almProxy   = IALMProxy(controllerInst.almProxy);
-        IRateLimits rateLimits = IRateLimits(controllerInst.rateLimits);
-
-        require(oldController != address(0), "MainnetControllerInit/old-controller-zero-address"); 
-
-        require(almProxy.hasRole(almProxy.CONTROLLER(), oldController),     "MainnetControllerInit/old-controller-not-almProxy-controller");
-        require(rateLimits.hasRole(rateLimits.CONTROLLER(), oldController), "MainnetControllerInit/old-controller-not-rateLimits-controller");
-
-        almProxy.revokeRole(almProxy.CONTROLLER(), oldController);
-        rateLimits.revokeRole(rateLimits.CONTROLLER(), oldController);
     }
 
 }
