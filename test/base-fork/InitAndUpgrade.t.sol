@@ -82,6 +82,7 @@ contract ForeignControllerInitAndUpgradeFailureTest is ForeignControllerInitAndU
     ControllerInstance public controllerInst;
 
     address public mismatchAddress = makeAddr("mismatchAddress");
+    
     address public oldController;
 
     Init.ConfigAddressParams configAddresses;
@@ -340,7 +341,7 @@ contract ForeignControllerInitAndUpgradeFailureTest is ForeignControllerInitAndU
     }
 
     /**********************************************************************************************/
-    /*** Upgrade tests                                                                         ***/
+    /*** Upgrade tests                                                                          ***/
     /**********************************************************************************************/
 
     function test_upgradeController_oldControllerZeroAddress() external {

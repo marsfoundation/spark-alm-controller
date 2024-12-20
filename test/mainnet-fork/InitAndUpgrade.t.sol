@@ -60,9 +60,9 @@ contract MainnetControllerInitAndUpgradeTestBase is ForkTestBase {
 
         checkAddresses = Init.CheckAddressParams({
             admin      : Ethereum.SPARK_PROXY,
-            proxy      : Ethereum.ALM_PROXY,
-            rateLimits : Ethereum.ALM_RATE_LIMITS,
-            vault      : Ethereum.ALLOCATOR_VAULT,
+            proxy      : address(almProxy),
+            rateLimits : address(rateLimits),
+            vault      : address(vault),
             psm        : Ethereum.PSM,
             daiUsds    : Ethereum.DAI_USDS,
             cctp       : Ethereum.CCTP_TOKEN_MESSENGER
@@ -78,13 +78,19 @@ contract MainnetControllerInitAndUpgradeTestBase is ForkTestBase {
 
 }
 
-contract MainnetControllerInitFailureTests is MainnetControllerInitAndUpgradeTestBase {
+contract MainnetControllerInitAndUpgradeFailureTest is MainnetControllerInitAndUpgradeTestBase {
+
+    // NOTE: `initAlmSystem` and `upgradeController` are tested in the same contract because
+    //       they both use _initController and have similar specific setups, so it 
+    //       less complex/repetitive to test them together.
 
     LibraryWrapper wrapper;
 
     ControllerInstance public controllerInst;
 
     address public mismatchAddress = makeAddr("mismatchAddress");
+
+    address public oldController;
 
     Init.ConfigAddressParams configAddresses;
     Init.CheckAddressParams  checkAddresses;
@@ -93,21 +99,22 @@ contract MainnetControllerInitFailureTests is MainnetControllerInitAndUpgradeTes
     function setUp() public override {
         super.setUp();
 
-        // Deploy new controller against live mainnet system
+        oldController = address(mainnetController);  // Cache for later testing
+
         // NOTE: initAlmSystem will redundantly call rely and approve on already inited 
-        //       almProxy and rateLimits, this setup was chosen to easily test upgrade and init failures
+        //       almProxy and rateLimits, this setup was chosen to easily test upgrade and init failures.
+        //       It also should be noted that the almProxy and rateLimits that are being used in initAlmSystem
+        //       are already deployed. This is technically possible to do and works in the same way, it was
+        //       done also for make testing easier.
         mainnetController = MainnetController(MainnetControllerDeploy.deployController({
             admin      : Ethereum.SPARK_PROXY,
-            almProxy   : Ethereum.ALM_PROXY,
-            rateLimits : Ethereum.ALM_RATE_LIMITS,
-            vault      : Ethereum.ALLOCATOR_VAULT,
+            almProxy   : address(almProxy),
+            rateLimits : address(rateLimits),
+            vault      : address(vault),
             psm        : Ethereum.PSM,
             daiUsds    : Ethereum.DAI_USDS,
             cctp       : Ethereum.CCTP_TOKEN_MESSENGER
         }));
-
-        almProxy   = ALMProxy(payable(Ethereum.ALM_PROXY));
-        rateLimits = RateLimits(Ethereum.ALM_RATE_LIMITS);
 
         Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
@@ -117,9 +124,9 @@ contract MainnetControllerInitFailureTests is MainnetControllerInitAndUpgradeTes
         mintRecipients.push(mintRecipients_[0]);
 
         controllerInst = ControllerInstance({
-            almProxy   : Ethereum.ALM_PROXY,
+            almProxy   : address(almProxy),
             controller : address(mainnetController),
-            rateLimits : Ethereum.ALM_RATE_LIMITS
+            rateLimits : address(rateLimits)
         });
 
         // Admin will be calling the library from its own address
@@ -136,7 +143,7 @@ contract MainnetControllerInitFailureTests is MainnetControllerInitAndUpgradeTes
     /*** ACL tests                                                                              ***/
     /**********************************************************************************************/
 
-    function test_init_incorrectAdminAlmProxy() external {
+    function test_initAlmSystem_incorrectAdminAlmProxy() external {
         // Isolate different contracts instead of setting param so can get three different failures
         vm.startPrank(SPARK_PROXY);
         almProxy.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
@@ -154,7 +161,7 @@ contract MainnetControllerInitFailureTests is MainnetControllerInitAndUpgradeTes
         );
     }
 
-    function test_init_incorrectAdminRateLimits() external {
+    function test_initAlmSystem_incorrectAdminRateLimits() external {
         // Isolate different contracts instead of setting param so can get three different failures
         vm.startPrank(SPARK_PROXY);
         rateLimits.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
@@ -172,7 +179,7 @@ contract MainnetControllerInitFailureTests is MainnetControllerInitAndUpgradeTes
         );
     }
 
-    function test_init_incorrectAdminController() external {
+    function test_initAlmSystem_upgradeController_incorrectAdminController() external {
         // Isolate different contracts instead of setting param so can get three different failures
         vm.startPrank(SPARK_PROXY);
         mainnetController.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
@@ -186,41 +193,41 @@ contract MainnetControllerInitFailureTests is MainnetControllerInitAndUpgradeTes
     /*** Constructor tests                                                                      ***/
     /**********************************************************************************************/
 
-    function test_init_incorrectAlmProxy() external {
+    function test_initAlmSystem_upgradeController_incorrectAlmProxy() external {
         // Deploy new address that will not EVM revert on OZ ACL check
         controllerInst.almProxy = address(new ALMProxy(SPARK_PROXY));
 
         _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-almProxy"));
     }
 
-    function test_init_incorrectRateLimits() external {
+    function test_initAlmSystem_upgradeController_incorrectRateLimits() external {
         // Deploy new address that will not EVM revert on OZ ACL check
         controllerInst.rateLimits = address(new RateLimits(SPARK_PROXY));
 
         _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-rateLimits"));
     }
 
-    function test_init_incorrectVault() external {
+    function test_initAlmSystem_upgradeController_incorrectVault() external {
         checkAddresses.vault = mismatchAddress;
         _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-vault"));
     }
 
-    function test_init_incorrectPsm() external {
+    function test_initAlmSystem_upgradeController_incorrectPsm() external {
         checkAddresses.psm = mismatchAddress;
         _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-psm"));
     }
 
-    function test_init_incorrectDaiUsds() external {
+    function test_initAlmSystem_upgradeController_incorrectDaiUsds() external {
         checkAddresses.daiUsds = mismatchAddress;
         _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-daiUsds"));
     }
 
-    function test_init_incorrectCctp() external {
+    function test_initAlmSystem_upgradeController_incorrectCctp() external {
         checkAddresses.cctp = mismatchAddress;
         _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-cctp"));
     }
 
-    function test_init_controllerInactive() external {
+    function test_initAlmSystem_upgradeController_controllerInactive() external {
         // Cheating to set this outside of init scripts so that the controller can be frozen
         vm.startPrank(SPARK_PROXY);
         mainnetController.grantRole(FREEZER, freezer);
@@ -232,12 +239,12 @@ contract MainnetControllerInitFailureTests is MainnetControllerInitAndUpgradeTes
         _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/controller-not-active"));
     }
 
-    function test_init_oldControllerIsNewController() external {
+    function test_initAlmSystem_upgradeController_oldControllerIsNewController() external {
         configAddresses.oldController = controllerInst.controller;
         _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/old-controller-is-new-controller"));
     }
 
-    function test_init_vaultMismatch() external {
+    function test_initAlmSystem_upgradeController_vaultMismatch() external {
         vault = mismatchAddress;
         
         vm.expectRevert("MainnetControllerInit/incorrect-vault");
@@ -251,80 +258,11 @@ contract MainnetControllerInitFailureTests is MainnetControllerInitAndUpgradeTes
         );
     }
 
-    function _checkInitAndUpgradeFail(bytes memory expectedError) internal {
-        vm.expectRevert(expectedError);
-        wrapper.initAlmSystem(
-            vault,
-            address(usds),
-            controllerInst,
-            configAddresses,
-            checkAddresses,
-            mintRecipients
-        );
+    /**********************************************************************************************/
+    /*** Upgrade tests                                                                          ***/
+    /**********************************************************************************************/
 
-        vm.expectRevert(expectedError);
-        wrapper.upgradeController(
-            controllerInst,
-            configAddresses,
-            checkAddresses,
-            mintRecipients
-        );
-    }
-
-}
-
-contract MainnetControllerUpgradeFailureTests is MainnetControllerInitAndUpgradeTestBase {
-
-    LibraryWrapper wrapper;
-
-    ControllerInstance public controllerInst;
-
-    address public mismatchAddress = makeAddr("mismatchAddress");
-
-    Init.ConfigAddressParams configAddresses;
-    Init.CheckAddressParams  checkAddresses;
-    Init.MintRecipient[]     mintRecipients;
-
-    function setUp() public override {
-        super.setUp();
-
-        // Deploy new controller against live mainnet system
-        controllerInst.controller = MainnetControllerDeploy.deployController({
-            admin      : Ethereum.SPARK_PROXY,
-            almProxy   : Ethereum.ALM_PROXY,
-            rateLimits : Ethereum.ALM_RATE_LIMITS,
-            vault      : Ethereum.ALLOCATOR_VAULT,
-            psm        : Ethereum.PSM,
-            daiUsds    : Ethereum.DAI_USDS,
-            cctp       : Ethereum.CCTP_TOKEN_MESSENGER
-        });
-
-        // Overwrite storage for all previous deployments in setUp and assert deployment
-        almProxy   = ALMProxy(payable(Ethereum.ALM_PROXY));
-        rateLimits = RateLimits(Ethereum.ALM_RATE_LIMITS);
-
-        controllerInst.almProxy   = address(almProxy);
-        controllerInst.rateLimits = address(rateLimits);
-
-        Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
-
-        ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
-
-        mintRecipients.push(mintRecipients_[0]);
-
-        configAddresses.oldController = Ethereum.ALM_CONTROLLER;
-
-        // Admin will be calling the library from its own address
-        vm.etch(SPARK_PROXY, address(new LibraryWrapper()).code);
-
-        wrapper = LibraryWrapper(SPARK_PROXY);
-    }
-
-    function _getBlock() internal pure override returns (uint256) {
-        return 21430000;  // Dec 18, 2024
-    }
-
-    function test_upgrade_oldControllerZeroAddress() external {
+    function test_upgradeController_oldControllerZeroAddress() external {
         configAddresses.oldController = address(0);
 
         vm.expectRevert("MainnetControllerInit/old-controller-zero-address");
@@ -336,7 +274,9 @@ contract MainnetControllerUpgradeFailureTests is MainnetControllerInitAndUpgrade
         );
     }
 
-    function test_upgrade_oldControllerDoesNotHaveRoleInAlmProxy() external {
+    function test_upgradeController_oldControllerDoesNotHaveRoleInAlmProxy() external {
+        configAddresses.oldController = oldController;
+
         // Revoke the old controller address in ALM proxy
         vm.startPrank(SPARK_PROXY);
         almProxy.revokeRole(almProxy.CONTROLLER(), configAddresses.oldController);
@@ -352,7 +292,9 @@ contract MainnetControllerUpgradeFailureTests is MainnetControllerInitAndUpgrade
         );
     }
 
-    function test_upgrade_oldControllerDoesNotHaveRoleInRateLimits() external {
+    function test_upgradeController_oldControllerDoesNotHaveRoleInRateLimits() external {
+        configAddresses.oldController = oldController;
+
         // Revoke the old controller address in rate limits
         vm.startPrank(SPARK_PROXY);
         rateLimits.revokeRole(rateLimits.CONTROLLER(), configAddresses.oldController);
@@ -360,6 +302,30 @@ contract MainnetControllerUpgradeFailureTests is MainnetControllerInitAndUpgrade
 
         // Try to upgrade with the old controller address that is doesn't have the CONTROLLER role
         vm.expectRevert("MainnetControllerInit/old-controller-not-rateLimits-controller");
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Helper functions                                                                       ***/
+    /**********************************************************************************************/
+
+    function _checkInitAndUpgradeFail(bytes memory expectedError) internal {
+        vm.expectRevert(expectedError);
+        wrapper.initAlmSystem(
+            vault,
+            address(usds),
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+
+        vm.expectRevert(expectedError);
         wrapper.upgradeController(
             controllerInst,
             configAddresses,
@@ -387,7 +353,7 @@ contract MainnetControllerInitAlmSystemSuccessTests is MainnetControllerInitAndU
 
         controllerInst = MainnetControllerDeploy.deployFull(
             Ethereum.SPARK_PROXY,
-            Ethereum.ALLOCATOR_VAULT,
+            address(vault),
             Ethereum.PSM,
             Ethereum.DAI_USDS,
             Ethereum.CCTP_TOKEN_MESSENGER
@@ -397,8 +363,6 @@ contract MainnetControllerInitAlmSystemSuccessTests is MainnetControllerInitAndU
         mainnetController = MainnetController(controllerInst.controller);
         almProxy          = ALMProxy(payable(controllerInst.almProxy));
         rateLimits        = RateLimits(controllerInst.rateLimits);
-        vault             = Ethereum.ALLOCATOR_VAULT;  // Use mainnet vault
-        buffer            = Ethereum.ALLOCATOR_BUFFER; // Use mainnet buffer
 
         Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
@@ -431,8 +395,8 @@ contract MainnetControllerInitAlmSystemSuccessTests is MainnetControllerInitAndU
 
         vm.startPrank(SPARK_PROXY);
         wrapper.initAlmSystem(
-            Ethereum.ALLOCATOR_VAULT,
-            Ethereum.USDS,
+            address(vault),
+            address(usds),
             controllerInst,
             configAddresses,
             checkAddresses,
@@ -492,20 +456,6 @@ contract MainnetControllerUpgradeControllerSuccessTests is MainnetControllerInit
     function setUp() public override {
         super.setUp();
 
-        // Upgrade against mainnet contracts
-        controllerInst = ControllerInstance({
-            almProxy   : Ethereum.ALM_PROXY,
-            controller : Ethereum.ALM_CONTROLLER,
-            rateLimits : Ethereum.ALM_RATE_LIMITS
-        });
-
-        // Overwrite storage for all previous deployments in setUp and assert brand new deployment
-        mainnetController = MainnetController(controllerInst.controller);
-        almProxy          = ALMProxy(payable(controllerInst.almProxy));
-        rateLimits        = RateLimits(controllerInst.rateLimits);
-        vault             = Ethereum.ALLOCATOR_VAULT;  // Use mainnet vault
-        buffer            = Ethereum.ALLOCATOR_BUFFER; // Use mainnet buffer
-
         Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
         ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
@@ -514,16 +464,21 @@ contract MainnetControllerUpgradeControllerSuccessTests is MainnetControllerInit
 
         newController = MainnetController(MainnetControllerDeploy.deployController({
             admin      : Ethereum.SPARK_PROXY,
-            almProxy   : Ethereum.ALM_PROXY,
-            rateLimits : Ethereum.ALM_RATE_LIMITS,
-            vault      : Ethereum.ALLOCATOR_VAULT,
+            almProxy   : address(almProxy),
+            rateLimits : address(rateLimits),
+            vault      : address(vault),
             psm        : Ethereum.PSM,
             daiUsds    : Ethereum.DAI_USDS,
             cctp       : Ethereum.CCTP_TOKEN_MESSENGER
         }));
 
-        controllerInst.controller     = address(newController);   // Upgrade to new controller
-        configAddresses.oldController = Ethereum.ALM_CONTROLLER;  // Revoke from old controller
+        controllerInst = ControllerInstance({
+            almProxy   : address(almProxy),
+            controller : address(newController),
+            rateLimits : address(rateLimits)
+        });
+
+        configAddresses.oldController = address(mainnetController);  // Revoke from old controller
 
         // Admin will be calling the library from its own address
         vm.etch(SPARK_PROXY, address(new LibraryWrapper()).code);
