@@ -54,11 +54,11 @@ contract ForeignControllerInitAndUpgradeTestBase is ForkTestBase {
 
         checkAddresses = Init.CheckAddressParams({
             admin : Base.SPARK_EXECUTOR,
-            psm   : Base.PSM3,
+            psm   : address(psmBase),
             cctp  : Base.CCTP_TOKEN_MESSENGER,
-            usdc  : Base.USDS,
-            susds : Base.SUSDS,
-            usds  : Base.USDC
+            usdc  : address(usdcBase),
+            susds : address(susdsBase),
+            usds  : address(usdsBase)
         });
 
         mintRecipients = new Init.MintRecipient[](1);
@@ -93,13 +93,10 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
             admin      : Base.SPARK_EXECUTOR,
             almProxy   : address(almProxy),
             rateLimits : address(rateLimits),
-            psm        : Base.PSM3,
-            usdc       : Base.USDC,
+            psm        : address(psmBase),
+            usdc       : address(usdcBase),
             cctp       : Base.CCTP_TOKEN_MESSENGER
         }));
-
-        almProxy   = ALMProxy(payable(Base.ALM_PROXY));
-        rateLimits = RateLimits(Base.ALM_RATE_LIMITS);
 
         Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
@@ -109,9 +106,9 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         mintRecipients.push(mintRecipients_[0]);
 
         controllerInst = ControllerInstance({
-            almProxy   : Base.ALM_PROXY,
+            almProxy   : address(almProxy),
             controller : address(foreignController),
-            rateLimits : Base.ALM_RATE_LIMITS
+            rateLimits : address(rateLimits)
         });
 
         // Admin will be calling the library from its own address
@@ -144,122 +141,258 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         );
     }
 
-    // function test_init_incorrectAdminRateLimits() external {
-    //     // Isolate different contracts instead of setting param so can get three different failures
-    //     vm.startPrank(Base.SPARK_EXECUTOR);
-    //     rateLimits.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
-    //     rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR);
-    //     vm.stopPrank();
+    function test_init_incorrectAdminRateLimits() external {
+        // Isolate different contracts instead of setting param so can get three different failures
+        vm.startPrank(Base.SPARK_EXECUTOR);
+        rateLimits.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+        rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR);
+        vm.stopPrank();
 
-    //     vm.expectRevert("ForeignControllerInit/incorrect-admin-rateLimits");
-    //     wrapper.initAlmSystem(
-    //         vault,
-    //         address(usds),
-    //         controllerInst,
-    //         configAddresses,
-    //         checkAddresses,
-    //         mintRecipients
-    //     );
-    // }
+        vm.expectRevert("ForeignControllerInit/incorrect-admin-rateLimits");
+        wrapper.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
 
-    // function test_init_incorrectAdminController() external {
-    //     // Isolate different contracts instead of setting param so can get three different failures
-    //     vm.startPrank(Base.SPARK_EXECUTOR);
-    //     foreignController.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
-    //     foreignController.revokeRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR);
-    //     vm.stopPrank();
+    function test_init_incorrectAdminController() external {
+        // Isolate different contracts instead of setting param so can get three different failures
+        vm.startPrank(Base.SPARK_EXECUTOR);
+        foreignController.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+        foreignController.revokeRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR);
+        vm.stopPrank();
 
-    //     _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-admin-controller"));
-    // }
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-admin-controller"));
+    }
 
-    // /**********************************************************************************************/
-    // /*** Constructor tests                                                                      ***/
-    // /**********************************************************************************************/
+    /**********************************************************************************************/
+    /*** Constructor tests                                                                      ***/
+    /**********************************************************************************************/
 
-    // function test_init_incorrectAlmProxy() external {
-    //     // Deploy new address that will not EVM revert on OZ ACL check
-    //     controllerInst.almProxy = address(new ALMProxy(Base.SPARK_EXECUTOR));
+    function test_init_incorrectAlmProxy() external {
+        // Deploy new address that will not EVM revert on OZ ACL check
+        controllerInst.almProxy = address(new ALMProxy(Base.SPARK_EXECUTOR));
 
-    //     _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-almProxy"));
-    // }
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-almProxy"));
+    }
 
-    // function test_init_incorrectRateLimits() external {
-    //     // Deploy new address that will not EVM revert on OZ ACL check
-    //     controllerInst.rateLimits = address(new RateLimits(Base.SPARK_EXECUTOR));
+    function test_init_incorrectRateLimits() external {
+        // Deploy new address that will not EVM revert on OZ ACL check
+        controllerInst.rateLimits = address(new RateLimits(Base.SPARK_EXECUTOR));
 
-    //     _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-rateLimits"));
-    // }
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-rateLimits"));
+    }
 
-    // function test_init_incorrectVault() external {
-    //     checkAddresses.vault = mismatchAddress;
-    //     _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-vault"));
-    // }
+    function test_init_incorrectPsm() external {
+        checkAddresses.psm = mismatchAddress;
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-psm"));
+    }
 
-    // function test_init_incorrectPsm() external {
-    //     checkAddresses.psm = mismatchAddress;
-    //     _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-psm"));
-    // }
+    function test_init_incorrectUsdc() external {
+        checkAddresses.usdc = mismatchAddress;
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-usdc"));
+    }
 
-    // function test_init_incorrectDaiUsds() external {
-    //     checkAddresses.daiUsds = mismatchAddress;
-    //     _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-daiUsds"));
-    // }
+    function test_init_incorrectCctp() external {
+        checkAddresses.cctp = mismatchAddress;
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-cctp"));
+    }
 
-    // function test_init_incorrectCctp() external {
-    //     checkAddresses.cctp = mismatchAddress;
-    //     _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-cctp"));
-    // }
+    function test_init_controllerInactive() external {
+        // Cheating to set this outside of init scripts so that the controller can be frozen
+        vm.startPrank(Base.SPARK_EXECUTOR);
+        foreignController.grantRole(FREEZER, freezer);
 
-    // function test_init_controllerInactive() external {
-    //     // Cheating to set this outside of init scripts so that the controller can be frozen
-    //     vm.startPrank(Base.SPARK_EXECUTOR);
-    //     foreignController.grantRole(FREEZER, freezer);
+        vm.startPrank(freezer);
+        foreignController.freeze();
+        vm.stopPrank();
 
-    //     vm.startPrank(freezer);
-    //     foreignController.freeze();
-    //     vm.stopPrank();
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/controller-not-active"));
+    }
 
-    //     _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/controller-not-active"));
-    // }
+    function test_init_oldControllerIsNewController() external {
+        configAddresses.oldController = controllerInst.controller;
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/old-controller-is-new-controller"));
+    }
 
-    // function test_init_oldControllerIsNewController() external {
-    //     configAddresses.oldController = controllerInst.controller;
-    //     _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/old-controller-is-new-controller"));
-    // }
+    /**********************************************************************************************/
+    /*** PSM tests                                                                              ***/
+    /**********************************************************************************************/
 
-    // function test_init_vaultMismatch() external {
-    //     vault = mismatchAddress;
-        
-    //     vm.expectRevert("ForeignControllerInit/incorrect-vault");
-    //     wrapper.initAlmSystem(
-    //         vault,
-    //         address(usds),
-    //         controllerInst,
-    //         configAddresses,
-    //         checkAddresses,
-    //         mintRecipients
-    //     );
-    // }
+    function test_init_totalAssetsNotSeededBoundary() external {
+        // Remove one wei from PSM to make seeded condition not met
+        vm.prank(address(0));
+        psmBase.withdraw(address(usdsBase), address(this), 1);  // Withdraw one wei from PSM
 
-    // function _checkInitAndUpgradeFail(bytes memory expectedError) internal {
-    //     vm.expectRevert(expectedError);
-    //     wrapper.initAlmSystem(
-    //         vault,
-    //         address(usds),
-    //         controllerInst,
-    //         configAddresses,
-    //         checkAddresses,
-    //         mintRecipients
-    //     );
+        assertEq(psmBase.totalAssets(), 1e18 - 1);
 
-    //     vm.expectRevert(expectedError);
-    //     wrapper.upgradeController(
-    //         controllerInst,
-    //         configAddresses,
-    //         checkAddresses,
-    //         mintRecipients
-    //     );
-    // }
+        vm.expectRevert("ForeignControllerInit/psm-totalAssets-not-seeded");
+        wrapper.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+
+        // Approve from address(this) cause it received the one wei
+        // Redo the seeding
+        usdsBase.approve(address(psmBase), 1);
+        psmBase.deposit(address(usdsBase), address(0), 1);
+
+        assertEq(psmBase.totalAssets(), 1e18);
+
+        wrapper.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+    function test_init_totalSharesNotSeededBoundary() external {
+        // Remove one wei from PSM to make seeded condition not met
+        vm.prank(address(0));
+        psmBase.withdraw(address(usdsBase), address(this), 1);  // Withdraw one wei from PSM
+
+        usdsBase.transfer(address(psmBase), 1);  // Transfer one wei to PSM to update totalAssets
+
+        assertEq(psmBase.totalAssets(), 1e18);
+        assertEq(psmBase.totalShares(), 1e18 - 1);
+
+        vm.expectRevert("ForeignControllerInit/psm-totalShares-not-seeded");
+        wrapper.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+
+        // Do deposit to update shares, need to do 2 wei to get back to 1e18 because of rounding
+        deal(address(usdsBase), address(this), 2);
+        usdsBase.approve(address(psmBase), 2);
+        psmBase.deposit(address(usdsBase), address(0), 2);
+
+        assertEq(psmBase.totalAssets(), 1e18 + 2);
+        assertEq(psmBase.totalShares(), 1e18);
+
+        wrapper.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+    function test_init_incorrectPsmUsdc() external {
+        ERC20Mock wrongUsdc = new ERC20Mock();
+
+        deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
+
+        // Deploy a new PSM with the wrong USDC
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            SPARK_EXECUTOR, address(wrongUsdc), address(usdsBase), address(susdsBase), SSR_ORACLE
+        ));
+
+        // Deploy a new controller pointing to misconfigured PSM
+        controllerInst = ForeignControllerDeploy.deployFull(
+            SPARK_EXECUTOR,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
+
+        checkAddresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+
+        vm.expectRevert("ForeignControllerInit/psm-incorrect-usdc");
+        wrapper.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+    function test_init_incorrectPsmUsds() external {
+        ERC20Mock wrongUsds = new ERC20Mock();
+
+        deal(address(wrongUsds), address(this), 1e18);  // For seeding PSM during deployment
+
+        // Deploy a new PSM with the wrong USDC
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            SPARK_EXECUTOR, USDC_BASE, address(wrongUsds), address(susdsBase), SSR_ORACLE
+        ));
+
+        // Deploy a new controller pointing to misconfigured PSM
+        controllerInst = ForeignControllerDeploy.deployFull(
+            SPARK_EXECUTOR,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
+
+        checkAddresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+
+        vm.expectRevert("ForeignControllerInit/psm-incorrect-usds");
+        wrapper.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+    function test_init_incorrectPsmSUsds() external {
+        ERC20Mock wrongSUsds = new ERC20Mock();
+
+        deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
+
+        // Deploy a new PSM with the wrong USDC
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            SPARK_EXECUTOR, USDC_BASE, address(usdsBase), address(wrongSUsds), SSR_ORACLE
+        ));
+
+        // Deploy a new controller pointing to misconfigured PSM
+        controllerInst = ForeignControllerDeploy.deployFull(
+            SPARK_EXECUTOR,
+            address(psmBase),
+            USDC_BASE,
+            CCTP_MESSENGER_BASE
+        );
+
+        checkAddresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
+
+        vm.expectRevert("ForeignControllerInit/psm-incorrect-susds");
+        wrapper.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Helper functions                                                                       ***/
+    /**********************************************************************************************/
+
+    function _checkInitAndUpgradeFail(bytes memory expectedError) internal {
+        vm.expectRevert(expectedError);
+        wrapper.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+
+        vm.expectRevert(expectedError);
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
 
 }
 
@@ -281,8 +414,8 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 //         // Deploy new controller against live mainnet system
 //         controllerInst.controller = ForeignControllerDeploy.deployController({
 //             admin      : Base.Base.SPARK_EXECUTOR,
-//             almProxy   : Base.ALM_PROXY,
-//             rateLimits : Base.ALM_RATE_LIMITS,
+//             almProxy   : almProxy,
+//             rateLimits : rateLimits,
 //             vault      : Base.ALLOCATOR_VAULT,
 //             psm        : Base.PSM,
 //             daiUsds    : Base.DAI_USDS,
@@ -290,8 +423,8 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 //         });
 
 //         // Overwrite storage for all previous deployments in setUp and assert deployment
-//         almProxy   = ALMProxy(payable(Base.ALM_PROXY));
-//         rateLimits = RateLimits(Base.ALM_RATE_LIMITS);
+//         almProxy   = ALMProxy(payable(almProxy));
+//         rateLimits = RateLimits(rateLimits);
 
 //         controllerInst.almProxy   = address(almProxy);
 //         controllerInst.rateLimits = address(rateLimits);
@@ -422,7 +555,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 //         vm.startPrank(Base.SPARK_EXECUTOR);
 //         wrapper.initAlmSystem(
 //             Base.ALLOCATOR_VAULT,
-//             Base.USDS,
+//             usdsBase,
 //             controllerInst,
 //             configAddresses,
 //             checkAddresses,
@@ -484,9 +617,9 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 
 //         // Upgrade against mainnet contracts
 //         controllerInst = ControllerInstance({
-//             almProxy   : Base.ALM_PROXY,
+//             almProxy   : almProxy,
 //             controller : Base.ALM_CONTROLLER,
-//             rateLimits : Base.ALM_RATE_LIMITS
+//             rateLimits : rateLimits
 //         });
 
 //         // Overwrite storage for all previous deployments in setUp and assert brand new deployment
@@ -504,8 +637,8 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 
 //         newController = ForeignController(ForeignControllerDeploy.deployController({
 //             admin      : Base.Base.SPARK_EXECUTOR,
-//             almProxy   : Base.ALM_PROXY,
-//             rateLimits : Base.ALM_RATE_LIMITS,
+//             almProxy   : almProxy,
+//             rateLimits : rateLimits,
 //             vault      : Base.ALLOCATOR_VAULT,
 //             psm        : Base.PSM,
 //             daiUsds    : Base.DAI_USDS,
