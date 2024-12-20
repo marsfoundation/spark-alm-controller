@@ -1,443 +1,485 @@
-// // SPDX-License-Identifier: AGPL-3.0-or-later
-// pragma solidity ^0.8.21;
+// SPDX-License-Identifier: AGPL-3.0-or-later
+pragma solidity ^0.8.21;
 
-// import {
-//     AllocatorDeploy,
-//     AllocatorIlkInstance,
-//     AllocatorSharedInstance
-// } from "dss-allocator/deploy/AllocatorDeploy.sol";
+import {
+    AllocatorDeploy,
+    AllocatorIlkInstance,
+    AllocatorSharedInstance
+} from "dss-allocator/deploy/AllocatorDeploy.sol";
 
-// import {
-//     BufferLike,
-//     RegistryLike,
-//     RolesLike,
-//     VaultLike
-// } from "dss-allocator/deploy/AllocatorInit.sol";
+import {
+    BufferLike,
+    RegistryLike,
+    RolesLike,
+    VaultLike
+} from "dss-allocator/deploy/AllocatorInit.sol";
 
-// import { AllocatorBuffer } from "dss-allocator/src/AllocatorBuffer.sol";
-// import { AllocatorVault }  from "dss-allocator/src/AllocatorVault.sol";
+import { AllocatorBuffer } from "dss-allocator/src/AllocatorBuffer.sol";
+import { AllocatorVault }  from "dss-allocator/src/AllocatorVault.sol";
 
-// import { ScriptTools } from "dss-test/ScriptTools.sol";
+import { ScriptTools } from "dss-test/ScriptTools.sol";
 
-// import { IERC20 }  from "forge-std/interfaces/IERC20.sol";
-// import { Script }  from "forge-std/Script.sol";
-// import { stdJson } from "forge-std/StdJson.sol";
+import { IERC20 }  from "forge-std/interfaces/IERC20.sol";
+import { Script }  from "forge-std/Script.sol";
+import { stdJson } from "forge-std/StdJson.sol";
 
-// import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
+import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
-// import {
-//     ControllerInstance,
-//     ForeignController,
-//     ForeignControllerDeploy,
-//     MainnetController,
-//     MainnetControllerDeploy
-// } from "../../deploy/ControllerDeploy.sol";
+import {
+    ControllerInstance,
+    ForeignController,
+    ForeignControllerDeploy,
+    MainnetController,
+    MainnetControllerDeploy
+} from "../../deploy/ControllerDeploy.sol";
 
-// import {
-//     ForeignControllerInit,
-//     MainnetControllerInit,
-//     MintRecipient,
-//     RateLimitData
-// } from "../../deploy/ControllerInit.sol";
+import { ForeignControllerInit }                from "../../deploy/ForeignControllerInit.sol";
+import { MainnetControllerInit, MintRecipient } from "../../deploy/MainnetControllerInit.sol";
 
-// import { IRateLimits }      from "../../src/interfaces/IRateLimits.sol";
-// import { RateLimitHelpers } from "../../src/RateLimitHelpers.sol";
+import { IRateLimits } from "../../src/interfaces/IRateLimits.sol";
 
-// import { MockJug }          from "./mocks/MockJug.sol";
-// import { MockUsdsJoin }     from "./mocks/MockUsdsJoin.sol";
-// import { MockVat }          from "./mocks/MockVat.sol";
-// import { PSMWrapper }       from "./mocks/PSMWrapper.sol";
+import { RateLimitHelpers, RateLimitData } from "../../src/RateLimitHelpers.sol";
 
-// struct Domain {
-//     string  name;
-//     string  nameDeps;
-//     string  config;
-//     uint256 forkId;
-//     address admin;
-// }
+import { MockJug }          from "./mocks/MockJug.sol";
+import { MockUsdsJoin }     from "./mocks/MockUsdsJoin.sol";
+import { MockVat }          from "./mocks/MockVat.sol";
+import { PSMWrapper }       from "./mocks/PSMWrapper.sol";
 
-// contract FullStagingDeploy is Script {
+struct Domain {
+    string  name;
+    string  nameDeps;
+    string  config;
+    uint256 forkId;
+    address admin;
+}
 
-//     using stdJson     for string;
-//     using ScriptTools for string;
+contract FullStagingDeploy is Script {
 
-//     /**********************************************************************************************/
-//     /*** Mainnet existing/mock deployments                                                      ***/
-//     /**********************************************************************************************/
+    using stdJson     for string;
+    using ScriptTools for string;
 
-//     address dai;
-//     address daiUsds;
-//     address livePsm;
-//     address psm;
-//     address susds;
-//     address usds;
-//     address usdc;
+    /**********************************************************************************************/
+    /*** Mainnet existing/mock deployments                                                      ***/
+    /**********************************************************************************************/
 
-//     // Mocked MCD contracts
-//     address jug;
-//     address usdsJoin;
-//     address vat;
+    address dai;
+    address daiUsds;
+    address livePsm;
+    address psm;
+    address susds;
+    address usds;
+    address usdc;
 
-//     /**********************************************************************************************/
-//     /*** Mainnet allocation system deployments                                                  ***/
-//     /**********************************************************************************************/
+    // Mocked MCD contracts
+    address jug;
+    address usdsJoin;
+    address vat;
 
-//     address oracle;
-//     address roles;
-//     address registry;
+    /**********************************************************************************************/
+    /*** Mainnet allocation system deployments                                                  ***/
+    /**********************************************************************************************/
 
-//     address buffer;
-//     address vault;
+    address oracle;
+    address roles;
+    address registry;
 
-//     /**********************************************************************************************/
-//     /*** ALM system deployments                                                                 ***/
-//     /**********************************************************************************************/
+    address buffer;
+    address vault;
 
-//     address baseAlmProxy;
-//     address baseController;
+    /**********************************************************************************************/
+    /*** ALM system deployments                                                                 ***/
+    /**********************************************************************************************/
 
-//     address mainnetAlmProxy;
-//     address mainnetController;
+    address baseAlmProxy;
+    address baseController;
 
-//     /**********************************************************************************************/
-//     /*** Deployment-specific variables                                                          ***/
-//     /**********************************************************************************************/
+    address mainnetAlmProxy;
+    address mainnetController;
 
-//     address deployer;
-//     bytes32 ilk;
+    /**********************************************************************************************/
+    /*** Deployment-specific variables                                                          ***/
+    /**********************************************************************************************/
 
-//     uint256 USDC_UNIT_SIZE;
-//     uint256 USDS_UNIT_SIZE;
+    address deployer;
+    bytes32 ilk;
 
-//     Domain mainnet;
-//     Domain base;
+    uint256 USDC_UNIT_SIZE;
+    uint256 USDS_UNIT_SIZE;
 
-//     /**********************************************************************************************/
-//     /*** Helper functions                                                                       ***/
-//     /**********************************************************************************************/
+    Domain mainnet;
+    Domain base;
 
-//     function _setUpDependencies() internal {
-//         vm.selectFork(mainnet.forkId);
-//         vm.startBroadcast();
+    /**********************************************************************************************/
+    /*** Helper functions                                                                       ***/
+    /**********************************************************************************************/
 
-//         // Step 1: Use existing contracts for tokens, DaiUsds and PSM
+    function _setUpDependencies() internal {
+        vm.selectFork(mainnet.forkId);
+        vm.startBroadcast();
 
-//         dai     = mainnet.config.readAddress(".dai");
-//         usds    = mainnet.config.readAddress(".usds");
-//         susds   = mainnet.config.readAddress(".susds");
-//         usdc    = mainnet.config.readAddress(".usdc");
-//         daiUsds = mainnet.config.readAddress(".daiUsds");
-//         livePsm = mainnet.config.readAddress(".psm");
+        // Step 1: Use existing contracts for tokens, DaiUsds and PSM
 
-//         // This contract is necessary to get past the `kiss` requirement from the pause proxy.
-//         // It wraps the `noFee` calls with regular PSM swap calls.
-//         psm = address(new PSMWrapper(usdc, dai, livePsm));
+        dai     = mainnet.config.readAddress(".dai");
+        usds    = mainnet.config.readAddress(".usds");
+        susds   = mainnet.config.readAddress(".susds");
+        usdc    = mainnet.config.readAddress(".usdc");
+        daiUsds = mainnet.config.readAddress(".daiUsds");
+        livePsm = mainnet.config.readAddress(".psm");
 
-//         // NOTE: This is a HACK to make sure that `fill` doesn't get called until the call reverts.
-//         //       Because this PSM contract is a wrapper over the real PSM, the controller queries
-//         //       the DAI balance of the PSM to check if it should fill or not. Filling with DAI
-//         //       fills the live PSM NOT the wrapper, so the while loop will continue until the
-//         //       function reverts. Dealing DAI into the wrapper will prevent fill from being called.
-//         IERC20(dai).transfer(psm, USDS_UNIT_SIZE);
+        // This contract is necessary to get past the `kiss` requirement from the pause proxy.
+        // It wraps the `noFee` calls with regular PSM swap calls.
+        psm = address(new PSMWrapper(usdc, dai, livePsm));
 
-//         // Step 2: Deploy mocked MCD contracts
+        // NOTE: This is a HACK to make sure that `fill` doesn't get called until the call reverts.
+        //       Because this PSM contract is a wrapper over the real PSM, the controller queries
+        //       the DAI balance of the PSM to check if it should fill or not. Filling with DAI
+        //       fills the live PSM NOT the wrapper, so the while loop will continue until the
+        //       function reverts. Dealing DAI into the wrapper will prevent fill from being called.
+        IERC20(dai).transfer(psm, USDS_UNIT_SIZE);
 
-//         vat      = address(new MockVat(mainnet.admin));
-//         usdsJoin = address(new MockUsdsJoin(mainnet.admin, vat, usds));
-//         jug      = address(new MockJug());
+        // Step 2: Deploy mocked MCD contracts
 
-//         // Step 3: Transfer USDS into the join contract
+        vat      = address(new MockVat(mainnet.admin));
+        usdsJoin = address(new MockUsdsJoin(mainnet.admin, vat, usds));
+        jug      = address(new MockJug());
 
-//         require(IERC20(usds).balanceOf(deployer) >= USDS_UNIT_SIZE, "USDS balance too low");
+        // Step 3: Transfer USDS into the join contract
 
-//         IERC20(usds).transfer(usdsJoin, USDS_UNIT_SIZE);
+        require(IERC20(usds).balanceOf(deployer) >= USDS_UNIT_SIZE, "USDS balance too low");
 
-//         vm.stopBroadcast();
+        IERC20(usds).transfer(usdsJoin, USDS_UNIT_SIZE);
 
-//         // Step 4: Export all deployed addresses
+        vm.stopBroadcast();
 
-//         ScriptTools.exportContract(mainnet.nameDeps, "dai",      dai);
-//         ScriptTools.exportContract(mainnet.nameDeps, "daiUsds",  daiUsds);
-//         ScriptTools.exportContract(mainnet.nameDeps, "jug",      jug);
-//         ScriptTools.exportContract(mainnet.nameDeps, "psm",      psm);
-//         ScriptTools.exportContract(mainnet.nameDeps, "susds",    susds);
-//         ScriptTools.exportContract(mainnet.nameDeps, "usdc",     usdc);
-//         ScriptTools.exportContract(mainnet.nameDeps, "usds",     usds);
-//         ScriptTools.exportContract(mainnet.nameDeps, "usdsJoin", usdsJoin);
-//         ScriptTools.exportContract(mainnet.nameDeps, "vat",      vat);
-//     }
+        // Step 4: Export all deployed addresses
 
-//     function _setUpAllocationSystem() internal {
-//         vm.selectFork(mainnet.forkId);
-//         vm.startBroadcast();
+        ScriptTools.exportContract(mainnet.nameDeps, "dai",      dai);
+        ScriptTools.exportContract(mainnet.nameDeps, "daiUsds",  daiUsds);
+        ScriptTools.exportContract(mainnet.nameDeps, "jug",      jug);
+        ScriptTools.exportContract(mainnet.nameDeps, "psm",      psm);
+        ScriptTools.exportContract(mainnet.nameDeps, "susds",    susds);
+        ScriptTools.exportContract(mainnet.nameDeps, "usdc",     usdc);
+        ScriptTools.exportContract(mainnet.nameDeps, "usds",     usds);
+        ScriptTools.exportContract(mainnet.nameDeps, "usdsJoin", usdsJoin);
+        ScriptTools.exportContract(mainnet.nameDeps, "vat",      vat);
+    }
 
-//         // Step 1: Deploy allocation system
+    function _setUpAllocationSystem() internal {
+        vm.selectFork(mainnet.forkId);
+        vm.startBroadcast();
 
-//         AllocatorSharedInstance memory allocatorSharedInstance
-//             = AllocatorDeploy.deployShared(deployer, mainnet.admin);
+        // Step 1: Deploy allocation system
 
-//         AllocatorIlkInstance memory allocatorIlkInstance = AllocatorDeploy.deployIlk(
-//             deployer,
-//             mainnet.admin,
-//             allocatorSharedInstance.roles,
-//             ilk,
-//             usdsJoin
-//         );
+        AllocatorSharedInstance memory allocatorSharedInstance
+            = AllocatorDeploy.deployShared(deployer, mainnet.admin);
 
-//         oracle   = allocatorSharedInstance.oracle;
-//         registry = allocatorSharedInstance.registry;
-//         roles    = allocatorSharedInstance.roles;
+        AllocatorIlkInstance memory allocatorIlkInstance = AllocatorDeploy.deployIlk(
+            deployer,
+            mainnet.admin,
+            allocatorSharedInstance.roles,
+            ilk,
+            usdsJoin
+        );
 
-//         buffer = allocatorIlkInstance.buffer;
-//         vault  = allocatorIlkInstance.vault;
+        oracle   = allocatorSharedInstance.oracle;
+        registry = allocatorSharedInstance.registry;
+        roles    = allocatorSharedInstance.roles;
 
-//         // Step 2: Perform partial initialization (not using library because of mocked MCD)
+        buffer = allocatorIlkInstance.buffer;
+        vault  = allocatorIlkInstance.vault;
 
-//         RegistryLike(registry).file(ilk, "buffer", buffer);
-//         VaultLike(vault).file("jug", jug);
-//         BufferLike(buffer).approve(usds, vault, type(uint256).max);
-//         RolesLike(roles).setIlkAdmin(ilk, mainnet.admin);
+        // Step 2: Perform partial initialization (not using library because of mocked MCD)
 
-//         // Step 3: Move ownership of both the vault and buffer to the admin
+        RegistryLike(registry).file(ilk, "buffer", buffer);
+        VaultLike(vault).file("jug", jug);
+        BufferLike(buffer).approve(usds, vault, type(uint256).max);
+        RolesLike(roles).setIlkAdmin(ilk, mainnet.admin);
 
-//         ScriptTools.switchOwner(vault,  allocatorIlkInstance.owner, mainnet.admin);
-//         ScriptTools.switchOwner(buffer, allocatorIlkInstance.owner, mainnet.admin);
+        // Step 3: Move ownership of both the vault and buffer to the admin
 
-//         vm.stopBroadcast();
+        ScriptTools.switchOwner(vault,  allocatorIlkInstance.owner, mainnet.admin);
+        ScriptTools.switchOwner(buffer, allocatorIlkInstance.owner, mainnet.admin);
 
-//         // Step 4: Export all deployed addresses
+        vm.stopBroadcast();
 
-//         ScriptTools.exportContract(mainnet.nameDeps, "allocatorOracle",   oracle);
-//         ScriptTools.exportContract(mainnet.nameDeps, "allocatorRegistry", registry);
-//         ScriptTools.exportContract(mainnet.nameDeps, "allocatorRoles",    roles);
+        // Step 4: Export all deployed addresses
 
-//         ScriptTools.exportContract(mainnet.nameDeps, "allocatorBuffer", buffer);
-//         ScriptTools.exportContract(mainnet.nameDeps, "allocatorVault",  vault);
-//     }
+        ScriptTools.exportContract(mainnet.nameDeps, "allocatorOracle",   oracle);
+        ScriptTools.exportContract(mainnet.nameDeps, "allocatorRegistry", registry);
+        ScriptTools.exportContract(mainnet.nameDeps, "allocatorRoles",    roles);
 
-//     function _setUpALMController() internal {
-//         vm.selectFork(mainnet.forkId);
-//         vm.startBroadcast();
+        ScriptTools.exportContract(mainnet.nameDeps, "allocatorBuffer", buffer);
+        ScriptTools.exportContract(mainnet.nameDeps, "allocatorVault",  vault);
+    }
 
-//         // Step 1: Deploy ALM controller
+    function _setUpALMController() internal {
+        vm.selectFork(mainnet.forkId);
+        vm.startBroadcast();
 
-//         ControllerInstance memory instance = MainnetControllerDeploy.deployFull({
-//             admin   : mainnet.admin,
-//             vault   : vault,
-//             psm     : psm,
-//             daiUsds : daiUsds,
-//             cctp    : mainnet.config.readAddress(".cctpTokenMessenger")
-//         });
+        // Step 1: Deploy ALM controller
 
-//         mainnetAlmProxy   = instance.almProxy;
-//         mainnetController = instance.controller;
+        ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull({
+            admin   : mainnet.admin,
+            vault   : vault,
+            psm     : psm,
+            daiUsds : daiUsds,
+            cctp    : mainnet.config.readAddress(".cctpTokenMessenger")
+        });
 
-//         // Step 2: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
+        mainnetAlmProxy   = controllerInst.almProxy;
+        mainnetController = controllerInst.controller;
 
-//         // Still constrained by the USDC_UNIT_SIZE
-//         RateLimitData memory rateLimitData18 = RateLimitData({
-//             maxAmount : USDC_UNIT_SIZE * 1e12 * 5,
-//             slope     : USDC_UNIT_SIZE * 1e12 / 4 hours
-//         });
-//         RateLimitData memory rateLimitData6 = RateLimitData({
-//             maxAmount : USDC_UNIT_SIZE * 5,
-//             slope     : USDC_UNIT_SIZE / 4 hours
-//         });
-//         RateLimitData memory unlimitedRateLimit = RateLimitData({
-//             maxAmount : type(uint256).max,
-//             slope     : 0
-//         });
+        // Step 2: Initialize ALM system
 
-//         // Configure this after Base ALM Proxy is deployed
-//         MintRecipient[] memory mintRecipients = new MintRecipient[](0);
+        MainnetControllerInit.ConfigAddressParams memory configAddresses 
+            = MainnetControllerInit.ConfigAddressParams({
+                freezer       : freezer,
+                relayer       : relayer,
+                oldController : address(0)
+            });
 
-//         MainnetControllerInit.subDaoInitFull({
-//             addresses: MainnetControllerInit.AddressParams({
-//                 admin         : mainnet.admin,
-//                 freezer       : mainnet.config.readAddress(".freezer"),
-//                 relayer       : mainnet.config.readAddress(".relayer"),
-//                 oldController : address(0),
-//                 psm           : psm,
-//                 vault         : vault,
-//                 buffer        : buffer,
-//                 cctpMessenger : mainnet.config.readAddress(".cctpTokenMessenger"),
-//                 dai           : dai,
-//                 daiUsds       : daiUsds,
-//                 usdc          : usdc,
-//                 usds          : usds,
-//                 susds         : susds
-//             }),
-//             controllerInst: instance,
-//             data: MainnetControllerInit.InitRateLimitData({
-//                 usdsMintData         : rateLimitData18,
-//                 usdsToUsdcData       : rateLimitData6,
-//                 usdcToCctpData       : unlimitedRateLimit,
-//                 cctpToBaseDomainData : rateLimitData6,
-//                 susdsDepositData     : rateLimitData18
-//             }),
-//             mintRecipients: mintRecipients
-//         });
+        MainnetControllerInit.CheckAddressParams memory checkAddresses
+            = MainnetControllerInit.CheckAddressParams({
+                admin      : Ethereum.SPARK_PROXY,
+                proxy      : address(almProxy),
+                rateLimits : address(rateLimits),
+                vault      : address(vault),
+                psm        : Ethereum.PSM,
+                daiUsds    : Ethereum.DAI_USDS,
+                cctp       : Ethereum.CCTP_TOKEN_MESSENGER
+            });
 
-//         // Extra rate limit configuration
-//         bytes32 mintKey = MainnetController(instance.controller).LIMIT_USDE_MINT();
-//         bytes32 burnKey = MainnetController(instance.controller).LIMIT_USDE_BURN();
+        MainnetControllerInit.MintRecipient[] memory mintRecipients = new MainnetControllerInit.MintRecipient[](1);
+
+        mintRecipients[0] = MainnetControllerInit.MintRecipient({
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
+        });
+
+        Init.MintRecipient[] memory mintRecipients = new Init.MintRecipient[](1);
+
+        Init.initAlmSystem(
+            vault,
+            address(usds),
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+
+        // Step 3: Set all rate limits for the controller
+
+        // Still constrained by the USDC_UNIT_SIZE
+        RateLimitData memory rateLimitData18 = RateLimitData({
+            maxAmount : USDC_UNIT_SIZE * 1e12 * 5,
+            slope     : USDC_UNIT_SIZE * 1e12 / 4 hours
+        });
+        RateLimitData memory rateLimitData6 = RateLimitData({
+            maxAmount : USDC_UNIT_SIZE * 5,
+            slope     : USDC_UNIT_SIZE / 4 hours
+        });
+        RateLimitData memory unlimitedRateLimit = RateLimitData({
+            maxAmount : type(uint256).max,
+            slope     : 0
+        });
+
+        bytes32 mintKey = MainnetController(controllerInst.controller).LIMIT_USDE_MINT();
+        bytes32 burnKey = MainnetController(controllerInst.controller).LIMIT_USDE_BURN();
     
-//         bytes32 susdsDepositKey = RateLimitHelpers.makeAssetKey(
-//             MainnetController(instance.controller).LIMIT_4626_DEPOSIT(),
-//             address(MainnetController(instance.controller).susde())
-//         );
+        bytes32 susdsDepositKey = RateLimitHelpers.makeAssetKey(
+            MainnetController(controllerInst.controller).LIMIT_4626_DEPOSIT(),
+            address(MainnetController(controllerInst.controller).susde())
+        );
 
-//         bytes32 susdsWithdrawKey = RateLimitHelpers.makeAssetKey(
-//             MainnetController(instance.controller).LIMIT_4626_WITHDRAW(),
-//             address(MainnetController(instance.controller).susde())
-//         );
+        bytes32 susdsWithdrawKey = RateLimitHelpers.makeAssetKey(
+            MainnetController(controllerInst.controller).LIMIT_4626_WITHDRAW(),
+            address(MainnetController(controllerInst.controller).susde())
+        );
 
-//         // Extra rate limit configuration
-//         MainnetControllerInit.setRateLimitData(mintKey,          IRateLimits(instance.rateLimits), rateLimitData6,  "usdeMintData",      6);
-//         MainnetControllerInit.setRateLimitData(burnKey,          IRateLimits(instance.rateLimits), rateLimitData18, "usdeBurnData",      18);
-//         MainnetControllerInit.setRateLimitData(susdsDepositKey,  IRateLimits(instance.rateLimits), rateLimitData18, "susdsDepositData",  18);
-//         MainnetControllerInit.setRateLimitData(susdsWithdrawKey, IRateLimits(instance.rateLimits), rateLimitData18, "susdsWithdrawData", 18);
+        bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
+            mainnetController.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
+        );
 
-//         // Step 3: Transfer ownership of mock usdsJoin to the vault (able to mint usds)
+        bytes32 susdsKey = RateLimitHelpers.makeAssetKey(
+            mainnetController.LIMIT_4626_DEPOSIT(),
+            address(susds)
+        );
 
-//         MockUsdsJoin(usdsJoin).transferOwnership(vault);
+        IRateLimits rateLimits_ = IRateLimits(controllerInst.rateLimits);
 
-//         vm.stopBroadcast();
+        RateLimitHelpers.setRateLimitData(mintKey,                                rateLimits_, rateLimitData6,  "usdeMintData",         6);
+        RateLimitHelpers.setRateLimitData(burnKey,                                rateLimits_, rateLimitData18, "usdeBurnData",         18);
+        RateLimitHelpers.setRateLimitData(susdsDepositKey,                        rateLimits_, rateLimitData18, "susdsDepositData",     18);
+        RateLimitHelpers.setRateLimitData(susdsWithdrawKey,                       rateLimits_, rateLimitData18, "susdsWithdrawData",    18);
+        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimits_, rateLimitData18, "usdsMintData",         18);
+        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimits_, rateLimitData6 , "usdsToUsdcData",       6);
+        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimits_, rateLimitData6,  "usdcToCctpData",       6);
+        RateLimitHelpers.setRateLimitData(domainKeyBase,                          rateLimits_, rateLimitData6,  "cctpToBaseDomainData", 6);
+        RateLimitHelpers.setRateLimitData(susdsKey,                               rateLimits_, rateLimitData18, "susdsDepositData",     18);
 
-//         // Step 4: Export all deployed addresses
+        // Step 3: Transfer ownership of mock usdsJoin to the vault (able to mint usds)
 
-//         ScriptTools.exportContract(mainnet.nameDeps, "freezer",    mainnet.config.readAddress(".freezer"));
-//         ScriptTools.exportContract(mainnet.nameDeps, "relayer",    mainnet.config.readAddress(".relayer"));
+        MockUsdsJoin(usdsJoin).transferOwnership(vault);
 
-//         ScriptTools.exportContract(mainnet.name, "almProxy",   instance.almProxy);
-//         ScriptTools.exportContract(mainnet.name, "controller", instance.controller);
-//         ScriptTools.exportContract(mainnet.name, "rateLimits", instance.rateLimits);
-//     }
+        vm.stopBroadcast();
 
-//     function _setUpBaseALMController() public {
-//         vm.selectFork(base.forkId);
-//         vm.startBroadcast();
+        // Step 4: Export all deployed addresses
 
-//         // Step 1: Deploy ALM controller
+        ScriptTools.exportContract(mainnet.nameDeps, "freezer",    mainnet.config.readAddress(".freezer"));
+        ScriptTools.exportContract(mainnet.nameDeps, "relayer",    mainnet.config.readAddress(".relayer"));
 
-//         ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
-//             admin : base.admin,
-//             psm   : base.config.readAddress(".psm"),
-//             usdc  : base.config.readAddress(".usdc"),
-//             cctp  : base.config.readAddress(".cctpTokenMessenger")
-//         });
+        ScriptTools.exportContract(mainnet.name, "almProxy",   instance.almProxy);
+        ScriptTools.exportContract(mainnet.name, "controller", instance.controller);
+        ScriptTools.exportContract(mainnet.name, "rateLimits", instance.rateLimits);
+    }
 
-//         baseAlmProxy   = instance.almProxy;
-//         baseController = instance.controller;
+    function _setUpBaseALMController() public {
+        vm.selectFork(base.forkId);
+        vm.startBroadcast();
 
-//         // Step 2: Initialize ALM controller, setting rate limits, mint recipients, and setting ACL
+        // Step 1: Deploy ALM controller
 
-//         // Still constrained by the USDC_UNIT_SIZE
-//         RateLimitData memory rateLimitData18 = RateLimitData({
-//             maxAmount : USDC_UNIT_SIZE * 1e12 * 5,
-//             slope     : USDC_UNIT_SIZE * 1e12 / 4 hours
-//         });
-//         RateLimitData memory rateLimitData6 = RateLimitData({
-//             maxAmount : USDC_UNIT_SIZE * 5,
-//             slope     : USDC_UNIT_SIZE / 4 hours
-//         });
-//         RateLimitData memory unlimitedRateLimit = RateLimitData({
-//             maxAmount : type(uint256).max,
-//             slope     : 0
-//         });
+        ControllerInstance memory instance = ForeignControllerDeploy.deployFull({
+            admin : base.admin,
+            psm   : base.config.readAddress(".psm"),
+            usdc  : base.config.readAddress(".usdc"),
+            cctp  : base.config.readAddress(".cctpTokenMessenger")
+        });
 
-//         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
-//         mintRecipients[0] = MintRecipient({
-//             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-//             mintRecipient : bytes32(uint256(uint160(mainnetAlmProxy)))
-//         });
+        baseAlmProxy   = instance.almProxy;
+        baseController = instance.controller;
 
-//         ForeignControllerInit.init({
-//             addresses: ForeignControllerInit.AddressParams({
-//                 admin         : base.admin,
-//                 freezer       : base.config.readAddress(".freezer"),
-//                 relayer       : base.config.readAddress(".relayer"),
-//                 oldController : address(0),
-//                 psm           : base.config.readAddress(".psm"),
-//                 cctpMessenger : base.config.readAddress(".cctpTokenMessenger"),
-//                 usdc          : base.config.readAddress(".usdc"),
-//                 usds          : base.config.readAddress(".usds"),
-//                 susds         : base.config.readAddress(".susds")
-//             }),
-//             controllerInst: instance,
-//             data: ForeignControllerInit.InitRateLimitData({
-//                 usdcDepositData          : rateLimitData6,
-//                 usdcWithdrawData         : rateLimitData6,
-//                 usdsDepositData          : rateLimitData18,
-//                 usdsWithdrawData         : rateLimitData18,
-//                 susdsDepositData         : rateLimitData18,
-//                 susdsWithdrawData        : rateLimitData18,
-//                 usdcToCctpData           : unlimitedRateLimit,
-//                 cctpToEthereumDomainData : rateLimitData6
-//             }),
-//             mintRecipients: mintRecipients
-//         });
+        // Step 2: Initialize ALM system
 
-//         vm.stopBroadcast();
+        ForeignControllerInit.ConfigAddressParams memory configAddresses = ForeignControllerInit.ConfigAddressParams({
+            freezer       : base.config.readAddress(".freezer"),
+            relayer       : base.config.readAddress(".relayer"),
+            oldController : address(0)
+        });
 
-//         // Step 3: Export all deployed addresses
+        ForeignControllerInit.CheckAddressParams memory checkAddresses = ForeignControllerInit.CheckAddressParams({
+            admin : ase.admin,
+            psm   : base.config.readAddress(".psm"),
+            cctp  : base.config.readAddress(".cctpTokenMessenger"),
+            usdc  : base.config.readAddress(".usdc"),
+            susds : base.config.readAddress(".usdc"),
+            usds  : base.config.readAddress(".susds")
+        });
 
-//         ScriptTools.exportContract(base.nameDeps, "freezer",    base.config.readAddress(".freezer"));
-//         ScriptTools.exportContract(base.nameDeps, "relayer",    base.config.readAddress(".relayer"));
+        ForeignControllerInit.MintRecipient[] memory mintRecipients = new ForeignControllerInit.MintRecipient[](1);
 
-//         ScriptTools.exportContract(base.name, "almProxy",   instance.almProxy);
-//         ScriptTools.exportContract(base.name, "controller", instance.controller);
-//         ScriptTools.exportContract(base.name, "rateLimits", instance.rateLimits);
-//     }
+        mintRecipients[0] = ForeignControllerInit.MintRecipient({
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            mintRecipient : bytes32(uint256(uint160(mainnetAlmProxy)))
+        });
 
-//     function _setBaseMintRecipient() internal {
-//         vm.selectFork(mainnet.forkId);
-//         vm.startBroadcast();
+        ForeignControllerInit.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
 
-//         MainnetController(mainnetController).setMintRecipient(
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-//             bytes32(uint256(uint160(baseAlmProxy)))
-//         );
+        // Step 3: Set all rate limits for the controller
 
-//         vm.stopBroadcast();
-//     }
+        RateLimitData memory rateLimitData18 = RateLimitData({
+            maxAmount : USDC_UNIT_SIZE * 1e12 * 5,
+            slope     : USDC_UNIT_SIZE * 1e12 / 4 hours
+        });
+        RateLimitData memory rateLimitData6 = RateLimitData({
+            maxAmount : USDC_UNIT_SIZE * 5,
+            slope     : USDC_UNIT_SIZE / 4 hours
+        });
+        RateLimitData memory unlimitedRateLimit = RateLimitData({
+            maxAmount : type(uint256).max,
+            slope     : 0
+        });
 
-//     function run() public {
-//         vm.setEnv("FOUNDRY_ROOT_CHAINID",             "1");
-//         vm.setEnv("FOUNDRY_EXPORTS_OVERWRITE_LATEST", "true");
+        bytes32 depositKey  = foreignController.LIMIT_PSM_DEPOSIT();
+        bytes32 withdrawKey = foreignController.LIMIT_PSM_WITHDRAW();
 
-//         deployer = msg.sender;
+        bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
+            foreignController.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+        );
 
-//         mainnet = Domain({
-//             name     : "mainnet-staging",
-//             nameDeps : "mainnet-staging-deps",
-//             config   : ScriptTools.loadConfig("mainnet-staging"),
-//             forkId   : vm.createFork(getChain("mainnet").rpcUrl),
-//             admin    : deployer
-//         });
-//         base = Domain({
-//             name     : "base-staging",
-//             nameDeps : "base-staging-deps",
-//             config   : ScriptTools.loadConfig("base-staging"),
-//             forkId :   vm.createFork(getChain("base").rpcUrl),
-//             admin    : deployer
-//         });
+        address usdc  = base.config.readAddress(".usdc");
+        address usds  = base.config.readAddress(".usds");
+        address susds = base.config.readAddress(".susds");
 
-//         // Ballpark sizing of rate limits, tokens in PSMs, etc
-//         // Ballpark sizing of USDS to put in the join contracts, PSMs, etc
-//         USDC_UNIT_SIZE = mainnet.config.readUint(".usdcUnitSize") * 1e6;
-//         USDS_UNIT_SIZE = mainnet.config.readUint(".usdsUnitSize") * 1e18;
+        IRateLimits rateLimits_ = IRateLimits(controllerInst.rateLimits);
 
-//         // Run deployment scripts after setting storage variables
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  usdc),  rateLimits_, standardUsdcData, "usdcDepositData",  6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, usdc),  rateLimits_, standardUsdcData, "usdcWithdrawData", 6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  usds),  rateLimits_, standardUsdsData, "usdsDepositData",  18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, usds),  rateLimits_, unlimitedData,    "usdsWithdrawData", 18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  susds), rateLimits_, standardUsdsData, "susdsDepositData", 18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, susds), rateLimits_, unlimitedData,    "susdsWithdrawData", 18);
 
-//         _setUpDependencies();
-//         _setUpAllocationSystem();
-//         _setUpALMController();
-//         _setUpBaseALMController();
-//         _setBaseMintRecipient();
+        RateLimitHelpers.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), rateLimits_, standardUsdcData, "usdcToCctpData",           6);
+        RateLimitHelpers.setRateLimitData(domainKeyEthereum,                      rateLimits_, standardUsdcData, "cctpToEthereumDomainData", 6);
 
-//         ScriptTools.exportContract(mainnet.nameDeps, "admin", deployer);
-//         ScriptTools.exportContract(base.nameDeps,    "admin", deployer);
-//     }
+        vm.stopBroadcast();
 
-// }
+        // Step 3: Export all deployed addresses
+
+        ScriptTools.exportContract(base.nameDeps, "freezer",    base.config.readAddress(".freezer"));
+        ScriptTools.exportContract(base.nameDeps, "relayer",    base.config.readAddress(".relayer"));
+
+        ScriptTools.exportContract(base.name, "almProxy",   instance.almProxy);
+        ScriptTools.exportContract(base.name, "controller", instance.controller);
+        ScriptTools.exportContract(base.name, "rateLimits", instance.rateLimits);
+    }
+
+    function _setBaseMintRecipient() internal {
+        vm.selectFork(mainnet.forkId);
+        vm.startBroadcast();
+
+        MainnetController(mainnetController).setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(uint256(uint160(baseAlmProxy)))
+        );
+
+        vm.stopBroadcast();
+    }
+
+    function run() public {
+        vm.setEnv("FOUNDRY_ROOT_CHAINID",             "1");
+        vm.setEnv("FOUNDRY_EXPORTS_OVERWRITE_LATEST", "true");
+
+        deployer = msg.sender;
+
+        mainnet = Domain({
+            name     : "mainnet-staging",
+            nameDeps : "mainnet-staging-deps",
+            config   : ScriptTools.loadConfig("mainnet-staging"),
+            forkId   : vm.createFork(getChain("mainnet").rpcUrl),
+            admin    : deployer
+        });
+        base = Domain({
+            name     : "base-staging",
+            nameDeps : "base-staging-deps",
+            config   : ScriptTools.loadConfig("base-staging"),
+            forkId :   vm.createFork(getChain("base").rpcUrl),
+            admin    : deployer
+        });
+
+        // Ballpark sizing of rate limits, tokens in PSMs, etc
+        // Ballpark sizing of USDS to put in the join contracts, PSMs, etc
+        USDC_UNIT_SIZE = mainnet.config.readUint(".usdcUnitSize") * 1e6;
+        USDS_UNIT_SIZE = mainnet.config.readUint(".usdsUnitSize") * 1e18;
+
+        // Run deployment scripts after setting storage variables
+
+        _setUpDependencies();
+        _setUpAllocationSystem();
+        _setUpALMController();
+        _setUpBaseALMController();
+        _setBaseMintRecipient();
+
+        ScriptTools.exportContract(mainnet.nameDeps, "admin", deployer);
+        ScriptTools.exportContract(base.nameDeps,    "admin", deployer);
+    }
+
+}
