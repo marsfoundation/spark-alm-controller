@@ -8,6 +8,14 @@ import { IRateLimits } from "../src/interfaces/IRateLimits.sol";
 
 import { ControllerInstance } from "./ControllerInstance.sol";
 
+interface IPSM3Like {
+    function susds() external view returns (address);
+    function totalAssets() external view returns (uint256);
+    function totalShares() external view returns (uint256);
+    function usdc() external view returns (address);
+    function usds() external view returns (address);
+}
+
 library ForeignControllerInit {
 
     /**********************************************************************************************/
@@ -15,9 +23,12 @@ library ForeignControllerInit {
     /**********************************************************************************************/
 
     struct CheckAddressParams {
+        address admin;
         address psm;
-        address usdc;
         address cctp;
+        address usdc;
+        address susds;
+        address usds;
     }
 
     struct ConfigAddressParams {
@@ -98,25 +109,24 @@ library ForeignControllerInit {
         require(address(newController.proxy())      == controllerInst.almProxy,   "ForeignControllerInit/incorrect-almProxy");
         require(address(newController.rateLimits()) == controllerInst.rateLimits, "ForeignControllerInit/incorrect-rateLimits");
 
-        require(address(controller.psm())  == checkAddresses.psm,  "ForeignControllerInit/incorrect-psm");
-        require(address(controller.usdc()) == checkAddresses.usdc, "ForeignControllerInit/incorrect-usdc");
-        require(address(controller.cctp()) == checkAddresses.cctp, "ForeignControllerInit/incorrect-cctp");
+        require(address(newController.psm())  == checkAddresses.psm,  "ForeignControllerInit/incorrect-psm");
+        require(address(newController.usdc()) == checkAddresses.usdc, "ForeignControllerInit/incorrect-usdc");
+        require(address(newController.cctp()) == checkAddresses.cctp, "ForeignControllerInit/incorrect-cctp");
 
-        require(newController.psmTo18ConversionFactor() == 1e12, "ForeignControllerInit/incorrect-psmTo18ConversionFactor");
-        require(newController.active(),                          "ForeignControllerInit/controller-not-active");
+        require(newController.active(), "ForeignControllerInit/controller-not-active");
 
         require(configAddresses.oldController != address(newController), "ForeignControllerInit/old-controller-is-new-controller");
 
         // Step 2: Perform PSM sanity checks
 
-        IPSM3Like psm = IPSM3Like(addresses.psm);
+        IPSM3Like psm = IPSM3Like(checkAddresses.psm);
 
         require(psm.totalAssets() >= 1e18, "ForeignControllerInit/psm-totalAssets-not-seeded");
         require(psm.totalShares() >= 1e18, "ForeignControllerInit/psm-totalShares-not-seeded");
 
-        require(psm.usdc()  == addresses.usdc,  "ForeignControllerInit/psm-incorrect-usdc");
-        require(psm.usds()  == addresses.usds,  "ForeignControllerInit/psm-incorrect-usds");
-        require(psm.susds() == addresses.susds, "ForeignControllerInit/psm-incorrect-susds");
+        require(psm.usdc()  == checkAddresses.usdc,  "ForeignControllerInit/psm-incorrect-usdc");
+        require(psm.usds()  == checkAddresses.usds,  "ForeignControllerInit/psm-incorrect-usds");
+        require(psm.susds() == checkAddresses.susds, "ForeignControllerInit/psm-incorrect-susds");
 
         // Step 3: Configure ACL permissions controller, almProxy, and rateLimits
 
