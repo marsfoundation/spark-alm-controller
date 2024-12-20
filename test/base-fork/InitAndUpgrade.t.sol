@@ -78,6 +78,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
     ControllerInstance public controllerInst;
 
     address public mismatchAddress = makeAddr("mismatchAddress");
+    address public oldController;
 
     Init.ConfigAddressParams configAddresses;
     Init.CheckAddressParams  checkAddresses;
@@ -85,6 +86,8 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 
     function setUp() public override {
         super.setUp();
+
+        oldController = address(foreignController);  // Cache for later testing
 
         // Deploy new controller against live mainnet system
         // NOTE: initAlmSystem will redundantly call rely and approve on already inited 
@@ -228,14 +231,6 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 
         assertEq(psmBase.totalAssets(), 1e18 - 1);
 
-        // vm.expectRevert("ForeignControllerInit/psm-totalAssets-not-seeded");
-        // wrapper.initAlmSystem(
-        //     controllerInst,
-        //     configAddresses,
-        //     checkAddresses,
-        //     mintRecipients
-        // );
-
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-totalAssets-not-seeded"));
 
         // Approve from address(this) cause it received the one wei
@@ -245,12 +240,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 
         assertEq(psmBase.totalAssets(), 1e18);
 
-        wrapper.initAlmSystem(
-            controllerInst,
-            configAddresses,
-            checkAddresses,
-            mintRecipients
-        );
+        _checkInitAndUpgradeSucceed();
     }
 
     function test_init_totalSharesNotSeededBoundary() external {
@@ -263,13 +253,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         assertEq(psmBase.totalAssets(), 1e18);
         assertEq(psmBase.totalShares(), 1e18 - 1);
 
-        vm.expectRevert("ForeignControllerInit/psm-totalShares-not-seeded");
-        wrapper.initAlmSystem(
-            controllerInst,
-            configAddresses,
-            checkAddresses,
-            mintRecipients
-        );
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-totalShares-not-seeded"));
 
         // Do deposit to update shares, need to do 2 wei to get back to 1e18 because of rounding
         deal(address(usdsBase), address(this), 2);
@@ -279,12 +263,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         assertEq(psmBase.totalAssets(), 1e18 + 2);
         assertEq(psmBase.totalShares(), 1e18);
 
-        wrapper.initAlmSystem(
-            controllerInst,
-            configAddresses,
-            checkAddresses,
-            mintRecipients
-        );
+        _checkInitAndUpgradeSucceed();
     }
 
     function test_init_incorrectPsmUsdc() external {
@@ -307,13 +286,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 
         checkAddresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
 
-        vm.expectRevert("ForeignControllerInit/psm-incorrect-usdc");
-        wrapper.initAlmSystem(
-            controllerInst,
-            configAddresses,
-            checkAddresses,
-            mintRecipients
-        );
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-incorrect-usdc"));
     }
 
     function test_init_incorrectPsmUsds() external {
@@ -336,13 +309,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 
         checkAddresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
 
-        vm.expectRevert("ForeignControllerInit/psm-incorrect-usds");
-        wrapper.initAlmSystem(
-            controllerInst,
-            configAddresses,
-            checkAddresses,
-            mintRecipients
-        );
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-incorrect-usds"));
     }
 
     function test_init_incorrectPsmSUsds() external {
@@ -365,13 +332,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 
         checkAddresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
 
-        vm.expectRevert("ForeignControllerInit/psm-incorrect-susds");
-        wrapper.initAlmSystem(
-            controllerInst,
-            configAddresses,
-            checkAddresses,
-            mintRecipients
-        );
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-incorrect-susds"));
     }
 
     /**********************************************************************************************/
@@ -388,6 +349,28 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         );
 
         vm.expectRevert(expectedError);
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+    function _checkInitAndUpgradeSucceed() internal {
+        uint256 id = vm.snapshot();
+
+        wrapper.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+
+        vm.revertTo(id);
+
+        configAddresses.oldController = oldController;
+
         wrapper.upgradeController(
             controllerInst,
             configAddresses,
