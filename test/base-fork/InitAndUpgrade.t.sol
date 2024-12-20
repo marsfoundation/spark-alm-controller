@@ -71,7 +71,11 @@ contract ForeignControllerInitAndUpgradeTestBase is ForkTestBase {
 
 }
 
-contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTestBase {
+contract ForeignControllerInitAndUpgradeFailureTest is ForeignControllerInitAndUpgradeTestBase {
+
+    // NOTE: `initAlmSystem` and `upgradeController` are tested in the same contract because
+    //       they both use _initController and have similar specific setups, so it 
+    //       less complex/repetitive to test them together.
 
     LibraryWrapper wrapper;
 
@@ -128,7 +132,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
     /*** ACL tests                                                                              ***/
     /**********************************************************************************************/
 
-    function test_init_incorrectAdminAlmProxy() external {
+    function test_initAlmSystem_upgradeController_incorrectAdminAlmProxy() external {
         // Isolate different contracts instead of setting param so can get three different failures
         vm.startPrank(Base.SPARK_EXECUTOR);
         almProxy.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
@@ -144,7 +148,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         );
     }
 
-    function test_init_incorrectAdminRateLimits() external {
+    function test_initAlmSystem_upgradeController_incorrectAdminRateLimits() external {
         // Isolate different contracts instead of setting param so can get three different failures
         vm.startPrank(Base.SPARK_EXECUTOR);
         rateLimits.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
@@ -160,7 +164,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         );
     }
 
-    function test_init_incorrectAdminController() external {
+    function test_initAlmSystem_upgradeController_incorrectAdminController() external {
         // Isolate different contracts instead of setting param so can get three different failures
         vm.startPrank(Base.SPARK_EXECUTOR);
         foreignController.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
@@ -174,36 +178,36 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
     /*** Constructor tests                                                                      ***/
     /**********************************************************************************************/
 
-    function test_init_incorrectAlmProxy() external {
+    function test_initAlmSystem_upgradeController_incorrectAlmProxy() external {
         // Deploy new address that will not EVM revert on OZ ACL check
         controllerInst.almProxy = address(new ALMProxy(Base.SPARK_EXECUTOR));
 
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-almProxy"));
     }
 
-    function test_init_incorrectRateLimits() external {
+    function test_initAlmSystem_upgradeController_incorrectRateLimits() external {
         // Deploy new address that will not EVM revert on OZ ACL check
         controllerInst.rateLimits = address(new RateLimits(Base.SPARK_EXECUTOR));
 
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-rateLimits"));
     }
 
-    function test_init_incorrectPsm() external {
+    function test_initAlmSystem_upgradeController_incorrectPsm() external {
         checkAddresses.psm = mismatchAddress;
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-psm"));
     }
 
-    function test_init_incorrectUsdc() external {
+    function test_initAlmSystem_upgradeController_incorrectUsdc() external {
         checkAddresses.usdc = mismatchAddress;
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-usdc"));
     }
 
-    function test_init_incorrectCctp() external {
+    function test_initAlmSystem_upgradeController_incorrectCctp() external {
         checkAddresses.cctp = mismatchAddress;
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-cctp"));
     }
 
-    function test_init_controllerInactive() external {
+    function test_initAlmSystem_upgradeController_controllerInactive() external {
         // Cheating to set this outside of init scripts so that the controller can be frozen
         vm.startPrank(Base.SPARK_EXECUTOR);
         foreignController.grantRole(FREEZER, freezer);
@@ -215,7 +219,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/controller-not-active"));
     }
 
-    function test_init_oldControllerIsNewController() external {
+    function test_initAlmSystem_upgradeController_oldControllerIsNewController() external {
         configAddresses.oldController = controllerInst.controller;
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/old-controller-is-new-controller"));
     }
@@ -224,7 +228,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
     /*** PSM tests                                                                              ***/
     /**********************************************************************************************/
 
-    function test_init_totalAssetsNotSeededBoundary() external {
+    function test_initAlmSystem_upgradeController_totalAssetsNotSeededBoundary() external {
         // Remove one wei from PSM to make seeded condition not met
         vm.prank(address(0));
         psmBase.withdraw(address(usdsBase), address(this), 1);  // Withdraw one wei from PSM
@@ -243,7 +247,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         _checkInitAndUpgradeSucceed();
     }
 
-    function test_init_totalSharesNotSeededBoundary() external {
+    function test_initAlmSystem_upgradeController_totalSharesNotSeededBoundary() external {
         // Remove one wei from PSM to make seeded condition not met
         vm.prank(address(0));
         psmBase.withdraw(address(usdsBase), address(this), 1);  // Withdraw one wei from PSM
@@ -266,7 +270,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         _checkInitAndUpgradeSucceed();
     }
 
-    function test_init_incorrectPsmUsdc() external {
+    function test_initAlmSystem_upgradeController_incorrectPsmUsdc() external {
         ERC20Mock wrongUsdc = new ERC20Mock();
 
         deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
@@ -289,7 +293,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-incorrect-usdc"));
     }
 
-    function test_init_incorrectPsmUsds() external {
+    function test_initAlmSystem_upgradeController_incorrectPsmUsds() external {
         ERC20Mock wrongUsds = new ERC20Mock();
 
         deal(address(wrongUsds), address(this), 1e18);  // For seeding PSM during deployment
@@ -312,7 +316,7 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-incorrect-usds"));
     }
 
-    function test_init_incorrectPsmSUsds() external {
+    function test_initAlmSystem_upgradeController_incorrectPsmSUsds() external {
         ERC20Mock wrongSUsds = new ERC20Mock();
 
         deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
@@ -333,6 +337,58 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
         checkAddresses.psm = address(psmBase);  // Overwrite to point to misconfigured PSM
 
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-incorrect-susds"));
+    }
+
+    /**********************************************************************************************/
+    /*** Upgrade tests                                                                         ***/
+    /**********************************************************************************************/
+
+    function test_upgradeController_oldControllerZeroAddress() external {
+        configAddresses.oldController = address(0);
+
+        vm.expectRevert("ForeignControllerInit/old-controller-zero-address");
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+    function test_upgradeController_oldControllerDoesNotHaveRoleInAlmProxy() external {
+        configAddresses.oldController = oldController;
+
+        // Revoke the old controller address in ALM proxy
+        vm.startPrank(Base.SPARK_EXECUTOR);
+        almProxy.revokeRole(almProxy.CONTROLLER(), configAddresses.oldController);
+        vm.stopPrank(); 
+
+        // Try to upgrade with the old controller address that is doesn't have the CONTROLLER role
+        vm.expectRevert("ForeignControllerInit/old-controller-not-almProxy-controller");
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+    }
+
+    function test_upgradeController_oldControllerDoesNotHaveRoleInRateLimits() external {
+        configAddresses.oldController = oldController;
+
+        // Revoke the old controller address in rate limits
+        vm.startPrank(Base.SPARK_EXECUTOR);
+        rateLimits.revokeRole(rateLimits.CONTROLLER(), configAddresses.oldController);
+        vm.stopPrank();
+
+        // Try to upgrade with the old controller address that is doesn't have the CONTROLLER role
+        vm.expectRevert("ForeignControllerInit/old-controller-not-rateLimits-controller");
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
     }
 
     /**********************************************************************************************/
@@ -380,103 +436,6 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
     }
 
 }
-
-// contract ForeignControllerUpgradeFailureTests is ForeignControllerInitAndUpgradeTestBase {
-
-//     LibraryWrapper wrapper;
-
-//     ControllerInstance public controllerInst;
-
-//     address public mismatchAddress = makeAddr("mismatchAddress");
-
-//     Init.ConfigAddressParams configAddresses;
-//     Init.CheckAddressParams  checkAddresses;
-//     Init.MintRecipient[]     mintRecipients;
-
-//     function setUp() public override {
-//         super.setUp();
-
-//         // Deploy new controller against live mainnet system
-//         controllerInst.controller = ForeignControllerDeploy.deployController({
-//             admin      : Base.Base.SPARK_EXECUTOR,
-//             almProxy   : almProxy,
-//             rateLimits : rateLimits,
-//             vault      : Base.ALLOCATOR_VAULT,
-//             psm        : Base.PSM,
-//             daiUsds    : Base.DAI_USDS,
-//             cctp       : Base.CCTP_TOKEN_MESSENGER
-//         });
-
-//         // Overwrite storage for all previous deployments in setUp and assert deployment
-//         almProxy   = ALMProxy(payable(almProxy));
-//         rateLimits = RateLimits(rateLimits);
-
-//         controllerInst.almProxy   = address(almProxy);
-//         controllerInst.rateLimits = address(rateLimits);
-
-//         Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
-
-//         ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
-
-//         mintRecipients.push(mintRecipients_[0]);
-
-//         configAddresses.oldController = Base.ALM_CONTROLLER;
-
-//         // Admin will be calling the library from its own address
-//         vm.etch(Base.SPARK_EXECUTOR, address(new LibraryWrapper()).code);
-
-//         wrapper = LibraryWrapper(Base.SPARK_EXECUTOR);
-//     }
-
-//     function _getBlock() internal pure override returns (uint256) {
-//         return 21430000;  // Dec 18, 2024
-//     }
-
-//     function test_upgrade_oldControllerZeroAddress() external {
-//         configAddresses.oldController = address(0);
-
-//         vm.expectRevert("ForeignControllerInit/old-controller-zero-address");
-//         wrapper.upgradeController(
-//             controllerInst,
-//             configAddresses,
-//             checkAddresses,
-//             mintRecipients
-//         );
-//     }
-
-//     function test_upgrade_oldControllerDoesNotHaveRoleInAlmProxy() external {
-//         // Revoke the old controller address in ALM proxy
-//         vm.startPrank(Base.SPARK_EXECUTOR);
-//         almProxy.revokeRole(almProxy.CONTROLLER(), configAddresses.oldController);
-//         vm.stopPrank(); 
-
-//         // Try to upgrade with the old controller address that is doesn't have the CONTROLLER role
-//         vm.expectRevert("ForeignControllerInit/old-controller-not-almProxy-controller");
-//         wrapper.upgradeController(
-//             controllerInst,
-//             configAddresses,
-//             checkAddresses,
-//             mintRecipients
-//         );
-//     }
-
-//     function test_upgrade_oldControllerDoesNotHaveRoleInRateLimits() external {
-//         // Revoke the old controller address in rate limits
-//         vm.startPrank(Base.SPARK_EXECUTOR);
-//         rateLimits.revokeRole(rateLimits.CONTROLLER(), configAddresses.oldController);
-//         vm.stopPrank();
-
-//         // Try to upgrade with the old controller address that is doesn't have the CONTROLLER role
-//         vm.expectRevert("ForeignControllerInit/old-controller-not-rateLimits-controller");
-//         wrapper.upgradeController(
-//             controllerInst,
-//             configAddresses,
-//             checkAddresses,
-//             mintRecipients
-//         );
-//     }
-
-// }
 
 // contract ForeignControllerInitAlmSystemSuccessTests is ForeignControllerInitAndUpgradeTestBase {
 
