@@ -17,15 +17,13 @@ import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 
-import {
-    ForeignControllerInit,
-    MintRecipient,
-    RateLimitData
-} from "../../deploy/ControllerInit.sol";
+import { ForeignControllerInit as Init } from "../../deploy/ForeignControllerInit.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { ForeignController } from "../../src/ForeignController.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
+
+import { RateLimitHelpers, RateLimitData }  from "../../src/RateLimitHelpers.sol";
 
 contract ForkTestBase is Test {
 
@@ -117,54 +115,70 @@ contract ForkTestBase is Test {
         FREEZER    = foreignController.FREEZER();
         RELAYER    = foreignController.RELAYER();
 
-        ForeignControllerInit.AddressParams memory addresses = ForeignControllerInit.AddressParams({
-            admin         : SPARK_EXECUTOR,
+        Init.ConfigAddressParams memory configAddresses = Init.ConfigAddressParams({
             freezer       : freezer,
             relayer       : relayer,
-            oldController : address(0),  // Empty
-            psm           : address(psmBase),
-            cctpMessenger : CCTP_MESSENGER_BASE,
-            usdc          : USDC_BASE,
-            usds          : address(usdsBase),
-            susds         : address(susdsBase)
+            oldController : address(0)
         });
 
-        RateLimitData memory standardUsdcRateLimitData = RateLimitData({
-            maxAmount : 5_000_000e6,
-            slope     : uint256(1_000_000e6) / 4 hours
+        Init.CheckAddressParams memory checkAddresses = Init.CheckAddressParams({
+            admin : Base.SPARK_EXECUTOR,
+            psm   : address(psmBase),
+            cctp  : Base.CCTP_TOKEN_MESSENGER,
+            usdc  : address(usdcBase),
+            susds : address(susdsBase),
+            usds  : address(usdsBase)
         });
 
-        RateLimitData memory standardUsdsRateLimitData = RateLimitData({
-            maxAmount : 5_000_000e18,
-            slope     : uint256(1_000_000e18) / 4 hours
-        });
+        Init.MintRecipient[] memory mintRecipients = new Init.MintRecipient[](1);
 
-        RateLimitData memory unlimitedRateLimitData = RateLimitData({
-            maxAmount : type(uint256).max,
-            slope     : 0
-        });
-
-        ForeignControllerInit.InitRateLimitData memory rateLimitData
-            = ForeignControllerInit.InitRateLimitData({
-                usdcDepositData          : standardUsdcRateLimitData,
-                usdcWithdrawData         : standardUsdcRateLimitData,
-                usdsDepositData          : standardUsdsRateLimitData,
-                usdsWithdrawData         : unlimitedRateLimitData,
-                susdsDepositData         : standardUsdsRateLimitData,
-                susdsWithdrawData        : unlimitedRateLimitData,
-                usdcToCctpData           : standardUsdcRateLimitData,
-                cctpToEthereumDomainData : standardUsdcRateLimitData
-            });
-
-        MintRecipient[] memory mintRecipients = new MintRecipient[](1);
-
-        mintRecipients[0] = MintRecipient({
+        mintRecipients[0] = Init.MintRecipient({
             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
             mintRecipient : bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
         });
 
         vm.startPrank(SPARK_EXECUTOR);
-        ForeignControllerInit.init(addresses, controllerInst, rateLimitData, mintRecipients);
+
+        Init.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
+
+        RateLimitData memory standardUsdcData = RateLimitData({
+            maxAmount : 5_000_000e6,
+            slope     : uint256(1_000_000e6) / 4 hours
+        });
+
+        RateLimitData memory standardUsdsData = RateLimitData({
+            maxAmount : 5_000_000e18,
+            slope     : uint256(1_000_000e18) / 4 hours
+        });
+
+        RateLimitData memory unlimitedData = RateLimitData({
+            maxAmount : type(uint256).max,
+            slope     : 0
+        });
+
+        bytes32 depositKey  = foreignController.LIMIT_PSM_DEPOSIT();
+        bytes32 withdrawKey = foreignController.LIMIT_PSM_WITHDRAW();
+
+        bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
+            foreignController.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+        );
+
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  address(usdcBase)),  rateLimits, standardUsdcData, "usdcDepositData",  6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, address(usdcBase)),  rateLimits, standardUsdcData, "usdcWithdrawData", 6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  address(usdsBase)),  rateLimits, standardUsdsData, "usdsDepositData",  18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, address(usdsBase)),  rateLimits, unlimitedData,    "usdsWithdrawData", 18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  address(susdsBase)), rateLimits, standardUsdsData, "susdsDepositData", 18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, address(susdsBase)), rateLimits, unlimitedData,    "susdsWithdrawData", 18);
+
+        RateLimitHelpers.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), rateLimits, standardUsdcData, "usdcToCctpData",           6);
+        RateLimitHelpers.setRateLimitData(domainKeyEthereum,                      rateLimits, standardUsdcData, "cctpToEthereumDomainData", 6);
+
         vm.stopPrank();
     }
 

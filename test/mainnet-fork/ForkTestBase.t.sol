@@ -26,16 +26,13 @@ import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
 import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 
-import {
-    MainnetControllerInit,
-    MintRecipient,
-    RateLimitData
-} from "../../deploy/ControllerInit.sol";
+import { MainnetControllerInit as Init } from "../../deploy/MainnetControllerInit.sol";
 
 import { ALMProxy }          from "../../src/ALMProxy.sol";
 import { RateLimits }        from "../../src/RateLimits.sol";
-import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 import { MainnetController } from "../../src/MainnetController.sol";
+
+import { RateLimitHelpers, RateLimitData }  from "../../src/RateLimitHelpers.sol";
 
 interface IChainlogLike {
     function getAddress(bytes32) external view returns (address);
@@ -201,14 +198,14 @@ contract ForkTestBase is DssTest {
         buffer = ilkInst.buffer;
         vault  = ilkInst.vault;
 
-        /*** Step 3: Deploy and configure ALM system ***/
+        /*** Step 3: Deploy ALM system ***/
 
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull({
-            admin  : Ethereum.SPARK_PROXY,
-            vault  : ilkInst.vault,
-            psm    : Ethereum.PSM,
-            daiUsds: Ethereum.DAI_USDS,
-            cctp   : Ethereum.CCTP_TOKEN_MESSENGER
+            admin   : Ethereum.SPARK_PROXY,
+            vault   : ilkInst.vault,
+            psm     : Ethereum.PSM,
+            daiUsds : Ethereum.DAI_USDS,
+            cctp    : Ethereum.CCTP_TOKEN_MESSENGER
         });
 
         almProxy          = ALMProxy(payable(controllerInst.almProxy));
@@ -219,21 +216,48 @@ contract ForkTestBase is DssTest {
         FREEZER    = mainnetController.FREEZER();
         RELAYER    = mainnetController.RELAYER();
 
-        MainnetControllerInit.AddressParams memory addresses = MainnetControllerInit.AddressParams({
-            admin         : Ethereum.SPARK_PROXY,
-            freezer       : freezer,
-            relayer       : relayer,
-            oldController : address(0),
-            psm           : Ethereum.PSM,
-            vault         : vault,
-            buffer        : buffer,
-            cctpMessenger : Ethereum.CCTP_TOKEN_MESSENGER,
-            dai           : Ethereum.DAI,
-            daiUsds       : Ethereum.DAI_USDS,
-            usdc          : Ethereum.USDC,
-            usds          : Ethereum.USDS,
-            susds         : Ethereum.SUSDS
+        Init.ConfigAddressParams memory configAddresses 
+            = Init.ConfigAddressParams({
+                freezer       : freezer,
+                relayer       : relayer,
+                oldController : address(0)
+            });
+
+        Init.CheckAddressParams memory checkAddresses
+            = Init.CheckAddressParams({
+                admin      : Ethereum.SPARK_PROXY,
+                proxy      : address(almProxy),
+                rateLimits : address(rateLimits),
+                vault      : address(vault),
+                psm        : Ethereum.PSM,
+                daiUsds    : Ethereum.DAI_USDS,
+                cctp       : Ethereum.CCTP_TOKEN_MESSENGER
+            });
+
+        Init.MintRecipient[] memory mintRecipients = new Init.MintRecipient[](1);
+
+        mintRecipients[0] = Init.MintRecipient({
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         });
+
+        // Step 4: Initialize through Sky governance
+
+        vm.prank(Ethereum.PAUSE_PROXY);
+        Init.pauseProxyInitAlmSystem(Ethereum.PSM, controllerInst.almProxy);
+
+        // Step 5: Initialize through Spark governance
+
+        vm.startPrank(Ethereum.SPARK_PROXY);
+
+        Init.initAlmSystem(
+            vault,
+            address(usds),
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
 
         RateLimitData memory standardUsdsData = RateLimitData({
             maxAmount : 5_000_000e18,
@@ -245,32 +269,22 @@ contract ForkTestBase is DssTest {
             slope     : uint256(1_000_000e6) / 4 hours
         });
 
-        MainnetControllerInit.InitRateLimitData memory rateLimitData
-            = MainnetControllerInit.InitRateLimitData({
-                usdsMintData         : standardUsdsData,
-                usdsToUsdcData       : standardUsdcData,
-                usdcToCctpData       : standardUsdcData,
-                cctpToBaseDomainData : standardUsdcData,
-                susdsDepositData     : standardUsdsData
-            });
-
-        MintRecipient[] memory mintRecipients = new MintRecipient[](1);
-
-        mintRecipients[0] = MintRecipient({
-            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
-        });
-
-        vm.prank(Ethereum.PAUSE_PROXY);
-        MainnetControllerInit.pauseProxyInit(Ethereum.PSM, controllerInst.almProxy);
-
-        vm.startPrank(Ethereum.SPARK_PROXY);
-        MainnetControllerInit.subDaoInitFull(
-            addresses,
-            controllerInst,
-            rateLimitData,
-            mintRecipients
+        bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
+            mainnetController.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
         );
+
+        bytes32 susdsKey = RateLimitHelpers.makeAssetKey(
+            mainnetController.LIMIT_4626_DEPOSIT(),
+            address(susds)
+        );
+
+        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimits, standardUsdsData, "usdsMintData",         18);
+        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimits, standardUsdcData, "usdsToUsdcData",       6);
+        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimits, standardUsdcData, "usdcToCctpData",       6);
+        RateLimitHelpers.setRateLimitData(domainKeyBase,                          rateLimits, standardUsdcData, "cctpToBaseDomainData", 6);
+        RateLimitHelpers.setRateLimitData(susdsKey,                               rateLimits, standardUsdsData, "susdsDepositData",     18);
+
         vm.stopPrank();
 
         /*** Step 4: Label addresses ***/
