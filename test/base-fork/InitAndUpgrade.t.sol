@@ -228,13 +228,15 @@ contract ForeignControllerInitFailureTests is ForeignControllerInitAndUpgradeTes
 
         assertEq(psmBase.totalAssets(), 1e18 - 1);
 
-        vm.expectRevert("ForeignControllerInit/psm-totalAssets-not-seeded");
-        wrapper.initAlmSystem(
-            controllerInst,
-            configAddresses,
-            checkAddresses,
-            mintRecipients
-        );
+        // vm.expectRevert("ForeignControllerInit/psm-totalAssets-not-seeded");
+        // wrapper.initAlmSystem(
+        //     controllerInst,
+        //     configAddresses,
+        //     checkAddresses,
+        //     mintRecipients
+        // );
+
+        _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/psm-totalAssets-not-seeded"));
 
         // Approve from address(this) cause it received the one wei
         // Redo the seeding
