@@ -64,8 +64,8 @@ contract ForeignControllerInitAndUpgradeTestBase is ForkTestBase {
         mintRecipients = new Init.MintRecipient[](1);
 
         mintRecipients[0] = Init.MintRecipient({
-            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-            mintRecipient : bytes32(uint256(uint160(makeAddr("mainnetAlmProxy"))))
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            mintRecipient : bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
         });
     }
 
@@ -437,210 +437,171 @@ contract ForeignControllerInitAndUpgradeFailureTest is ForeignControllerInitAndU
 
 }
 
-// contract ForeignControllerInitAlmSystemSuccessTests is ForeignControllerInitAndUpgradeTestBase {
+contract ForeignControllerInitAlmSystemSuccessTests is ForeignControllerInitAndUpgradeTestBase {
 
-//     LibraryWrapper wrapper;
+    LibraryWrapper wrapper;
 
-//     ControllerInstance public controllerInst;
+    ControllerInstance public controllerInst;
 
-//     address public mismatchAddress = makeAddr("mismatchAddress");
+    Init.ConfigAddressParams configAddresses;
+    Init.CheckAddressParams  checkAddresses;
+    Init.MintRecipient[]     mintRecipients;
 
-//     Init.ConfigAddressParams configAddresses;
-//     Init.CheckAddressParams  checkAddresses;
-//     Init.MintRecipient[]     mintRecipients;
+    function setUp() public override {
+        super.setUp();
 
-//     function setUp() public override {
-//         super.setUp();
+        controllerInst = ForeignControllerDeploy.deployFull(
+            Base.SPARK_EXECUTOR,
+            address(psmBase),
+            address(usdcBase),
+            Base.CCTP_TOKEN_MESSENGER
+        );
 
-//         controllerInst = ForeignControllerDeploy.deployFull(
-//             Base.Base.SPARK_EXECUTOR,
-//             Base.ALLOCATOR_VAULT,
-//             Base.PSM,
-//             Base.DAI_USDS,
-//             Base.CCTP_TOKEN_MESSENGER
-//         );
+        // Overwrite storage for all previous deployments in setUp and assert brand new deployment
+        foreignController = ForeignController(controllerInst.controller);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
+        rateLimits        = RateLimits(controllerInst.rateLimits);
 
-//         // Overwrite storage for all previous deployments in setUp and assert brand new deployment
-//         foreignController = ForeignController(controllerInst.controller);
-//         almProxy          = ALMProxy(payable(controllerInst.almProxy));
-//         rateLimits        = RateLimits(controllerInst.rateLimits);
-//         vault             = Base.ALLOCATOR_VAULT;  // Use mainnet vault
-//         buffer            = Base.ALLOCATOR_BUFFER; // Use mainnet buffer
+        Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
-//         Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
+        ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
 
-//         ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
+        mintRecipients.push(mintRecipients_[0]);
 
-//         mintRecipients.push(mintRecipients_[0]);
+        // Admin will be calling the library from its own address
+        vm.etch(Base.SPARK_EXECUTOR, address(new LibraryWrapper()).code);
 
-//         // Admin will be calling the library from its own address
-//         vm.etch(Base.SPARK_EXECUTOR, address(new LibraryWrapper()).code);
+        wrapper = LibraryWrapper(Base.SPARK_EXECUTOR);
+    }
 
-//         wrapper = LibraryWrapper(Base.SPARK_EXECUTOR);
-//     }
+    function _getBlock() internal pure override returns (uint256) {
+        return 21430000;  // Dec 18, 2024
+    }
 
-//     function _getBlock() internal pure override returns (uint256) {
-//         return 21430000;  // Dec 18, 2024
-//     }
+    function test_initAlmSystem() public {
+        assertEq(foreignController.hasRole(foreignController.FREEZER(), freezer), false);
+        assertEq(foreignController.hasRole(foreignController.RELAYER(), relayer), false);
 
-//     function test_initAlmSystem() public {
-//         assertEq(foreignController.hasRole(foreignController.FREEZER(), freezer), false);
-//         assertEq(foreignController.hasRole(foreignController.RELAYER(), relayer), false);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)),     false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), false);
 
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)),     false);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), false);
+        assertEq(foreignController.mintRecipients(mintRecipients[0].domain),                bytes32(0));
+        assertEq(foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM), bytes32(0));
 
-//         assertEq(foreignController.mintRecipients(mintRecipients[0].domain),            bytes32(0));
-//         assertEq(foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE), bytes32(0));
+        vm.startPrank(Base.SPARK_EXECUTOR);
+        wrapper.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
 
-//         assertEq(IVaultLike(vault).wards(controllerInst.almProxy), 0);
-//         assertEq(usds.allowance(buffer, controllerInst.almProxy),  0);
+        assertEq(foreignController.hasRole(foreignController.FREEZER(), freezer), true);
+        assertEq(foreignController.hasRole(foreignController.RELAYER(), relayer), true);
 
-//         vm.startPrank(Base.SPARK_EXECUTOR);
-//         wrapper.initAlmSystem(
-//             Base.ALLOCATOR_VAULT,
-//             usdsBase,
-//             controllerInst,
-//             configAddresses,
-//             checkAddresses,
-//             mintRecipients
-//         );
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)),     true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), true);
 
-//         assertEq(foreignController.hasRole(foreignController.FREEZER(), freezer), true);
-//         assertEq(foreignController.hasRole(foreignController.RELAYER(), relayer), true);
+        assertEq(
+            foreignController.mintRecipients(mintRecipients[0].domain),
+            mintRecipients[0].mintRecipient
+        );
 
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)),     true);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), true);
+        assertEq(
+            foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
+            bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
+        );
+    }
 
-//         assertEq(
-//             foreignController.mintRecipients(mintRecipients[0].domain),
-//             mintRecipients[0].mintRecipient
-//         );
+}
 
-//         assertEq(
-//             foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
-//             bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
-//         );
+contract ForeignControllerUpgradeControllerSuccessTests is ForeignControllerInitAndUpgradeTestBase {
 
-//         assertEq(IVaultLike(vault).wards(controllerInst.almProxy), 1);
-//         assertEq(usds.allowance(buffer, controllerInst.almProxy),  type(uint256).max);
-//     }
+    LibraryWrapper wrapper;
 
-//     function test_pauseProxyInitAlmSystem() public {
-//         // Update to call the library from the pause proxy
-//         vm.etch(PAUSE_PROXY, address(new LibraryWrapper()).code);
-//         wrapper = LibraryWrapper(PAUSE_PROXY);
+    ControllerInstance public controllerInst;
 
-//         assertEq(IPSMLike(Base.PSM).bud(controllerInst.almProxy), 0);
+    Init.ConfigAddressParams configAddresses;
+    Init.CheckAddressParams  checkAddresses;
+    Init.MintRecipient[]     mintRecipients;
 
-//         vm.startPrank(PAUSE_PROXY);
-//         wrapper.pauseProxyInitAlmSystem(Base.PSM, controllerInst.almProxy);
-//         vm.stopPrank();
+    ForeignController newController;
 
-//         assertEq(IPSMLike(Base.PSM).bud(controllerInst.almProxy), 1);
-//     }
+    function setUp() public override {
+        super.setUp();
 
-// }
+        Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
-// contract ForeignControllerUpgradeControllerSuccessTests is ForeignControllerInitAndUpgradeTestBase {
+        ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
 
-//     LibraryWrapper wrapper;
+        mintRecipients.push(mintRecipients_[0]);
 
-//     ControllerInstance public controllerInst;
+        newController = ForeignController(ForeignControllerDeploy.deployController({
+            admin      : Base.SPARK_EXECUTOR,
+            almProxy   : address(almProxy),
+            rateLimits : address(rateLimits),
+            psm        : address(psmBase),
+            usdc       : address(usdcBase),
+            cctp       : Base.CCTP_TOKEN_MESSENGER
+        }));
 
-//     address public mismatchAddress = makeAddr("mismatchAddress");
+        controllerInst = ControllerInstance({
+            almProxy   : address(almProxy),
+            controller : address(newController),
+            rateLimits : address(rateLimits)
+        });
 
-//     Init.ConfigAddressParams configAddresses;
-//     Init.CheckAddressParams  checkAddresses;
-//     Init.MintRecipient[]     mintRecipients;
+        configAddresses.oldController = address(foreignController);  // Revoke from old controller
 
-//     ForeignController newController;
+        // Admin will be calling the library from its own address
+        vm.etch(Base.SPARK_EXECUTOR, address(new LibraryWrapper()).code);
 
-//     function setUp() public override {
-//         super.setUp();
+        wrapper = LibraryWrapper(Base.SPARK_EXECUTOR);
+    }
 
-//         // Upgrade against mainnet contracts
-//         controllerInst = ControllerInstance({
-//             almProxy   : almProxy,
-//             controller : Base.ALM_CONTROLLER,
-//             rateLimits : rateLimits
-//         });
+    function _getBlock() internal pure override returns (uint256) {
+        return 21430000;  // Dec 18, 2024
+    }
 
-//         // Overwrite storage for all previous deployments in setUp and assert brand new deployment
-//         foreignController = ForeignController(controllerInst.controller);
-//         almProxy          = ALMProxy(payable(controllerInst.almProxy));
-//         rateLimits        = RateLimits(controllerInst.rateLimits);
-//         vault             = Base.ALLOCATOR_VAULT;  // Use mainnet vault
-//         buffer            = Base.ALLOCATOR_BUFFER; // Use mainnet buffer
+    function test_upgradeController() public {
+        assertEq(newController.hasRole(newController.FREEZER(), freezer), false);
+        assertEq(newController.hasRole(newController.RELAYER(), relayer), false);
 
-//         Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)),     true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), true);
 
-//         ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(newController)),     false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(newController)), false);
 
-//         mintRecipients.push(mintRecipients_[0]);
+        assertEq(newController.mintRecipients(mintRecipients[0].domain),                bytes32(0));
+        assertEq(newController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM), bytes32(0));
 
-//         newController = ForeignController(ForeignControllerDeploy.deployController({
-//             admin      : Base.Base.SPARK_EXECUTOR,
-//             almProxy   : almProxy,
-//             rateLimits : rateLimits,
-//             vault      : Base.ALLOCATOR_VAULT,
-//             psm        : Base.PSM,
-//             daiUsds    : Base.DAI_USDS,
-//             cctp       : Base.CCTP_TOKEN_MESSENGER
-//         }));
+        vm.startPrank(Base.SPARK_EXECUTOR);
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
 
-//         controllerInst.controller     = address(newController);   // Upgrade to new controller
-//         configAddresses.oldController = Base.ALM_CONTROLLER;  // Revoke from old controller
+        assertEq(newController.hasRole(newController.FREEZER(), freezer), true);
+        assertEq(newController.hasRole(newController.RELAYER(), relayer), true);
 
-//         // Admin will be calling the library from its own address
-//         vm.etch(Base.SPARK_EXECUTOR, address(new LibraryWrapper()).code);
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)),     false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), false);
 
-//         wrapper = LibraryWrapper(Base.SPARK_EXECUTOR);
-//     }
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(newController)),     true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(newController)), true);
 
-//     function _getBlock() internal pure override returns (uint256) {
-//         return 21430000;  // Dec 18, 2024
-//     }
+        assertEq(
+            newController.mintRecipients(mintRecipients[0].domain),
+            mintRecipients[0].mintRecipient
+        );
 
-//     function test_upgradeController() public {
-//         assertEq(newController.hasRole(newController.FREEZER(), freezer), false);
-//         assertEq(newController.hasRole(newController.RELAYER(), relayer), false);
+        assertEq(
+            newController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
+            bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
+        );
+    }
 
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)),     true);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), true);
-
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(newController)),     false);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(newController)), false);
-
-//         assertEq(newController.mintRecipients(mintRecipients[0].domain),            bytes32(0));
-//         assertEq(newController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE), bytes32(0));
-
-//         vm.startPrank(Base.SPARK_EXECUTOR);
-//         wrapper.upgradeController(
-//             controllerInst,
-//             configAddresses,
-//             checkAddresses,
-//             mintRecipients
-//         );
-
-//         assertEq(newController.hasRole(newController.FREEZER(), freezer), true);
-//         assertEq(newController.hasRole(newController.RELAYER(), relayer), true);
-
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(foreignController)),     false);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(foreignController)), false);
-
-//         assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(newController)),     true);
-//         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(newController)), true);
-
-//         assertEq(
-//             newController.mintRecipients(mintRecipients[0].domain),
-//             mintRecipients[0].mintRecipient
-//         );
-
-//         assertEq(
-//             newController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
-//             bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
-//         );
-//     }
-
-// }
+}
