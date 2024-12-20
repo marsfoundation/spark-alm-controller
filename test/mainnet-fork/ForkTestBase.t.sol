@@ -81,8 +81,8 @@ contract ForkTestBase is DssTest {
     uint256 constant SEVEN_PCT_APY = 1.000000002145441671308778766e27;  // 7% APY (current DSR)
     uint256 constant EIGHT_PCT_APY = 1.000000002440418608258400030e27;  // 8% APY (current DSR + 1%)
 
-    address freezer = makeAddr("freezer");
-    address relayer = makeAddr("relayer");
+    address freezer = Ethereum.ALM_FREEZER;
+    address relayer = Ethereum.ALM_RELAYER;
 
     bytes32 CONTROLLER;
     bytes32 FREEZER;
