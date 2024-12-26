@@ -133,8 +133,7 @@ library MainnetControllerInit {
         require(address(newController.daiUsds()) == checkAddresses.daiUsds, "MainnetControllerInit/incorrect-daiUsds");
         require(address(newController.cctp())    == checkAddresses.cctp,    "MainnetControllerInit/incorrect-cctp");
 
-        require(newController.psmTo18ConversionFactor() == 1e12, "MainnetControllerInit/incorrect-psmTo18ConversionFactor");
-        require(newController.active(),                          "MainnetControllerInit/controller-not-active");
+        require(newController.active(), "MainnetControllerInit/controller-not-active");
 
         require(configAddresses.oldController != address(newController), "MainnetControllerInit/old-controller-is-new-controller");
 
