@@ -282,9 +282,6 @@ contract FullStagingDeploy is Script {
         });
 
         MainnetController mainnetController_ = MainnetController(mainnetController);
-
-        bytes32 mintKey = mainnetController_.LIMIT_USDE_MINT();
-        bytes32 burnKey = mainnetController_.LIMIT_USDE_BURN();
     
         bytes32 susdsDepositKey = RateLimitHelpers.makeAssetKey(
             mainnetController_.LIMIT_4626_DEPOSIT(),
@@ -306,15 +303,15 @@ contract FullStagingDeploy is Script {
             address(susds)
         );
 
-        RateLimitHelpers.setRateLimitData(mintKey,                                 controllerInst.rateLimits, rateLimitData6,  "usdeMintData",         6);
-        RateLimitHelpers.setRateLimitData(burnKey,                                 controllerInst.rateLimits, rateLimitData18, "usdeBurnData",         18);
-        RateLimitHelpers.setRateLimitData(susdsDepositKey,                         controllerInst.rateLimits, rateLimitData18, "susdsDepositData",     18);
-        RateLimitHelpers.setRateLimitData(susdsWithdrawKey,                        controllerInst.rateLimits, rateLimitData18, "susdsWithdrawData",    18);
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_MINT(),    controllerInst.rateLimits, rateLimitData18, "usdsMintData",         18);
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_TO_USDC(), controllerInst.rateLimits, rateLimitData6,  "usdsToUsdcData",       6);
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDC_TO_CCTP(), controllerInst.rateLimits, rateLimitData6,  "usdcToCctpData",       6);
-        RateLimitHelpers.setRateLimitData(domainKeyBase,                           controllerInst.rateLimits, rateLimitData6,  "cctpToBaseDomainData", 6);
-        RateLimitHelpers.setRateLimitData(susdsKey,                                controllerInst.rateLimits, rateLimitData18, "susdsDepositData",     18);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDE_MINT(),    controllerInst.rateLimits, rateLimitData6,     "usdeMintData",         6);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDE_BURN(),    controllerInst.rateLimits, rateLimitData18,    "usdeBurnData",         18);
+        RateLimitHelpers.setRateLimitData(susdsDepositKey,                         controllerInst.rateLimits, rateLimitData18,    "susdsDepositData",     18);
+        RateLimitHelpers.setRateLimitData(susdsWithdrawKey,                        controllerInst.rateLimits, rateLimitData18,    "susdsWithdrawData",    18);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_MINT(),    controllerInst.rateLimits, rateLimitData18,    "usdsMintData",         18);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_TO_USDC(), controllerInst.rateLimits, rateLimitData6,     "usdsToUsdcData",       6);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDC_TO_CCTP(), controllerInst.rateLimits, unlimitedRateLimit, "usdcToCctpData",       6);
+        RateLimitHelpers.setRateLimitData(domainKeyBase,                           controllerInst.rateLimits, rateLimitData6,     "cctpToBaseDomainData", 6);
+        RateLimitHelpers.setRateLimitData(susdsKey,                                controllerInst.rateLimits, rateLimitData18,    "susdsDepositData",     18);
 
         // Step 3: Transfer ownership of mock usdsJoin to the vault (able to mint usds)
 
@@ -404,9 +401,9 @@ contract FullStagingDeploy is Script {
             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
         );
 
-        address usdc  = base.config.readAddress(".usdc");
-        address usds  = base.config.readAddress(".usds");
-        address susds = base.config.readAddress(".susds");
+        usdc  = base.config.readAddress(".usdc");
+        usds  = base.config.readAddress(".usds");
+        susds = base.config.readAddress(".susds");
 
         RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  usdc),  controllerInst.rateLimits, rateLimitData6,     "usdcDepositData",   6);
         RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, usdc),  controllerInst.rateLimits, rateLimitData6,     "usdcWithdrawData",  6);
