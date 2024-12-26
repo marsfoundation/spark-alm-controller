@@ -24,7 +24,10 @@ contract MainnetControllerDeploySuccessTests is ForkTestBase {
         RateLimits        newRateLimits = RateLimits(controllerInst.rateLimits);
 
         assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),   true);
-        assertEq(newRateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY), true);
+        assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, address(this)), false);  // Deployer never gets admin
+
+        assertEq(newRateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),   true);
+        assertEq(newRateLimits.hasRole(DEFAULT_ADMIN_ROLE, address(this)), false);  // Deployer never gets admin
 
         _assertControllerInitState(newController, address(newAlmProxy), address(newRateLimits), vault, buffer);
     }
@@ -46,7 +49,8 @@ contract MainnetControllerDeploySuccessTests is ForkTestBase {
     }
 
     function _assertControllerInitState(MainnetController controller, address almProxy, address rateLimits, address vault, address buffer) internal view {
-        assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY), true);
+        assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),   true);
+        assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, address(this)), false);
 
         assertEq(address(controller.proxy()),        almProxy);
         assertEq(address(controller.rateLimits()),   rateLimits);

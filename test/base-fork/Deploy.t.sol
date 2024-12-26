@@ -22,8 +22,11 @@ contract ForeignControllerDeploySuccessTests is ForkTestBase {
         ForeignController newController = ForeignController(controllerInst.controller);
         RateLimits        newRateLimits = RateLimits(controllerInst.rateLimits);
 
-        assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR),   true);
+        assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR), true);
+        assertEq(newAlmProxy.hasRole(DEFAULT_ADMIN_ROLE, address(this)),       false);  // Deployer never gets admin
+
         assertEq(newRateLimits.hasRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR), true);
+        assertEq(newRateLimits.hasRole(DEFAULT_ADMIN_ROLE, address(this)),       false);  // Deployer never gets admin
 
         _assertControllerInitState(newController, address(newAlmProxy), address(newRateLimits));
     }
@@ -45,6 +48,7 @@ contract ForeignControllerDeploySuccessTests is ForkTestBase {
 
     function _assertControllerInitState(ForeignController controller, address almProxy, address rateLimits) internal view {
         assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR), true);
+        assertEq(controller.hasRole(DEFAULT_ADMIN_ROLE, address(this)),       false);  // Deployer never gets admin
 
         assertEq(address(controller.proxy()),      almProxy);
         assertEq(address(controller.rateLimits()), rateLimits);
