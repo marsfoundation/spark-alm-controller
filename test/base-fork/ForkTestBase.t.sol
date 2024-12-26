@@ -169,15 +169,15 @@ contract ForkTestBase is Test {
             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
         );
 
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  address(usdcBase)),  rateLimits, standardUsdcData, "usdcDepositData",  6);
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, address(usdcBase)),  rateLimits, standardUsdcData, "usdcWithdrawData", 6);
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  address(usdsBase)),  rateLimits, standardUsdsData, "usdsDepositData",  18);
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, address(usdsBase)),  rateLimits, unlimitedData,    "usdsWithdrawData", 18);
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  address(susdsBase)), rateLimits, standardUsdsData, "susdsDepositData", 18);
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, address(susdsBase)), rateLimits, unlimitedData,    "susdsWithdrawData", 18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  address(usdcBase)),  address(rateLimits), standardUsdcData, "usdcDepositData",  6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, address(usdcBase)),  address(rateLimits), standardUsdcData, "usdcWithdrawData", 6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  address(usdsBase)),  address(rateLimits), standardUsdsData, "usdsDepositData",  18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, address(usdsBase)),  address(rateLimits), unlimitedData,    "usdsWithdrawData", 18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  address(susdsBase)), address(rateLimits), standardUsdsData, "susdsDepositData", 18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, address(susdsBase)), address(rateLimits), unlimitedData,    "susdsWithdrawData", 18);
 
-        RateLimitHelpers.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), rateLimits, standardUsdcData, "usdcToCctpData",           6);
-        RateLimitHelpers.setRateLimitData(domainKeyEthereum,                      rateLimits, standardUsdcData, "cctpToEthereumDomainData", 6);
+        RateLimitHelpers.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), address(rateLimits), standardUsdcData, "usdcToCctpData",           6);
+        RateLimitHelpers.setRateLimitData(domainKeyEthereum,                      address(rateLimits), standardUsdcData, "cctpToEthereumDomainData", 6);
 
         vm.stopPrank();
     }

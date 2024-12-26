@@ -279,11 +279,11 @@ contract ForkTestBase is DssTest {
             address(susds)
         );
 
-        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimits, standardUsdsData, "usdsMintData",         18);
-        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimits, standardUsdcData, "usdsToUsdcData",       6);
-        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimits, standardUsdcData, "usdcToCctpData",       6);
-        RateLimitHelpers.setRateLimitData(domainKeyBase,                          rateLimits, standardUsdcData, "cctpToBaseDomainData", 6);
-        RateLimitHelpers.setRateLimitData(susdsKey,                               rateLimits, standardUsdsData, "susdsDepositData",     18);
+        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDS_MINT(),    address(rateLimits), standardUsdsData, "usdsMintData",         18);
+        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), address(rateLimits), standardUsdcData, "usdsToUsdcData",       6);
+        RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), address(rateLimits), standardUsdcData, "usdcToCctpData",       6);
+        RateLimitHelpers.setRateLimitData(domainKeyBase,                          address(rateLimits), standardUsdcData, "cctpToBaseDomainData", 6);
+        RateLimitHelpers.setRateLimitData(susdsKey,                               address(rateLimits), standardUsdsData, "susdsDepositData",     18);
 
         vm.stopPrank();
 

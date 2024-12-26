@@ -1,682 +1,688 @@
-// // SPDX-License-Identifier: AGPL-3.0-or-later
-// pragma solidity >=0.8.0;
-
-// import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+// SPDX-License-Identifier: AGPL-3.0-or-later
+pragma solidity >=0.8.0;
 
-// import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
-// import { Base } from "spark-address-registry/src/Base.sol";
+import { ERC20Mock } from "openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 
-// import { PSM3Deploy }       from "spark-psm/deploy/PSM3Deploy.sol";
-// import { IPSM3 }            from "spark-psm/src/PSM3.sol";
-// import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
+import { Base } from "spark-address-registry/src/Base.sol";
 
-// import { CCTPBridgeTesting } from "xchain-helpers/src/testing/bridges/CCTPBridgeTesting.sol";
-// import { CCTPForwarder }     from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
+import { PSM3Deploy }       from "spark-psm/deploy/PSM3Deploy.sol";
+import { IPSM3 }            from "spark-psm/src/PSM3.sol";
+import { MockRateProvider } from "spark-psm/test/mocks/MockRateProvider.sol";
 
-// import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
-// import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
+import { CCTPBridgeTesting } from "xchain-helpers/src/testing/bridges/CCTPBridgeTesting.sol";
+import { CCTPForwarder }     from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
 
-// import { ForeignControllerInit,
-//     MintRecipient,
-//     RateLimitData
-// } from "../../deploy/ControllerInit.sol";
+import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";
+import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 
-// import { ALMProxy }          from "../../src/ALMProxy.sol";
-// import { ForeignController } from "../../src/ForeignController.sol";
-// import { RateLimits }        from "../../src/RateLimits.sol";
-// import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
+import { ForeignControllerInit } from "../../deploy/ForeignControllerInit.sol";
 
-// import "./ForkTestBase.t.sol";
+import { ALMProxy }          from "../../src/ALMProxy.sol";
+import { ForeignController } from "../../src/ForeignController.sol";
+import { RateLimits }        from "../../src/RateLimits.sol";
+import { RateLimitHelpers }  from "../../src/RateLimitHelpers.sol";
 
-// contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
+import "./ForkTestBase.t.sol";
 
-//     function test_transferUSDCToCCTP_notRelayer() external {
-//         vm.expectRevert(abi.encodeWithSignature(
-//             "AccessControlUnauthorizedAccount(address,bytes32)",
-//             address(this),
-//             RELAYER
-//         ));
-//         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-//     }
+contract MainnetControllerTransferUSDCToCCTPFailureTests is ForkTestBase {
 
-//     function test_transferUSDCToCCTP_frozen() external {
-//         vm.prank(freezer);
-//         mainnetController.freeze();
+    function test_transferUSDCToCCTP_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+    }
 
-//         vm.prank(relayer);
-//         vm.expectRevert("MainnetController/not-active");
-//         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-//     }
+    function test_transferUSDCToCCTP_frozen() external {
+        vm.prank(freezer);
+        mainnetController.freeze();
 
-//     function test_transferUSDCToCCTP_cctpRateLimitedBoundary() external {
-//         vm.startPrank(SPARK_PROXY);
+        vm.prank(relayer);
+        vm.expectRevert("MainnetController/not-active");
+        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+    }
 
-//         // Set this so second modifier will be passed in success case
-//         rateLimits.setUnlimitedRateLimitData(
-//             RateLimitHelpers.makeDomainKey(
-//                 mainnetController.LIMIT_USDC_TO_DOMAIN(),
-//                 CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
-//             )
-//         );
+    function test_transferUSDCToCCTP_cctpRateLimitedBoundary() external {
+        vm.startPrank(SPARK_PROXY);
 
-//         // Rate limit will be constant 10m (higher than setup)
-//         rateLimits.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), 10_000_000e6, 0);
+        // Set this so second modifier will be passed in success case
+        rateLimits.setUnlimitedRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                mainnetController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
+            )
+        );
 
-//         // Set this for success case
-//         mainnetController.setMintRecipient(
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-//             bytes32(uint256(uint160(makeAddr("mintRecipient"))))
-//         );
+        // Rate limit will be constant 10m (higher than setup)
+        rateLimits.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), 10_000_000e6, 0);
 
-//         vm.stopPrank();
+        // Set this for success case
+        mainnetController.setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(uint256(uint160(makeAddr("mintRecipient"))))
+        );
 
-//         deal(address(usdc), address(almProxy), 10_000_000e6 + 1);
+        vm.stopPrank();
 
-//         vm.startPrank(relayer);
-//         vm.expectRevert("RateLimits/rate-limit-exceeded");
-//         mainnetController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        deal(address(usdc), address(almProxy), 10_000_000e6 + 1);
 
-//         mainnetController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-//     }
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
-//     function test_transferUSDCToCCTP_domainRateLimitedBoundary() external {
-//         vm.startPrank(SPARK_PROXY);
+        mainnetController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+    }
 
-//         // Set this so first modifier will be passed in success case
-//         rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP());
+    function test_transferUSDCToCCTP_domainRateLimitedBoundary() external {
+        vm.startPrank(SPARK_PROXY);
 
-//         // Rate limit will be constant 10m (higher than setup)
-//         rateLimits.setRateLimitData(
-//             RateLimitHelpers.makeDomainKey(
-//                 mainnetController.LIMIT_USDC_TO_DOMAIN(),
-//                 CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
-//             ),
-//             10_000_000e6,
-//             0
-//         );
+        // Set this so first modifier will be passed in success case
+        rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP());
 
-//         // Set this for success case
-//         mainnetController.setMintRecipient(
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-//             bytes32(uint256(uint160(makeAddr("mintRecipient"))))
-//         );
+        // Rate limit will be constant 10m (higher than setup)
+        rateLimits.setRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                mainnetController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
+            ),
+            10_000_000e6,
+            0
+        );
 
-//         vm.stopPrank();
+        // Set this for success case
+        mainnetController.setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(uint256(uint160(makeAddr("mintRecipient"))))
+        );
 
-//         deal(address(usdc), address(almProxy), 10_000_000e6 + 1);
+        vm.stopPrank();
 
-//         vm.startPrank(relayer);
-//         vm.expectRevert("RateLimits/rate-limit-exceeded");
-//         mainnetController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        deal(address(usdc), address(almProxy), 10_000_000e6 + 1);
 
-//         mainnetController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
-//     }
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
-//     function test_transferUSDCToCCTP_invalidMintRecipient() external {
-//         // Configure to pass modifiers
-//         vm.startPrank(SPARK_PROXY);
+        mainnetController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+    }
 
-//         rateLimits.setUnlimitedRateLimitData(
-//             RateLimitHelpers.makeDomainKey(
-//                 mainnetController.LIMIT_USDC_TO_DOMAIN(),
-//                 CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE
-//             )
-//         );
+    function test_transferUSDCToCCTP_invalidMintRecipient() external {
+        // Configure to pass modifiers
+        vm.startPrank(SPARK_PROXY);
 
-//         rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP());
+        rateLimits.setUnlimitedRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                mainnetController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE
+            )
+        );
 
-//         vm.stopPrank();
+        rateLimits.setUnlimitedRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP());
 
-//         vm.prank(relayer);
-//         vm.expectRevert("MainnetController/domain-not-configured");
-//         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE);
-//     }
+        vm.stopPrank();
 
-// }
+        vm.prank(relayer);
+        vm.expectRevert("MainnetController/domain-not-configured");
+        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE);
+    }
 
-// // TODO: Figure out finalized structure for this repo/testing structure wise
-// contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
+}
 
-//     using DomainHelpers     for *;
-//     using CCTPBridgeTesting for Bridge;
+// TODO: Figure out finalized structure for this repo/testing structure wise
+contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
-//     /**********************************************************************************************/
-//     /*** Constants/state variables                                                              ***/
-//     /**********************************************************************************************/
+    using DomainHelpers     for *;
+    using CCTPBridgeTesting for Bridge;
 
-//     address pocket = makeAddr("pocket");
+    /**********************************************************************************************/
+    /*** Constants/state variables                                                              ***/
+    /**********************************************************************************************/
 
-//     /**********************************************************************************************/
-//     /*** Base addresses                                                                         ***/
-//     /**********************************************************************************************/
+    address pocket = makeAddr("pocket");
 
-//     address constant CCTP_MESSENGER_BASE = Base.CCTP_TOKEN_MESSENGER;
-//     address constant SPARK_EXECUTOR      = Base.SPARK_EXECUTOR;
-//     address constant SSR_ORACLE          = Base.SSR_AUTH_ORACLE;
-//     address constant USDC_BASE           = Base.USDC;
+    /**********************************************************************************************/
+    /*** Base addresses                                                                         ***/
+    /**********************************************************************************************/
 
-//     /**********************************************************************************************/
-//     /*** ALM system deployments                                                                 ***/
-//     /**********************************************************************************************/
+    address constant CCTP_MESSENGER_BASE = Base.CCTP_TOKEN_MESSENGER;
+    address constant SPARK_EXECUTOR      = Base.SPARK_EXECUTOR;
+    address constant SSR_ORACLE          = Base.SSR_AUTH_ORACLE;
+    address constant USDC_BASE           = Base.USDC;
 
-//     ALMProxy          foreignAlmProxy;
-//     RateLimits        foreignRateLimits;
-//     ForeignController foreignController;
+    /**********************************************************************************************/
+    /*** ALM system deployments                                                                 ***/
+    /**********************************************************************************************/
 
-//     /**********************************************************************************************/
-//     /*** Casted addresses for testing                                                           ***/
-//     /**********************************************************************************************/
+    ALMProxy          foreignAlmProxy;
+    RateLimits        foreignRateLimits;
+    ForeignController foreignController;
 
-//     IERC20 usdsBase;
-//     IERC20 susdsBase;
-//     IERC20 usdcBase;
+    /**********************************************************************************************/
+    /*** Casted addresses for testing                                                           ***/
+    /**********************************************************************************************/
 
-//     MockRateProvider rateProvider;
+    IERC20 usdsBase;
+    IERC20 susdsBase;
+    IERC20 usdcBase;
 
-//     IPSM3 psmBase;
+    MockRateProvider rateProvider;
 
-//     uint256 USDC_BASE_SUPPLY;
+    IPSM3 psmBase;
 
-//     function setUp() public override virtual {
-//         super.setUp();
+    uint256 USDC_BASE_SUPPLY;
 
-//         /*** Step 1: Set up environment and deploy mocks ***/
+    function setUp() public override virtual {
+        super.setUp();
 
-//         destination = getChain("base").createSelectFork(20782500);  // October 7, 2024
+        /*** Step 1: Set up environment and deploy mocks ***/
 
-//         usdsBase  = IERC20(address(new ERC20Mock()));
-//         susdsBase = IERC20(address(new ERC20Mock()));
-//         usdcBase  = IERC20(USDC_BASE);
+        destination = getChain("base").createSelectFork(20782500);  // October 7, 2024
 
-//         /*** Step 2: Deploy and configure PSM with a pocket ***/
+        usdsBase  = IERC20(address(new ERC20Mock()));
+        susdsBase = IERC20(address(new ERC20Mock()));
+        usdcBase  = IERC20(USDC_BASE);
 
-//         deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
+        /*** Step 2: Deploy and configure PSM with a pocket ***/
 
-//         psmBase = IPSM3(PSM3Deploy.deploy(
-//             SPARK_EXECUTOR, USDC_BASE, address(usdsBase), address(susdsBase), SSR_ORACLE
-//         ));
+        deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
 
-//         vm.prank(SPARK_EXECUTOR);
-//         psmBase.setPocket(pocket);
+        psmBase = IPSM3(PSM3Deploy.deploy(
+            SPARK_EXECUTOR, USDC_BASE, address(usdsBase), address(susdsBase), SSR_ORACLE
+        ));
 
-//         vm.prank(pocket);
-//         usdcBase.approve(address(psmBase), type(uint256).max);
+        vm.prank(SPARK_EXECUTOR);
+        psmBase.setPocket(pocket);
 
-//         /*** Step 3: Deploy and configure ALM system ***/
+        vm.prank(pocket);
+        usdcBase.approve(address(psmBase), type(uint256).max);
 
-//         ControllerInstance memory controllerInst = ForeignControllerDeploy.deployFull({
-//             admin : SPARK_EXECUTOR,
-//             psm   : address(psmBase),
-//             usdc  : USDC_BASE,
-//             cctp  : CCTP_MESSENGER_BASE
-//         });
+        /*** Step 3: Deploy and configure ALM system ***/
 
-//         foreignAlmProxy   = ALMProxy(payable(controllerInst.almProxy));
-//         foreignRateLimits = RateLimits(controllerInst.rateLimits);
-//         foreignController = ForeignController(controllerInst.controller);
+        ControllerInstance memory controllerInst = ForeignControllerDeploy.deployFull({
+            admin : SPARK_EXECUTOR,
+            psm   : address(psmBase),
+            usdc  : USDC_BASE,
+            cctp  : CCTP_MESSENGER_BASE
+        });
 
-//         ForeignControllerInit.AddressParams memory addresses = ForeignControllerInit.AddressParams({
-//             admin         : SPARK_EXECUTOR,
-//             freezer       : freezer,
-//             relayer       : relayer,
-//             oldController : address(0),  // Empty
-//             psm           : address(psmBase),
-//             cctpMessenger : CCTP_MESSENGER_BASE,
-//             usdc          : USDC_BASE,
-//             usds          : address(usdsBase),
-//             susds         : address(susdsBase)
-//         });
+        foreignAlmProxy   = ALMProxy(payable(controllerInst.almProxy));
+        foreignRateLimits = RateLimits(controllerInst.rateLimits);
+        foreignController = ForeignController(controllerInst.controller);
 
-//         RateLimitData memory standardUsdcRateLimitData = RateLimitData({
-//             maxAmount : 5_000_000e6,
-//             slope     : uint256(1_000_000e6) / 4 hours
-//         });
+        ForeignControllerInit.ConfigAddressParams memory configAddresses = ForeignControllerInit.ConfigAddressParams({
+            freezer       : freezer,
+            relayer       : relayer,
+            oldController : address(0)
+        });
 
-//         RateLimitData memory standardUsdsRateLimitData = RateLimitData({
-//             maxAmount : 5_000_000e18,
-//             slope     : uint256(1_000_000e18) / 4 hours
-//         });
+        ForeignControllerInit.CheckAddressParams memory checkAddresses = ForeignControllerInit.CheckAddressParams({
+            admin : Base.SPARK_EXECUTOR,
+            psm   : address(psmBase),
+            cctp  : Base.CCTP_TOKEN_MESSENGER,
+            usdc  : address(usdcBase),
+            susds : address(susdsBase),
+            usds  : address(usdsBase)
+        });
 
-//         RateLimitData memory unlimitedRateLimitData = RateLimitData({
-//             maxAmount : type(uint256).max,
-//             slope     : 0
-//         });
+        ForeignControllerInit.MintRecipient[] memory mintRecipients = new ForeignControllerInit.MintRecipient[](1);
 
-//         ForeignControllerInit.InitRateLimitData memory rateLimitData
-//             = ForeignControllerInit.InitRateLimitData({
-//                 usdcDepositData          : standardUsdcRateLimitData,
-//                 usdcWithdrawData         : standardUsdcRateLimitData,
-//                 usdsDepositData          : standardUsdsRateLimitData,
-//                 usdsWithdrawData         : unlimitedRateLimitData,
-//                 susdsDepositData         : standardUsdsRateLimitData,
-//                 susdsWithdrawData        : unlimitedRateLimitData,
-//                 usdcToCctpData           : standardUsdcRateLimitData,
-//                 cctpToEthereumDomainData : standardUsdcRateLimitData
-//             });
+        mintRecipients[0] = ForeignControllerInit.MintRecipient({
+            domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            mintRecipient : bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
+        });
 
-//         MintRecipient[] memory mintRecipients = new MintRecipient[](1);
+        vm.startPrank(SPARK_EXECUTOR);
 
-//         mintRecipients[0] = MintRecipient({
-//             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-//             mintRecipient : bytes32(uint256(uint160(address(almProxy))))
-//         });
+        ForeignControllerInit.initAlmSystem(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
 
-//         vm.startPrank(SPARK_EXECUTOR);
-//         ForeignControllerInit.init(addresses, controllerInst, rateLimitData, mintRecipients);
-//         vm.stopPrank();
+        RateLimitData memory standardUsdcData = RateLimitData({
+            maxAmount : 5_000_000e6,
+            slope     : uint256(1_000_000e6) / 4 hours
+        });
 
-//         USDC_BASE_SUPPLY = usdcBase.totalSupply();
+        RateLimitData memory standardUsdsData = RateLimitData({
+            maxAmount : 5_000_000e18,
+            slope     : uint256(1_000_000e18) / 4 hours
+        });
 
-//         source.selectFork();
+        RateLimitData memory unlimitedData = RateLimitData({
+            maxAmount : type(uint256).max,
+            slope     : 0
+        });
 
-//         bridge = CCTPBridgeTesting.createCircleBridge(source, destination);
+        bytes32 depositKey  = foreignController.LIMIT_PSM_DEPOSIT();
+        bytes32 withdrawKey = foreignController.LIMIT_PSM_WITHDRAW();
 
-//         vm.prank(SPARK_PROXY);
-//         mainnetController.setMintRecipient(
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-//             bytes32(uint256(uint160(address(foreignAlmProxy))))
-//         );
-//     }
+        bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
+            foreignController.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+        );
 
-// }
+        RateLimitHelpers.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), address(foreignRateLimits), standardUsdcData, "usdcToCctpData",           6);
+        RateLimitHelpers.setRateLimitData(domainKeyEthereum,                      address(foreignRateLimits), standardUsdcData, "cctpToEthereumDomainData", 6);
 
-// contract ForeignControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPTestBase {
+        vm.stopPrank();
 
-//     using DomainHelpers for *;
+        USDC_BASE_SUPPLY = usdcBase.totalSupply();
 
-//     function setUp( ) public override {
-//         super.setUp();
-//         destination.selectFork();
-//     }
+        source.selectFork();
 
-//     function test_transferUSDCToCCTP_notRelayer() external {
-//         vm.expectRevert(abi.encodeWithSignature(
-//             "AccessControlUnauthorizedAccount(address,bytes32)",
-//             address(this),
-//             RELAYER
-//         ));
-//         foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
-//     }
+        bridge = CCTPBridgeTesting.createCircleBridge(source, destination);
 
-//     function test_transferUSDCToCCTP_frozen() external {
-//         vm.prank(freezer);
-//         foreignController.freeze();
+        vm.prank(SPARK_PROXY);
+        mainnetController.setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(uint256(uint160(address(foreignAlmProxy))))
+        );
+    }
 
-//         vm.prank(relayer);
-//         vm.expectRevert("ForeignController/not-active");
-//         foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
-//     }
+}
 
-//     function test_transferUSDCToCCTP_cctpRateLimitedBoundary() external {
-//         vm.startPrank(SPARK_EXECUTOR);
+contract ForeignControllerTransferUSDCToCCTPFailureTests is BaseChainUSDCToCCTPTestBase {
 
-//         // Set this so second modifier will be passed in success case
-//         foreignRateLimits.setUnlimitedRateLimitData(
-//             RateLimitHelpers.makeDomainKey(
-//                 foreignController.LIMIT_USDC_TO_DOMAIN(),
-//                 CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
-//             )
-//         );
+    using DomainHelpers for *;
 
-//         // Rate limit will be constant 10m (higher than setup)
-//         foreignRateLimits.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), 10_000_000e6, 0);
+    function setUp( ) public override {
+        super.setUp();
+        destination.selectFork();
+    }
 
-//         // Set this for success case
-//         foreignController.setMintRecipient(
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-//             bytes32(uint256(uint160(makeAddr("mintRecipient"))))
-//         );
+    function test_transferUSDCToCCTP_notRelayer() external {
+        vm.expectRevert(abi.encodeWithSignature(
+            "AccessControlUnauthorizedAccount(address,bytes32)",
+            address(this),
+            RELAYER
+        ));
+        foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    }
 
-//         vm.stopPrank();
+    function test_transferUSDCToCCTP_frozen() external {
+        vm.prank(freezer);
+        foreignController.freeze();
 
-//         deal(address(usdcBase), address(foreignAlmProxy), 10_000_000e6 + 1);
+        vm.prank(relayer);
+        vm.expectRevert("ForeignController/not-active");
+        foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    }
 
-//         vm.startPrank(relayer);
-//         vm.expectRevert("RateLimits/rate-limit-exceeded");
-//         foreignController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    function test_transferUSDCToCCTP_cctpRateLimitedBoundary() external {
+        vm.startPrank(SPARK_EXECUTOR);
 
-//         foreignController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
-//     }
+        // Set this so second modifier will be passed in success case
+        foreignRateLimits.setUnlimitedRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                foreignController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+            )
+        );
 
-//     function test_transferUSDCToCCTP_domainRateLimitedBoundary() external {
-//         vm.startPrank(SPARK_EXECUTOR);
+        // Rate limit will be constant 10m (higher than setup)
+        foreignRateLimits.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), 10_000_000e6, 0);
 
-//         // Set this so first modifier will be passed in success case
-//         foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
+        // Set this for success case
+        foreignController.setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            bytes32(uint256(uint160(makeAddr("mintRecipient"))))
+        );
 
-//         // Rate limit will be constant 10m (higher than setup)
-//         foreignRateLimits.setRateLimitData(
-//             RateLimitHelpers.makeDomainKey(
-//                 foreignController.LIMIT_USDC_TO_DOMAIN(),
-//                 CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
-//             ),
-//             10_000_000e6,
-//             0
-//         );
+        vm.stopPrank();
 
-//         // Set this for success case
-//         foreignController.setMintRecipient(
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-//             bytes32(uint256(uint160(makeAddr("mintRecipient"))))
-//         );
+        deal(address(usdcBase), address(foreignAlmProxy), 10_000_000e6 + 1);
 
-//         vm.stopPrank();
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        foreignController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
 
-//         deal(address(usdcBase), address(foreignAlmProxy), 10_000_000e6 + 1);
+        foreignController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    }
 
-//         vm.startPrank(relayer);
-//         vm.expectRevert("RateLimits/rate-limit-exceeded");
-//         foreignController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    function test_transferUSDCToCCTP_domainRateLimitedBoundary() external {
+        vm.startPrank(SPARK_EXECUTOR);
 
-//         foreignController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
-//     }
+        // Set this so first modifier will be passed in success case
+        foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
 
-//     function test_transferUSDCToCCTP_invalidMintRecipient() external {
-//         // Configure to pass modifiers
-//         vm.startPrank(SPARK_EXECUTOR);
+        // Rate limit will be constant 10m (higher than setup)
+        foreignRateLimits.setRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                foreignController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+            ),
+            10_000_000e6,
+            0
+        );
 
-//         foreignRateLimits.setUnlimitedRateLimitData(
-//             RateLimitHelpers.makeDomainKey(
-//                 foreignController.LIMIT_USDC_TO_DOMAIN(),
-//                 CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE
-//             )
-//         );
+        // Set this for success case
+        foreignController.setMintRecipient(
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            bytes32(uint256(uint160(makeAddr("mintRecipient"))))
+        );
 
-//         foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
+        vm.stopPrank();
 
-//         vm.stopPrank();
+        deal(address(usdcBase), address(foreignAlmProxy), 10_000_000e6 + 1);
 
-//         vm.prank(relayer);
-//         vm.expectRevert("ForeignController/domain-not-configured");
-//         foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE);
-//     }
+        vm.startPrank(relayer);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        foreignController.transferUSDCToCCTP(10_000_000e6 + 1, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
 
-// }
+        foreignController.transferUSDCToCCTP(10_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    }
 
-// contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
+    function test_transferUSDCToCCTP_invalidMintRecipient() external {
+        // Configure to pass modifiers
+        vm.startPrank(SPARK_EXECUTOR);
 
-//     using DomainHelpers     for *;
-//     using CCTPBridgeTesting for Bridge;
+        foreignRateLimits.setUnlimitedRateLimitData(
+            RateLimitHelpers.makeDomainKey(
+                foreignController.LIMIT_USDC_TO_DOMAIN(),
+                CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE
+            )
+        );
 
-//     event CCTPTransferInitiated(
-//         uint64  indexed nonce,
-//         uint32  indexed destinationDomain,
-//         bytes32 indexed mintRecipient,
-//         uint256 usdcAmount
-//     );
+        foreignRateLimits.setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
 
-//     event DepositForBurn(
-//         uint64  indexed nonce,
-//         address indexed burnToken,
-//         uint256 amount,
-//         address indexed depositor,
-//         bytes32 mintRecipient,
-//         uint32  destinationDomain,
-//         bytes32 destinationTokenMessenger,
-//         bytes32 destinationCaller
-//     );
+        vm.stopPrank();
 
-//     function test_transferUSDCToCCTP_sourceToDestination() external {
-//         deal(address(usdc), address(almProxy), 1e6);
+        vm.prank(relayer);
+        vm.expectRevert("ForeignController/domain-not-configured");
+        foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ARBITRUM_ONE);
+    }
 
-//         assertEq(usdc.balanceOf(address(almProxy)),          1e6);
-//         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-//         assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
+}
 
-//         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
+contract USDCToCCTPIntegrationTests is BaseChainUSDCToCCTPTestBase {
 
-//         _expectEthereumCCTPEmit(114_803, 1e6);
+    using DomainHelpers     for *;
+    using CCTPBridgeTesting for Bridge;
 
-//         vm.prank(relayer);
-//         mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+    event CCTPTransferInitiated(
+        uint64  indexed nonce,
+        uint32  indexed destinationDomain,
+        bytes32 indexed mintRecipient,
+        uint256 usdcAmount
+    );
 
-//         assertEq(usdc.balanceOf(address(almProxy)),          0);
-//         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-//         assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 1e6);
+    event DepositForBurn(
+        uint64  indexed nonce,
+        address indexed burnToken,
+        uint256 amount,
+        address indexed depositor,
+        bytes32 mintRecipient,
+        uint32  destinationDomain,
+        bytes32 destinationTokenMessenger,
+        bytes32 destinationCaller
+    );
 
-//         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
+    function test_transferUSDCToCCTP_sourceToDestination() external {
+        deal(address(usdc), address(almProxy), 1e6);
 
-//         destination.selectFork();
+        assertEq(usdc.balanceOf(address(almProxy)),          1e6);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   0);
-//         assertEq(usdcBase.balanceOf(address(foreignController)), 0);
-//         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY);
+        assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
-//         bridge.relayMessagesToDestination(true);
+        _expectEthereumCCTPEmit(114_803, 1e6);
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   1e6);
-//         assertEq(usdcBase.balanceOf(address(foreignController)), 0);
-//         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY + 1e6);
-//     }
+        vm.prank(relayer);
+        mainnetController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
-//     function test_transferUSDCToCCTP_sourceToDestination_bigTransfer() external {
-//         deal(address(usdc), address(almProxy), 2_900_000e6);
+        assertEq(usdc.balanceOf(address(almProxy)),          0);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 1e6);
 
-//         assertEq(usdc.balanceOf(address(almProxy)),          2_900_000e6);
-//         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-//         assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
+        assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
-//         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
+        destination.selectFork();
 
-//         // Will split into 3 separate transactions at max 1m each
-//         _expectEthereumCCTPEmit(114_803, 1_000_000e6);
-//         _expectEthereumCCTPEmit(114_804, 1_000_000e6);
-//         _expectEthereumCCTPEmit(114_805, 900_000e6);
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   0);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY);
 
-//         vm.prank(relayer);
-//         mainnetController.transferUSDCToCCTP(2_900_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        bridge.relayMessagesToDestination(true);
 
-//         assertEq(usdc.balanceOf(address(almProxy)),          0);
-//         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-//         assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 2_900_000e6);
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   1e6);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY + 1e6);
+    }
 
-//         assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
+    function test_transferUSDCToCCTP_sourceToDestination_bigTransfer() external {
+        deal(address(usdc), address(almProxy), 2_900_000e6);
 
-//         destination.selectFork();
+        assertEq(usdc.balanceOf(address(almProxy)),          2_900_000e6);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   0);
-//         assertEq(usdcBase.balanceOf(address(foreignController)), 0);
-//         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY);
+        assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
-//         bridge.relayMessagesToDestination(true);
+        // Will split into 3 separate transactions at max 1m each
+        _expectEthereumCCTPEmit(114_803, 1_000_000e6);
+        _expectEthereumCCTPEmit(114_804, 1_000_000e6);
+        _expectEthereumCCTPEmit(114_805, 900_000e6);
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   2_900_000e6);
-//         assertEq(usdcBase.balanceOf(address(foreignController)), 0);
-//         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY + 2_900_000e6);
-//     }
+        vm.prank(relayer);
+        mainnetController.transferUSDCToCCTP(2_900_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
-//     function test_transferUSDCToCCTP_sourceToDestination_rateLimited() external {
-//         bytes32 key = mainnetController.LIMIT_USDC_TO_CCTP();
-//         deal(address(usdc), address(almProxy), 9_000_000e6);
+        assertEq(usdc.balanceOf(address(almProxy)),          0);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY - 2_900_000e6);
 
-//         vm.startPrank(relayer);
+        assertEq(usds.allowance(address(almProxy), CCTP_MESSENGER),  0);
 
-//         assertEq(usdc.balanceOf(address(almProxy)),   9_000_000e6);
-//         assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
+        destination.selectFork();
 
-//         mainnetController.transferUSDCToCCTP(2_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   0);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY);
 
-//         assertEq(usdc.balanceOf(address(almProxy)),   7_000_000e6);
-//         assertEq(rateLimits.getCurrentRateLimit(key), 3_000_000e6);
+        bridge.relayMessagesToDestination(true);
 
-//         vm.expectRevert("RateLimits/rate-limit-exceeded");
-//         mainnetController.transferUSDCToCCTP(3_000_001e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   2_900_000e6);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY + 2_900_000e6);
+    }
 
-//         mainnetController.transferUSDCToCCTP(3_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+    function test_transferUSDCToCCTP_sourceToDestination_rateLimited() external {
+        bytes32 key = mainnetController.LIMIT_USDC_TO_CCTP();
+        deal(address(usdc), address(almProxy), 9_000_000e6);
 
-//         assertEq(usdc.balanceOf(address(almProxy)),   4_000_000e6);
-//         assertEq(rateLimits.getCurrentRateLimit(key), 0);
+        vm.startPrank(relayer);
 
-//         skip(4 hours);
+        assertEq(usdc.balanceOf(address(almProxy)),   9_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 5_000_000e6);
 
-//         assertEq(usdc.balanceOf(address(almProxy)),   4_000_000e6);
-//         assertEq(rateLimits.getCurrentRateLimit(key), 999_999.9936e6);
+        mainnetController.transferUSDCToCCTP(2_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
-//         mainnetController.transferUSDCToCCTP(999_999.9936e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
+        assertEq(usdc.balanceOf(address(almProxy)),   7_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 3_000_000e6);
 
-//         assertEq(usdc.balanceOf(address(almProxy)),   3_000_000.0064e6);
-//         assertEq(rateLimits.getCurrentRateLimit(key), 0);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        mainnetController.transferUSDCToCCTP(3_000_001e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
-//         vm.stopPrank();
-//     }
+        mainnetController.transferUSDCToCCTP(3_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
-//     function test_transferUSDCToCCTP_destinationToSource() external {
-//         destination.selectFork();
+        assertEq(usdc.balanceOf(address(almProxy)),   4_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 0);
 
-//         deal(address(usdcBase), address(foreignAlmProxy), 1e6);
+        skip(4 hours);
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   1e6);
-//         assertEq(usdcBase.balanceOf(address(foreignController)), 0);
-//         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY);
+        assertEq(usdc.balanceOf(address(almProxy)),   4_000_000e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 999_999.9936e6);
 
-//         assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
+        mainnetController.transferUSDCToCCTP(999_999.9936e6, CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
-//         _expectBaseCCTPEmit(296_114, 1e6);
+        assertEq(usdc.balanceOf(address(almProxy)),   3_000_000.0064e6);
+        assertEq(rateLimits.getCurrentRateLimit(key), 0);
 
-//         vm.prank(relayer);
-//         foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+        vm.stopPrank();
+    }
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   0);
-//         assertEq(usdcBase.balanceOf(address(foreignController)), 0);
-//         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY - 1e6);
+    function test_transferUSDCToCCTP_destinationToSource() external {
+        destination.selectFork();
 
-//         assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
+        deal(address(usdcBase), address(foreignAlmProxy), 1e6);
 
-//         source.selectFork();
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   1e6);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY);
 
-//         assertEq(usdc.balanceOf(address(almProxy)),          0);
-//         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-//         assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
+        assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
-//         bridge.relayMessagesToSource(true);
+        _expectBaseCCTPEmit(296_114, 1e6);
 
-//         assertEq(usdc.balanceOf(address(almProxy)),          1e6);
-//         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-//         assertEq(usdc.totalSupply(),                         USDC_SUPPLY + 1e6);
-//     }
+        vm.prank(relayer);
+        foreignController.transferUSDCToCCTP(1e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
 
-//     function test_transferUSDCToCCTP_destinationToSource_bigTransfer() external {
-//         destination.selectFork();
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   0);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY - 1e6);
 
-//         deal(address(usdcBase), address(foreignAlmProxy), 2_600_000e6);
+        assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   2_600_000e6);
-//         assertEq(usdcBase.balanceOf(address(foreignController)), 0);
-//         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY);
+        source.selectFork();
 
-//         assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
+        assertEq(usdc.balanceOf(address(almProxy)),          0);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
 
-//         // Will split into three separate transactions at max 1m each
-//         _expectBaseCCTPEmit(296_114, 1_000_000e6);
-//         _expectBaseCCTPEmit(296_115, 1_000_000e6);
-//         _expectBaseCCTPEmit(296_116, 600_000e6);
+        bridge.relayMessagesToSource(true);
 
-//         vm.prank(relayer);
-//         foreignController.transferUSDCToCCTP(2_600_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+        assertEq(usdc.balanceOf(address(almProxy)),          1e6);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY + 1e6);
+    }
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   0);
-//         assertEq(usdcBase.balanceOf(address(foreignController)), 0);
-//         assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY - 2_600_000e6);
+    function test_transferUSDCToCCTP_destinationToSource_bigTransfer() external {
+        destination.selectFork();
 
-//         assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
+        deal(address(usdcBase), address(foreignAlmProxy), 2_600_000e6);
 
-//         source.selectFork();
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   2_600_000e6);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY);
 
-//         assertEq(usdc.balanceOf(address(almProxy)),          0);
-//         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-//         assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
+        assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
-//         bridge.relayMessagesToSource(true);
+        // Will split into three separate transactions at max 1m each
+        _expectBaseCCTPEmit(296_114, 1_000_000e6);
+        _expectBaseCCTPEmit(296_115, 1_000_000e6);
+        _expectBaseCCTPEmit(296_116, 600_000e6);
 
-//         assertEq(usdc.balanceOf(address(almProxy)),          2_600_000e6);
-//         assertEq(usdc.balanceOf(address(mainnetController)), 0);
-//         assertEq(usdc.totalSupply(),                         USDC_SUPPLY + 2_600_000e6);
-//     }
+        vm.prank(relayer);
+        foreignController.transferUSDCToCCTP(2_600_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
 
-//     function test_transferUSDCToCCTP_destinationToSource_rateLimited() external {
-//         destination.selectFork();
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)),   0);
+        assertEq(usdcBase.balanceOf(address(foreignController)), 0);
+        assertEq(usdcBase.totalSupply(),                         USDC_BASE_SUPPLY - 2_600_000e6);
 
-//         bytes32 key = foreignController.LIMIT_USDC_TO_CCTP();
-//         deal(address(usdcBase), address(foreignAlmProxy), 9_000_000e6);
+        assertEq(usdsBase.allowance(address(foreignAlmProxy), CCTP_MESSENGER_BASE),  0);
 
-//         vm.startPrank(relayer);
+        source.selectFork();
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 9_000_000e6);
-//         assertEq(foreignRateLimits.getCurrentRateLimit(key),   5_000_000e6);
+        assertEq(usdc.balanceOf(address(almProxy)),          0);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY);
 
-//         foreignController.transferUSDCToCCTP(2_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+        bridge.relayMessagesToSource(true);
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 7_000_000e6);
-//         assertEq(foreignRateLimits.getCurrentRateLimit(key),   3_000_000e6);
+        assertEq(usdc.balanceOf(address(almProxy)),          2_600_000e6);
+        assertEq(usdc.balanceOf(address(mainnetController)), 0);
+        assertEq(usdc.totalSupply(),                         USDC_SUPPLY + 2_600_000e6);
+    }
 
-//         vm.expectRevert("RateLimits/rate-limit-exceeded");
-//         foreignController.transferUSDCToCCTP(3_000_001e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+    function test_transferUSDCToCCTP_destinationToSource_rateLimited() external {
+        destination.selectFork();
 
-//         foreignController.transferUSDCToCCTP(3_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+        bytes32 key = foreignController.LIMIT_USDC_TO_CCTP();
+        deal(address(usdcBase), address(foreignAlmProxy), 9_000_000e6);
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 4_000_000e6);
-//         assertEq(foreignRateLimits.getCurrentRateLimit(key),   0);
+        vm.startPrank(relayer);
 
-//         skip(4 hours);
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 9_000_000e6);
+        assertEq(foreignRateLimits.getCurrentRateLimit(key),   5_000_000e6);
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 4_000_000e6);
-//         assertEq(foreignRateLimits.getCurrentRateLimit(key),   999_999.9936e6);
+        foreignController.transferUSDCToCCTP(2_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
 
-//         foreignController.transferUSDCToCCTP(999_999.9936e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 7_000_000e6);
+        assertEq(foreignRateLimits.getCurrentRateLimit(key),   3_000_000e6);
 
-//         assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 3_000_000.0064e6);
-//         assertEq(foreignRateLimits.getCurrentRateLimit(key),   0);
+        vm.expectRevert("RateLimits/rate-limit-exceeded");
+        foreignController.transferUSDCToCCTP(3_000_001e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
 
-//         vm.stopPrank();
-//     }
+        foreignController.transferUSDCToCCTP(3_000_000e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
 
-//     function _expectEthereumCCTPEmit(uint64 nonce, uint256 amount) internal {
-//         // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
-//         //       for assertions
-//         vm.expectEmit(CCTP_MESSENGER);
-//         emit DepositForBurn(
-//             nonce,
-//             address(usdc),
-//             amount,
-//             address(almProxy),
-//             mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-//             bytes32(0x0000000000000000000000001682ae6375c4e4a97e4b583bc394c861a46d8962),
-//             bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
-//         );
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 4_000_000e6);
+        assertEq(foreignRateLimits.getCurrentRateLimit(key),   0);
 
-//         vm.expectEmit(address(mainnetController));
-//         emit CCTPTransferInitiated(
-//             nonce,
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
-//             mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
-//             amount
-//         );
-//     }
+        skip(4 hours);
 
-//     function _expectBaseCCTPEmit(uint64 nonce, uint256 amount) internal {
-//         // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
-//         //       for assertions
-//         vm.expectEmit(CCTP_MESSENGER_BASE);
-//         emit DepositForBurn(
-//             nonce,
-//             address(usdcBase),
-//             amount,
-//             address(foreignAlmProxy),
-//             foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-//             bytes32(0x000000000000000000000000bd3fa81b58ba92a82136038b25adec7066af3155),
-//             bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
-//         );
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 4_000_000e6);
+        assertEq(foreignRateLimits.getCurrentRateLimit(key),   999_999.9936e6);
 
-//         vm.expectEmit(address(foreignController));
-//         emit CCTPTransferInitiated(
-//             nonce,
-//             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-//             foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
-//             amount
-//         );
-//     }
+        foreignController.transferUSDCToCCTP(999_999.9936e6, CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM);
 
-// }
+        assertEq(usdcBase.balanceOf(address(foreignAlmProxy)), 3_000_000.0064e6);
+        assertEq(foreignRateLimits.getCurrentRateLimit(key),   0);
+
+        vm.stopPrank();
+    }
+
+    function _expectEthereumCCTPEmit(uint64 nonce, uint256 amount) internal {
+        // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
+        //       for assertions
+        vm.expectEmit(CCTP_MESSENGER);
+        emit DepositForBurn(
+            nonce,
+            address(usdc),
+            amount,
+            address(almProxy),
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            bytes32(0x0000000000000000000000001682ae6375c4e4a97e4b583bc394c861a46d8962),
+            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
+        );
+
+        vm.expectEmit(address(mainnetController));
+        emit CCTPTransferInitiated(
+            nonce,
+            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
+            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            amount
+        );
+    }
+
+    function _expectBaseCCTPEmit(uint64 nonce, uint256 amount) internal {
+        // NOTE: Focusing on burnToken, amount, depositor, mintRecipient, and destinationDomain
+        //       for assertions
+        vm.expectEmit(CCTP_MESSENGER_BASE);
+        emit DepositForBurn(
+            nonce,
+            address(usdcBase),
+            amount,
+            address(foreignAlmProxy),
+            foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            bytes32(0x000000000000000000000000bd3fa81b58ba92a82136038b25adec7066af3155),
+            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000)
+        );
+
+        vm.expectEmit(address(foreignController));
+        emit CCTPTransferInitiated(
+            nonce,
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
+            foreignController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM),
+            amount
+        );
+    }
+
+}

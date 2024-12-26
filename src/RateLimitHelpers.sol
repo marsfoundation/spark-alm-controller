@@ -20,7 +20,7 @@ library RateLimitHelpers {
 
     function setRateLimitData(
         bytes32       key,
-        IRateLimits   rateLimits,
+        address       rateLimits,
         RateLimitData memory data,
         string        memory name,
         uint256       decimals
@@ -44,7 +44,7 @@ library RateLimitHelpers {
                 string(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-", name))
             );
         }
-        rateLimits.setRateLimitData(key, data.maxAmount, data.slope);
+        IRateLimits(rateLimits).setRateLimitData(key, data.maxAmount, data.slope);
     }
 
 }
