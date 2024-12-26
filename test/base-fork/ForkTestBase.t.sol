@@ -98,7 +98,7 @@ contract ForkTestBase is Test {
         vm.prank(pocket);
         usdcBase.approve(address(psmBase), type(uint256).max);
 
-        /*** Step 3: Deploy and configure ALM system ***/
+        /*** Step 3: Deploy ALM system ***/
 
         ControllerInstance memory controllerInst = ForeignControllerDeploy.deployFull({
             admin : SPARK_EXECUTOR,
@@ -114,6 +114,9 @@ contract ForkTestBase is Test {
         CONTROLLER = almProxy.CONTROLLER();
         FREEZER    = foreignController.FREEZER();
         RELAYER    = foreignController.RELAYER();
+
+        /*** Step 3: Configure ALM system through Spark governance (Spark spell payload) ***/
+
 
         Init.ConfigAddressParams memory configAddresses = Init.ConfigAddressParams({
             freezer       : freezer,
@@ -169,6 +172,7 @@ contract ForkTestBase is Test {
             CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
         );
 
+        // NOTE: Using minimal config for test base setup
         RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  address(usdcBase)),  address(rateLimits), standardUsdcData, "usdcDepositData",  6);
         RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, address(usdcBase)),  address(rateLimits), standardUsdcData, "usdcWithdrawData", 6);
         RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  address(usdsBase)),  address(rateLimits), standardUsdsData, "usdsDepositData",  18);

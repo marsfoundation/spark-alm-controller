@@ -241,12 +241,12 @@ contract ForkTestBase is DssTest {
             mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         });
 
-        // Step 4: Initialize through Sky governance
+        // Step 4: Initialize through Sky governance (Sky spell payload)
 
         vm.prank(Ethereum.PAUSE_PROXY);
         Init.pauseProxyInitAlmSystem(Ethereum.PSM, controllerInst.almProxy);
 
-        // Step 5: Initialize through Spark governance
+        // Step 5: Initialize through Spark governance (Spark spell payload)
 
         vm.startPrank(Ethereum.SPARK_PROXY);
 
@@ -274,20 +274,15 @@ contract ForkTestBase is DssTest {
             CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
         );
 
-        bytes32 susdsKey = RateLimitHelpers.makeAssetKey(
-            mainnetController.LIMIT_4626_DEPOSIT(),
-            address(susds)
-        );
-
+        // NOTE: Using minimal config for test base setup
         RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDS_MINT(),    address(rateLimits), standardUsdsData, "usdsMintData",         18);
         RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), address(rateLimits), standardUsdcData, "usdsToUsdcData",       6);
         RateLimitHelpers.setRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), address(rateLimits), standardUsdcData, "usdcToCctpData",       6);
         RateLimitHelpers.setRateLimitData(domainKeyBase,                          address(rateLimits), standardUsdcData, "cctpToBaseDomainData", 6);
-        RateLimitHelpers.setRateLimitData(susdsKey,                               address(rateLimits), standardUsdsData, "susdsDepositData",     18);
 
         vm.stopPrank();
 
-        /*** Step 4: Label addresses ***/
+        /*** Step 6: Label addresses ***/
 
         vm.label(buffer,         "buffer");
         vm.label(address(susds), "susds");
