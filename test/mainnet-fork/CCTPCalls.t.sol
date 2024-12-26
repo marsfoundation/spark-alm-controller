@@ -232,7 +232,7 @@ contract BaseChainUSDCToCCTPTestBase is ForkTestBase {
 
         mintRecipients[0] = ForeignControllerInit.MintRecipient({
             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
-            mintRecipient : bytes32(uint256(uint160(makeAddr("ethereumAlmProxy"))))
+            mintRecipient : bytes32(uint256(uint160(address(almProxy))))
         });
 
         vm.startPrank(SPARK_EXECUTOR);
