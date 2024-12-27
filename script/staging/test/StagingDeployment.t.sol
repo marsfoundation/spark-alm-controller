@@ -56,7 +56,7 @@ contract StagingDeploymentTestBase is Test {
 
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
-    uint256 constant RELEASE_DATE = 20241210;
+    uint256 constant RELEASE_DATE = 20241227;
 
     // Common variables
     address admin;
