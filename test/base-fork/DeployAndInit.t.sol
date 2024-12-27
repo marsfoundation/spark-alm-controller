@@ -94,7 +94,7 @@ contract ForeignControllerInitAndUpgradeFailureTest is ForeignControllerInitAndU
 
         oldController = address(foreignController);  // Cache for later testing
 
-        // Deploy new controller against live mainnet system
+        // Deploy new controller against existing system
         // NOTE: initAlmSystem will redundantly call rely and approve on already inited 
         //       almProxy and rateLimits, this setup was chosen to easily test upgrade and init failures
         foreignController = ForeignController(ForeignControllerDeploy.deployController({
@@ -134,11 +134,8 @@ contract ForeignControllerInitAndUpgradeFailureTest is ForeignControllerInitAndU
     /**********************************************************************************************/
 
     function test_initAlmSystem_upgradeController_incorrectAdminAlmProxy() external {
-        // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(Base.SPARK_EXECUTOR);
-        almProxy.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+        vm.prank(Base.SPARK_EXECUTOR);
         almProxy.revokeRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR);
-        vm.stopPrank();
 
         vm.expectRevert("ForeignControllerInit/incorrect-admin-almProxy");
         wrapper.initAlmSystem(
@@ -150,11 +147,8 @@ contract ForeignControllerInitAndUpgradeFailureTest is ForeignControllerInitAndU
     }
 
     function test_initAlmSystem_upgradeController_incorrectAdminRateLimits() external {
-        // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(Base.SPARK_EXECUTOR);
-        rateLimits.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+        vm.prank(Base.SPARK_EXECUTOR);
         rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR);
-        vm.stopPrank();
 
         vm.expectRevert("ForeignControllerInit/incorrect-admin-rateLimits");
         wrapper.initAlmSystem(
@@ -166,11 +160,8 @@ contract ForeignControllerInitAndUpgradeFailureTest is ForeignControllerInitAndU
     }
 
     function test_initAlmSystem_upgradeController_incorrectAdminController() external {
-        // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(Base.SPARK_EXECUTOR);
-        foreignController.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+        vm.prank(Base.SPARK_EXECUTOR);
         foreignController.revokeRole(DEFAULT_ADMIN_ROLE, Base.SPARK_EXECUTOR);
-        vm.stopPrank();
 
         _checkInitAndUpgradeFail(abi.encodePacked("ForeignControllerInit/incorrect-admin-controller"));
     }
@@ -299,7 +290,7 @@ contract ForeignControllerInitAndUpgradeFailureTest is ForeignControllerInitAndU
 
         deal(address(wrongUsds), address(this), 1e18);  // For seeding PSM during deployment
 
-        // Deploy a new PSM with the wrong USDC
+        // Deploy a new PSM with the wrong USDS
         psmBase = IPSM3(PSM3Deploy.deploy(
             SPARK_EXECUTOR, USDC_BASE, address(wrongUsds), address(susdsBase), SSR_ORACLE
         ));
@@ -322,7 +313,7 @@ contract ForeignControllerInitAndUpgradeFailureTest is ForeignControllerInitAndU
 
         deal(address(usdsBase), address(this), 1e18);  // For seeding PSM during deployment
 
-        // Deploy a new PSM with the wrong USDC
+        // Deploy a new PSM with the wrong SUSDS
         psmBase = IPSM3(PSM3Deploy.deploy(
             SPARK_EXECUTOR, USDC_BASE, address(usdsBase), address(wrongSUsds), SSR_ORACLE
         ));

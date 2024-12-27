@@ -36,6 +36,7 @@ import { ALMProxy }          from "../../../src/ALMProxy.sol";
 import { ForeignController } from "../../../src/ForeignController.sol";
 import { MainnetController } from "../../../src/MainnetController.sol";
 import { RateLimits }        from "../../../src/RateLimits.sol";
+
 import { RateLimitHelpers }  from "../../../src/RateLimitHelpers.sol";
 
 interface IVatLike {
@@ -140,7 +141,7 @@ contract StagingDeploymentTestBase is Test {
         // ALM system
         almProxy          = ALMProxy(payable(outputMainnet.readAddress(".almProxy")));
         rateLimits        = RateLimits(outputMainnet.readAddress(".rateLimits"));
-        mainnetController = _reconfigureMainnetController();
+        mainnetController = MainnetController(outputMainnet.readAddress(".controller"));
 
         // Base roles
         relayerSafeBase = outputBaseDeps.readAddress(".relayer");
@@ -161,56 +162,6 @@ contract StagingDeploymentTestBase is Test {
         mainnet.selectFork();
 
         deal(address(usds), address(usdsJoin), 1000e18);  // Ensure there is enough balance
-    }
-
-    // TODO: Remove this once a deployment has been done on mainnet
-    function _reconfigureMainnetController() internal returns (MainnetController newController) {
-        newController = MainnetController(MainnetControllerDeploy.deployController({
-            admin      : admin,
-            almProxy   : address(almProxy),
-            rateLimits : address(rateLimits),
-            vault      : address(vault),
-            psm        : inputMainnet.readAddress(".psm"),
-            daiUsds    : inputMainnet.readAddress(".daiUsds"),
-            cctp       : inputMainnet.readAddress(".cctpTokenMessenger")
-        }));
-
-        vm.startPrank(admin);
-
-        newController.grantRole(newController.FREEZER(), inputMainnet.readAddress(".freezer"));
-        newController.grantRole(newController.RELAYER(), inputMainnet.readAddress(".relayer"));
-
-        almProxy.grantRole(almProxy.CONTROLLER(), address(newController));
-        rateLimits.grantRole(rateLimits.CONTROLLER(), address(newController));
-
-        almProxy.revokeRole(almProxy.CONTROLLER(), outputMainnet.readAddress(".controller"));
-        rateLimits.revokeRole(rateLimits.CONTROLLER(), outputMainnet.readAddress(".controller"));
-
-        newController.setMintRecipient(
-            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE, 
-            bytes32(uint256(uint160(address(outputBase.readAddress(".almProxy")))))
-        );
-
-        // Set all rate limits
-
-        bytes32[] memory rateLimitKeys = new bytes32[](10);
-
-        rateLimitKeys[0] = RateLimitHelpers.makeAssetKey(newController.LIMIT_AAVE_DEPOSIT(),  AUSDS);
-        rateLimitKeys[1] = RateLimitHelpers.makeAssetKey(newController.LIMIT_AAVE_DEPOSIT(),  AUSDC);
-        rateLimitKeys[2] = RateLimitHelpers.makeAssetKey(newController.LIMIT_4626_DEPOSIT(),  Ethereum.SUSDS);
-        rateLimitKeys[3] = RateLimitHelpers.makeAssetKey(newController.LIMIT_4626_DEPOSIT(),  Ethereum.SUSDE);
-        rateLimitKeys[4] = RateLimitHelpers.makeAssetKey(newController.LIMIT_AAVE_WITHDRAW(), AUSDS);
-        rateLimitKeys[5] = RateLimitHelpers.makeAssetKey(newController.LIMIT_AAVE_WITHDRAW(), AUSDC);
-        rateLimitKeys[6] = RateLimitHelpers.makeAssetKey(newController.LIMIT_4626_WITHDRAW(), Ethereum.SUSDS);
-        rateLimitKeys[7] = newController.LIMIT_USDE_MINT();
-        rateLimitKeys[8] = newController.LIMIT_USDE_BURN();
-        rateLimitKeys[9] = newController.LIMIT_SUSDE_COOLDOWN();
-        
-        for (uint256 i; i < rateLimitKeys.length; i++) {
-            rateLimits.setUnlimitedRateLimitData(rateLimitKeys[i]);
-        }
-
-        vm.stopPrank();
     }
 }
 
@@ -307,15 +258,15 @@ contract MainnetStagingDeploymentTests is StagingDeploymentTestBase {
         vm.startPrank(relayerSafe);
         mainnetController.depositERC4626(Ethereum.SUSDE, 10e18);
         skip(1 days);
-        mainnetController.cooldownAssetsSUSDe(10e18);
+        mainnetController.cooldownAssetsSUSDe(10e18 - 1);  // Rounding
         skip(7 days);
         mainnetController.unstakeSUSDe();
-        mainnetController.prepareUSDeBurn(10e18);
+        mainnetController.prepareUSDeBurn(10e18 - 1);
         vm.stopPrank();
 
-        _simulateUsdeBurn(10e18);
+        _simulateUsdeBurn(10e18 - 1);
 
-        assertEq(usdc.balanceOf(address(almProxy)), startingBalance + 10e6); 
+        assertEq(usdc.balanceOf(address(almProxy)), startingBalance + 10e6 - 1);  // Rounding not captured 
         
         assertGe(IERC4626(Ethereum.SUSDE).balanceOf(address(almProxy)), 0);  // Interest earned
     }
@@ -342,7 +293,7 @@ contract MainnetStagingDeploymentTests is StagingDeploymentTestBase {
 
         _simulateUsdeBurn(usdeAmount);
 
-        assertGe(usdc.balanceOf(address(almProxy)), startingBalance + 10e6);  // Interest earned
+        assertGe(usdc.balanceOf(address(almProxy)), startingBalance + 10e6 - 1);  // Interest earned (roundign)
         
         assertEq(IERC4626(Ethereum.SUSDE).balanceOf(address(almProxy)), 0);  
     }
@@ -389,21 +340,6 @@ contract BaseStagingDeploymentTests is StagingDeploymentTestBase {
         super.setUp();
 
         base.selectFork();
-
-        bytes32[] memory rateLimitKeys = new bytes32[](4);
-
-        rateLimitKeys[0] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_AAVE_DEPOSIT(),  AUSDC_BASE);
-        rateLimitKeys[1] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_4626_DEPOSIT(),  MORPHO_VAULT_USDC);
-        rateLimitKeys[2] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_AAVE_WITHDRAW(), AUSDC_BASE);
-        rateLimitKeys[3] = RateLimitHelpers.makeAssetKey(baseController.LIMIT_4626_WITHDRAW(), MORPHO_VAULT_USDC);
-
-        vm.startPrank(admin);
-        
-        for (uint256 i; i < rateLimitKeys.length; i++) {
-            baseRateLimits.setUnlimitedRateLimitData(rateLimitKeys[i]);
-        }
-
-        vm.stopPrank();
     }
 
     function test_transferCCTP() public {

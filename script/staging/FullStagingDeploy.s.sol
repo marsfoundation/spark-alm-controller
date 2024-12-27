@@ -59,6 +59,17 @@ contract FullStagingDeploy is Script {
     using ScriptTools for string;
 
     /**********************************************************************************************/
+    /*** Deployed contracts                                                                     ***/
+    /**********************************************************************************************/
+
+    address constant AUSDS = 0x32a6268f9Ba3642Dda7892aDd74f1D34469A4259;
+    address constant AUSDC = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c;
+
+    address constant AUSDC_BASE             = 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB;
+    address constant MORPHO_BASE            = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
+    address constant MORPHO_VAULT_USDC_BASE = 0x305E03Ed9ADaAB22F4A58c24515D79f2B1E2FD5D;
+
+    /**********************************************************************************************/
     /*** Mainnet existing/mock deployments                                                      ***/
     /**********************************************************************************************/
 
@@ -212,7 +223,7 @@ contract FullStagingDeploy is Script {
         ScriptTools.exportContract(mainnet.nameDeps, "allocatorVault",  vault);
     }
 
-    function _setUpALMController() internal {
+    function _setUpMainnetController() internal {
         vm.selectFork(mainnet.forkId);
         vm.startBroadcast();
 
@@ -221,7 +232,7 @@ contract FullStagingDeploy is Script {
         ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull({
             admin   : mainnet.admin,
             vault   : vault,
-            psm     : psm,
+            psm     : psm,  // Wrapper
             daiUsds : daiUsds,
             cctp    : mainnet.config.readAddress(".cctpTokenMessenger")
         });
@@ -243,8 +254,8 @@ contract FullStagingDeploy is Script {
                 admin      : mainnet.admin,
                 proxy      : controllerInst.almProxy,
                 rateLimits : controllerInst.rateLimits,
-                vault      : mainnet.config.readAddress(".psm"),
-                psm        : mainnet.config.readAddress(".psm"),
+                vault      : vault,
+                psm        : psm,
                 daiUsds    : mainnet.config.readAddress(".daiUsds"),
                 cctp       : mainnet.config.readAddress(".cctpTokenMessenger")
             });
@@ -267,6 +278,26 @@ contract FullStagingDeploy is Script {
 
         // Step 3: Set all rate limits for the controller
 
+        _setMainnetControllerRateLimits(controllerInst.rateLimits);
+        
+        // Step 4: Transfer ownership of mock usdsJoin to the vault (able to mint usds)
+
+        MockUsdsJoin(usdsJoin).transferOwnership(vault);
+
+        vm.stopBroadcast();
+
+        // Step 5: Export all deployed addresses
+
+        ScriptTools.exportContract(mainnet.nameDeps, "freezer", mainnet.config.readAddress(".freezer"));
+        ScriptTools.exportContract(mainnet.nameDeps, "relayer", mainnet.config.readAddress(".relayer"));
+
+        ScriptTools.exportContract(mainnet.name, "almProxy",   controllerInst.almProxy);
+        ScriptTools.exportContract(mainnet.name, "controller", controllerInst.controller);
+        ScriptTools.exportContract(mainnet.name, "rateLimits", controllerInst.rateLimits);
+    }
+
+    // TODO: Remove
+    function _setMainnetControllerRateLimits(address rateLimits) internal {
         // Still constrained by the USDC_UNIT_SIZE
         RateLimitData memory rateLimitData18 = RateLimitData({
             maxAmount : USDC_UNIT_SIZE * 1e12 * 5,
@@ -282,54 +313,93 @@ contract FullStagingDeploy is Script {
         });
 
         MainnetController mainnetController_ = MainnetController(mainnetController);
-    
-        bytes32 susdsDepositKey = RateLimitHelpers.makeAssetKey(
-            mainnetController_.LIMIT_4626_DEPOSIT(),
-            address(mainnetController_.susde())
-        );
 
-        bytes32 susdsWithdrawKey = RateLimitHelpers.makeAssetKey(
-            mainnetController_.LIMIT_4626_WITHDRAW(),
-            address(mainnetController_.susde())
-        );
+        bytes32 ausdcDepositKey  = RateLimitHelpers.makeAssetKey(mainnetController_.LIMIT_AAVE_DEPOSIT(),   AUSDC);
+        bytes32 ausdcWithdrawKey = RateLimitHelpers.makeAssetKey(mainnetController_.LIMIT_AAVE_WITHDRAW(),  AUSDC);
+        bytes32 ausdsDepositKey  = RateLimitHelpers.makeAssetKey(mainnetController_.LIMIT_AAVE_DEPOSIT(),   AUSDS);
+        bytes32 ausdsWithdrawKey = RateLimitHelpers.makeAssetKey(mainnetController_.LIMIT_AAVE_WITHDRAW(),  AUSDS);
+        bytes32 susdeDepositKey  = RateLimitHelpers.makeAssetKey(mainnetController_.LIMIT_4626_DEPOSIT(),   address(mainnetController_.susde()));
+        bytes32 susdeWithdrawKey = RateLimitHelpers.makeAssetKey(mainnetController_.LIMIT_4626_WITHDRAW(),  address(mainnetController_.susde()));
+        bytes32 susdsDepositKey  = RateLimitHelpers.makeAssetKey(mainnetController_.LIMIT_4626_DEPOSIT(),   susds);
+        bytes32 susdsWithdrawKey = RateLimitHelpers.makeAssetKey(mainnetController_.LIMIT_4626_WITHDRAW(),  susds);
 
-        bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
-            mainnetController_.LIMIT_USDC_TO_DOMAIN(),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
-        );
+        bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(mainnetController_.LIMIT_USDC_TO_DOMAIN(), CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
-        bytes32 susdsKey = RateLimitHelpers.makeAssetKey(
-            mainnetController_.LIMIT_4626_DEPOSIT(),
-            address(susds)
-        );
+        // USDS mint/burn and cross-chain transfer rate limits
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_MINT(),    rateLimits, rateLimitData18,    "usdsMintData",         18);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_TO_USDC(), rateLimits, rateLimitData6,     "usdsToUsdcData",       6);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDC_TO_CCTP(), rateLimits, unlimitedRateLimit, "usdcToCctpData",       6);
+        RateLimitHelpers.setRateLimitData(domainKeyBase,                           rateLimits, rateLimitData6,     "cctpToBaseDomainData", 6);
 
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDE_MINT(),    controllerInst.rateLimits, rateLimitData6,     "usdeMintData",         6);
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDE_BURN(),    controllerInst.rateLimits, rateLimitData18,    "usdeBurnData",         18);
-        RateLimitHelpers.setRateLimitData(susdsDepositKey,                         controllerInst.rateLimits, rateLimitData18,    "susdsDepositData",     18);
-        RateLimitHelpers.setRateLimitData(susdsWithdrawKey,                        controllerInst.rateLimits, rateLimitData18,    "susdsWithdrawData",    18);
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_MINT(),    controllerInst.rateLimits, rateLimitData18,    "usdsMintData",         18);
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_TO_USDC(), controllerInst.rateLimits, rateLimitData6,     "usdsToUsdcData",       6);
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDC_TO_CCTP(), controllerInst.rateLimits, unlimitedRateLimit, "usdcToCctpData",       6);
-        RateLimitHelpers.setRateLimitData(domainKeyBase,                           controllerInst.rateLimits, rateLimitData6,     "cctpToBaseDomainData", 6);
-        RateLimitHelpers.setRateLimitData(susdsKey,                                controllerInst.rateLimits, rateLimitData18,    "susdsDepositData",     18);
+        // Ethena-specific rate limits
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDE_MINT(),      rateLimits, rateLimitData6,     "usdeMintData",      6);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDE_BURN(),      rateLimits, rateLimitData18,    "usdeBurnData",      18);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_SUSDE_COOLDOWN(), rateLimits, unlimitedRateLimit, "susdeCooldownData", 18);
 
-        // Step 3: Transfer ownership of mock usdsJoin to the vault (able to mint usds)
-
-        MockUsdsJoin(usdsJoin).transferOwnership(vault);
-
-        vm.stopBroadcast();
-
-        // Step 4: Export all deployed addresses
-
-        ScriptTools.exportContract(mainnet.nameDeps, "freezer", mainnet.config.readAddress(".freezer"));
-        ScriptTools.exportContract(mainnet.nameDeps, "relayer", mainnet.config.readAddress(".relayer"));
-
-        ScriptTools.exportContract(mainnet.name, "almProxy",   controllerInst.almProxy);
-        ScriptTools.exportContract(mainnet.name, "controller", controllerInst.controller);
-        ScriptTools.exportContract(mainnet.name, "rateLimits", controllerInst.rateLimits);
+        // 4626 and AAVE deposit/withdraw rate limits
+        RateLimitHelpers.setRateLimitData(ausdcDepositKey,  rateLimits, rateLimitData6,  "ausdcDepositData",  6);
+        RateLimitHelpers.setRateLimitData(ausdcWithdrawKey, rateLimits, rateLimitData6,  "ausdcWithdrawData", 6);
+        RateLimitHelpers.setRateLimitData(ausdsDepositKey,  rateLimits, rateLimitData6,  "ausdsDepositData",  18);
+        RateLimitHelpers.setRateLimitData(ausdsWithdrawKey, rateLimits, rateLimitData6,  "ausdsWithdrawData", 18);
+        RateLimitHelpers.setRateLimitData(susdeDepositKey,  rateLimits, rateLimitData18, "susdeDepositData",  18);
+        RateLimitHelpers.setRateLimitData(susdeWithdrawKey, rateLimits, rateLimitData18, "susdeWithdrawData", 18);
+        RateLimitHelpers.setRateLimitData(susdsDepositKey,  rateLimits, rateLimitData18, "susdsDepositData",  18);
+        RateLimitHelpers.setRateLimitData(susdsWithdrawKey, rateLimits, rateLimitData18, "susdsWithdrawData", 18);
     }
 
-    function _setUpBaseALMController() public {
+    function _setBaseControllerRateLimits(address rateLimits) internal {
+        RateLimitData memory rateLimitData18 = RateLimitData({
+            maxAmount : USDC_UNIT_SIZE * 1e12 * 5,
+            slope     : USDC_UNIT_SIZE * 1e12 / 4 hours
+        });
+        RateLimitData memory rateLimitData6 = RateLimitData({
+            maxAmount : USDC_UNIT_SIZE * 5,
+            slope     : USDC_UNIT_SIZE / 4 hours
+        });
+        RateLimitData memory unlimitedRateLimit = RateLimitData({
+            maxAmount : type(uint256).max,
+            slope     : 0
+        });
+
+        ForeignController foreignController = ForeignController(baseController);
+
+        bytes32 aaveDepositKey   = foreignController.LIMIT_AAVE_DEPOSIT();
+        bytes32 aaveWithdrawKey  = foreignController.LIMIT_AAVE_WITHDRAW();
+        bytes32 psmDepositKey    = foreignController.LIMIT_PSM_DEPOSIT();
+        bytes32 psmWithdrawKey   = foreignController.LIMIT_PSM_WITHDRAW();
+        bytes32 vaultDepositKey  = foreignController.LIMIT_4626_DEPOSIT();
+        bytes32 vaultWithdrawKey = foreignController.LIMIT_4626_WITHDRAW();
+        
+        bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
+            foreignController.LIMIT_USDC_TO_DOMAIN(),
+            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
+        );
+
+        usdc  = base.config.readAddress(".usdc");
+        usds  = base.config.readAddress(".usds");
+        susds = base.config.readAddress(".susds");
+
+        // PSM rate limits for all three assets
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(psmDepositKey,  usdc),  rateLimits, rateLimitData6,     "usdcDepositDataPsm",   6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(psmWithdrawKey, usdc),  rateLimits, rateLimitData6,     "usdcWithdrawDataPsm",  6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(psmDepositKey,  usds),  rateLimits, rateLimitData18,    "usdsDepositDataPsm",   18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(psmWithdrawKey, usds),  rateLimits, unlimitedRateLimit, "usdsWithdrawDataPsm",  18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(psmDepositKey,  susds), rateLimits, rateLimitData18,    "susdsDepositDataPsm",  18);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(psmWithdrawKey, susds), rateLimits, unlimitedRateLimit, "susdsWithdrawDataPsm", 18);
+
+        // CCTP rate limits
+        RateLimitHelpers.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), rateLimits, rateLimitData6, "usdcToCctpData",           6);
+        RateLimitHelpers.setRateLimitData(domainKeyEthereum,                      rateLimits, rateLimitData6, "cctpToEthereumDomainData", 6);
+
+        // AAVE rate limits
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(aaveDepositKey,  AUSDC_BASE), rateLimits, rateLimitData6, "usdcDepositDataAave",  6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(aaveWithdrawKey, AUSDC_BASE), rateLimits, rateLimitData6, "usdcWithdrawDataAave", 6);
+
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(vaultDepositKey,  MORPHO_VAULT_USDC_BASE), rateLimits, rateLimitData6, "usdsDepositDataMorpho", 6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(vaultWithdrawKey, MORPHO_VAULT_USDC_BASE), rateLimits, rateLimitData6, "usdsDepositDataMorpho", 6);
+    }
+
+    function _setUpBaseALMController() internal {
         vm.selectFork(base.forkId);
         vm.startBroadcast();
 
@@ -358,8 +428,8 @@ contract FullStagingDeploy is Script {
             psm   : base.config.readAddress(".psm"),
             cctp  : base.config.readAddress(".cctpTokenMessenger"),
             usdc  : base.config.readAddress(".usdc"),
-            susds : base.config.readAddress(".usdc"),
-            usds  : base.config.readAddress(".susds")
+            susds : base.config.readAddress(".susds"),
+            usds  : base.config.readAddress(".usds")
         });
 
         ForeignControllerInit.MintRecipient[] memory mintRecipients = new ForeignControllerInit.MintRecipient[](1);
@@ -378,49 +448,14 @@ contract FullStagingDeploy is Script {
 
         // Step 3: Set all rate limits for the controller
 
-        RateLimitData memory rateLimitData18 = RateLimitData({
-            maxAmount : USDC_UNIT_SIZE * 1e12 * 5,
-            slope     : USDC_UNIT_SIZE * 1e12 / 4 hours
-        });
-        RateLimitData memory rateLimitData6 = RateLimitData({
-            maxAmount : USDC_UNIT_SIZE * 5,
-            slope     : USDC_UNIT_SIZE / 4 hours
-        });
-        RateLimitData memory unlimitedRateLimit = RateLimitData({
-            maxAmount : type(uint256).max,
-            slope     : 0
-        });
-
-        ForeignController foreignController = ForeignController(baseController);
-
-        bytes32 depositKey  = foreignController.LIMIT_PSM_DEPOSIT();
-        bytes32 withdrawKey = foreignController.LIMIT_PSM_WITHDRAW();
-
-        bytes32 domainKeyEthereum = RateLimitHelpers.makeDomainKey(
-            foreignController.LIMIT_USDC_TO_DOMAIN(),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM
-        );
-
-        usdc  = base.config.readAddress(".usdc");
-        usds  = base.config.readAddress(".usds");
-        susds = base.config.readAddress(".susds");
-
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  usdc),  controllerInst.rateLimits, rateLimitData6,     "usdcDepositData",   6);
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, usdc),  controllerInst.rateLimits, rateLimitData6,     "usdcWithdrawData",  6);
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  usds),  controllerInst.rateLimits, rateLimitData18,    "usdsDepositData",   18);
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, usds),  controllerInst.rateLimits, unlimitedRateLimit, "usdsWithdrawData",  18);
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(depositKey,  susds), controllerInst.rateLimits, rateLimitData18,    "susdsDepositData",  18);
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(withdrawKey, susds), controllerInst.rateLimits, unlimitedRateLimit, "susdsWithdrawData", 18);
-
-        RateLimitHelpers.setRateLimitData(foreignController.LIMIT_USDC_TO_CCTP(), controllerInst.rateLimits, rateLimitData6, "usdcToCctpData",           6);
-        RateLimitHelpers.setRateLimitData(domainKeyEthereum,                      controllerInst.rateLimits, rateLimitData6, "cctpToEthereumDomainData", 6);
+        _setBaseControllerRateLimits(controllerInst.rateLimits);
 
         vm.stopBroadcast();
 
-        // Step 3: Export all deployed addresses
+        // Step 4: Export all deployed addresses
 
-        ScriptTools.exportContract(base.nameDeps, "freezer",    base.config.readAddress(".freezer"));
-        ScriptTools.exportContract(base.nameDeps, "relayer",    base.config.readAddress(".relayer"));
+        ScriptTools.exportContract(base.nameDeps, "freezer", base.config.readAddress(".freezer"));
+        ScriptTools.exportContract(base.nameDeps, "relayer", base.config.readAddress(".relayer"));
 
         ScriptTools.exportContract(base.name, "almProxy",   controllerInst.almProxy);
         ScriptTools.exportContract(base.name, "controller", controllerInst.controller);
@@ -469,7 +504,7 @@ contract FullStagingDeploy is Script {
 
         _setUpDependencies();
         _setUpAllocationSystem();
-        _setUpALMController();
+        _setUpMainnetController();
         _setUpBaseALMController();
         _setBaseMintRecipient();
 

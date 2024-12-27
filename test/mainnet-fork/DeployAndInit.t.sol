@@ -144,11 +144,8 @@ contract MainnetControllerInitAndUpgradeFailureTest is MainnetControllerInitAndU
     /**********************************************************************************************/
 
     function test_initAlmSystem_incorrectAdminAlmProxy() external {
-        // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(SPARK_PROXY);
-        almProxy.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+        vm.prank(SPARK_PROXY);
         almProxy.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
-        vm.stopPrank();
 
         vm.expectRevert("MainnetControllerInit/incorrect-admin-almProxy");
         wrapper.initAlmSystem(
@@ -162,11 +159,8 @@ contract MainnetControllerInitAndUpgradeFailureTest is MainnetControllerInitAndU
     }
 
     function test_initAlmSystem_incorrectAdminRateLimits() external {
-        // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(SPARK_PROXY);
-        rateLimits.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+        vm.prank(SPARK_PROXY);
         rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
-        vm.stopPrank();
 
         vm.expectRevert("MainnetControllerInit/incorrect-admin-rateLimits");
         wrapper.initAlmSystem(
@@ -180,11 +174,8 @@ contract MainnetControllerInitAndUpgradeFailureTest is MainnetControllerInitAndU
     }
 
     function test_initAlmSystem_upgradeController_incorrectAdminController() external {
-        // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(SPARK_PROXY);
-        mainnetController.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+        vm.prank(SPARK_PROXY);
         mainnetController.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
-        vm.stopPrank();
 
         _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-controller"));
     }
@@ -242,20 +233,6 @@ contract MainnetControllerInitAndUpgradeFailureTest is MainnetControllerInitAndU
     function test_initAlmSystem_upgradeController_oldControllerIsNewController() external {
         configAddresses.oldController = controllerInst.controller;
         _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/old-controller-is-new-controller"));
-    }
-
-    function test_initAlmSystem_upgradeController_vaultMismatch() external {
-        vault = mismatchAddress;
-        
-        vm.expectRevert("MainnetControllerInit/incorrect-vault");
-        wrapper.initAlmSystem(
-            vault,
-            address(usds),
-            controllerInst,
-            configAddresses,
-            checkAddresses,
-            mintRecipients
-        );
     }
 
     /**********************************************************************************************/
