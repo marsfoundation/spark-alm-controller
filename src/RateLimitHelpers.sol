@@ -31,17 +31,17 @@ library RateLimitHelpers {
         if (data.maxAmount == type(uint256).max) {
             require(
                 data.slope == 0,
-                string(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-", name))
+                string(abi.encodePacked("RateLimitHelpers/invalid-rate-limit-", name))
             );
         }
         else {
             require(
                 data.maxAmount <= 1e12 * (10 ** decimals),
-                string(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-", name))
+                string(abi.encodePacked("RateLimitHelpers/invalid-max-amount-precision-", name))
             );
             require(
                 data.slope <= 1e12 * (10 ** decimals) / 1 hours,
-                string(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-", name))
+                string(abi.encodePacked("RateLimitHelpers/invalid-slope-precision-", name))
             );
         }
         IRateLimits(rateLimits).setRateLimitData(key, data.maxAmount, data.slope);

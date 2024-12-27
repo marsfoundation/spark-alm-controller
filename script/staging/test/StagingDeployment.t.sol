@@ -293,7 +293,7 @@ contract MainnetStagingDeploymentTests is StagingDeploymentTestBase {
 
         _simulateUsdeBurn(usdeAmount);
 
-        assertGe(usdc.balanceOf(address(almProxy)), startingBalance + 10e6 - 1);  // Interest earned (roundign)
+        assertGe(usdc.balanceOf(address(almProxy)), startingBalance + 10e6 - 1);  // Interest earned (rounding)
         
         assertEq(IERC4626(Ethereum.SUSDE).balanceOf(address(almProxy)), 0);  
     }
