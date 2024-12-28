@@ -1,112 +1,76 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
+import "test/mainnet-fork/ForkTestBase.t.sol";
+
+import { IRateLimits } from "src/interfaces/IRateLimits.sol";
+
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 
-import {
-    MainnetControllerInit,
-    RateLimitData,
-    MintRecipient
-} from "../../deploy/ControllerInit.sol";
-
-import { IRateLimits } from "../../src/interfaces/IRateLimits.sol";
-
-import "./ForkTestBase.t.sol";
+import { MainnetControllerInit as Init } from "../../deploy/MainnetControllerInit.sol";
 
 // Necessary to get error message assertions to work
 contract LibraryWrapper {
 
-    function subDaoInitController(
-        MainnetControllerInit.AddressParams     memory params,
-        ControllerInstance                      memory controllerInst,
-        MainnetControllerInit.InitRateLimitData memory rateLimitData,
-        MintRecipient[]                         memory mintRecipients
+    function initAlmSystem(
+        address vault, 
+        address usds,
+        ControllerInstance       memory controllerInst,
+        Init.ConfigAddressParams memory configAddresses,
+        Init.CheckAddressParams  memory checkAddresses,
+        Init.MintRecipient[]     memory mintRecipients
     )
         external
     {
-        MainnetControllerInit.subDaoInitController(
-            params,
-            controllerInst,
-            rateLimitData,
-            mintRecipients
-        );
+        Init.initAlmSystem(vault, usds, controllerInst, configAddresses, checkAddresses, mintRecipients);
     }
 
-    function subDaoInitFull(
-        MainnetControllerInit.AddressParams     memory params,
-        ControllerInstance                      memory controllerInst,
-        MainnetControllerInit.InitRateLimitData memory rateLimitData,
-        MintRecipient[]                         memory mintRecipients
+    function upgradeController(
+        ControllerInstance       memory controllerInst,
+        Init.ConfigAddressParams memory configAddresses,
+        Init.CheckAddressParams  memory checkAddresses,
+        Init.MintRecipient[]     memory mintRecipients
     )
         external
     {
-        MainnetControllerInit.subDaoInitFull(
-            params,
-            controllerInst,
-            rateLimitData,
-            mintRecipients
-        );
+        Init.upgradeController(controllerInst, configAddresses, checkAddresses, mintRecipients);
+    }
+
+    function pauseProxyInitAlmSystem(address psm, address almProxy) external {
+        Init.pauseProxyInitAlmSystem(psm, almProxy);
     }
 
 }
 
-contract MainnetControllerDeployInitTestBase is ForkTestBase {
+contract MainnetControllerInitAndUpgradeTestBase is ForkTestBase {
 
     function _getDefaultParams()
         internal returns (
-            MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData,
-            MintRecipient[]                         memory mintRecipients
+            Init.ConfigAddressParams memory configAddresses,
+            Init.CheckAddressParams  memory checkAddresses,
+            Init.MintRecipient[]     memory mintRecipients
         )
     {
-        addresses = MainnetControllerInit.AddressParams({
-            admin         : Ethereum.SPARK_PROXY,
+        configAddresses = Init.ConfigAddressParams({
             freezer       : freezer,
             relayer       : relayer,
-            oldController : address(0),
-            psm           : Ethereum.PSM,
-            vault         : vault,
-            buffer        : buffer,
-            cctpMessenger : Ethereum.CCTP_TOKEN_MESSENGER,
-            dai           : Ethereum.DAI,
-            daiUsds       : Ethereum.DAI_USDS,
-            usdc          : Ethereum.USDC,
-            usds          : Ethereum.USDS,
-            susds         : Ethereum.SUSDS
+            oldController : address(0)
         });
 
-        RateLimitData memory standardUsdsData = RateLimitData({
-            maxAmount : 1_000_000e18,
-            slope     : uint256(1_000_000e18) / 4 hours
+        checkAddresses = Init.CheckAddressParams({
+            admin      : Ethereum.SPARK_PROXY,
+            proxy      : address(almProxy),
+            rateLimits : address(rateLimits),
+            vault      : address(vault),
+            psm        : Ethereum.PSM,
+            daiUsds    : Ethereum.DAI_USDS,
+            cctp       : Ethereum.CCTP_TOKEN_MESSENGER
         });
 
-        RateLimitData memory usdsToUsdcData = RateLimitData({
-            maxAmount : 2_000_000e6,
-            slope     : uint256(2_000_000e6) / 4 hours
-        });
+        mintRecipients = new Init.MintRecipient[](1);
 
-        RateLimitData memory usdcToCctpData = RateLimitData({
-            maxAmount : 3_000_000e6,
-            slope     : uint256(3_000_000e6) / 4 hours
-        });
-
-        RateLimitData memory cctpToBaseDomainData = RateLimitData({
-            maxAmount : 4_000_000e6,
-            slope     : uint256(4_000_000e6) / 4 hours
-        });
-
-        rateLimitData = MainnetControllerInit.InitRateLimitData({
-            usdsMintData         : standardUsdsData,
-            usdsToUsdcData       : usdsToUsdcData,
-            usdcToCctpData       : usdcToCctpData,
-            cctpToBaseDomainData : cctpToBaseDomainData,
-            susdsDepositData     : standardUsdsData
-        });
-
-        mintRecipients = new MintRecipient[](1);
-
-        mintRecipients[0] = MintRecipient({
+        mintRecipients[0] = Init.MintRecipient({
             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
             mintRecipient : bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         });
@@ -114,7 +78,11 @@ contract MainnetControllerDeployInitTestBase is ForkTestBase {
 
 }
 
-contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployInitTestBase {
+contract MainnetControllerInitAndUpgradeFailureTest is MainnetControllerInitAndUpgradeTestBase {
+
+    // NOTE: `initAlmSystem` and `upgradeController` are tested in the same contract because
+    //       they both use _initController and have similar specific setups, so it 
+    //       less complex/repetitive to test them together.
 
     LibraryWrapper wrapper;
 
@@ -122,33 +90,44 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
 
     address public mismatchAddress = makeAddr("mismatchAddress");
 
-    MainnetControllerInit.AddressParams     addresses;
-    MainnetControllerInit.InitRateLimitData rateLimitData;
-    MintRecipient[]                         mintRecipients;
+    address public oldController;
+
+    Init.ConfigAddressParams configAddresses;
+    Init.CheckAddressParams  checkAddresses;
+    Init.MintRecipient[]     mintRecipients;
 
     function setUp() public override {
         super.setUp();
 
-        controllerInst = MainnetControllerDeploy.deployFull(
-            SPARK_PROXY,
-            vault,
-            PSM,
-            DAI_USDS,
-            CCTP_MESSENGER
-        );
+        oldController = address(mainnetController);  // Cache for later testing
 
-        MintRecipient[] memory mintRecipients_ = new MintRecipient[](1);
+        // NOTE: initAlmSystem will redundantly call rely and approve on already inited 
+        //       almProxy and rateLimits, this setup was chosen to easily test upgrade and init failures.
+        //       It also should be noted that the almProxy and rateLimits that are being used in initAlmSystem
+        //       are already deployed. This is technically possible to do and works in the same way, it was
+        //       done also for make testing easier.
+        mainnetController = MainnetController(MainnetControllerDeploy.deployController({
+            admin      : Ethereum.SPARK_PROXY,
+            almProxy   : address(almProxy),
+            rateLimits : address(rateLimits),
+            vault      : address(vault),
+            psm        : Ethereum.PSM,
+            daiUsds    : Ethereum.DAI_USDS,
+            cctp       : Ethereum.CCTP_TOKEN_MESSENGER
+        }));
 
-        ( addresses, rateLimitData, mintRecipients_ ) = _getDefaultParams();
+        Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
+
+        ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
 
         // NOTE: This would need to be refactored to a for loop if more than one recipient
         mintRecipients.push(mintRecipients_[0]);
 
-        // Overwrite storage for all previous deployments in setUp and assert deployment
-
-        almProxy          = ALMProxy(payable(controllerInst.almProxy));
-        mainnetController = MainnetController(controllerInst.controller);
-        rateLimits        = RateLimits(controllerInst.rateLimits);
+        controllerInst = ControllerInstance({
+            almProxy   : address(almProxy),
+            controller : address(mainnetController),
+            rateLimits : address(rateLimits)
+        });
 
         // Admin will be calling the library from its own address
         vm.etch(SPARK_PROXY, address(new LibraryWrapper()).code);
@@ -156,99 +135,90 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         wrapper = LibraryWrapper(SPARK_PROXY);
     }
 
+    function _getBlock() internal pure override returns (uint256) {
+        return 21430000;  // Dec 18, 2024
+    }
+
     /**********************************************************************************************/
     /*** ACL tests                                                                              ***/
     /**********************************************************************************************/
 
-    function test_init_incorrectAdminAlmProxy() external {
-        // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(SPARK_PROXY);
-        almProxy.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+    function test_initAlmSystem_incorrectAdminAlmProxy() external {
+        vm.prank(SPARK_PROXY);
         almProxy.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
-        vm.stopPrank();
 
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-almProxy"));
+        vm.expectRevert("MainnetControllerInit/incorrect-admin-almProxy");
+        wrapper.initAlmSystem(
+            vault,
+            address(usds),
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
     }
 
-    function test_init_incorrectAdminRateLimits() external {
-        // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(SPARK_PROXY);
-        rateLimits.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+    function test_initAlmSystem_incorrectAdminRateLimits() external {
+        vm.prank(SPARK_PROXY);
         rateLimits.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
-        vm.stopPrank();
 
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-rateLimits"));
+        vm.expectRevert("MainnetControllerInit/incorrect-admin-rateLimits");
+        wrapper.initAlmSystem(
+            vault,
+            address(usds),
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
     }
 
-    function test_init_incorrectAdminController() external {
-        // Isolate different contracts instead of setting param so can get three different failures
-        vm.startPrank(SPARK_PROXY);
-        mainnetController.grantRole(DEFAULT_ADMIN_ROLE, mismatchAddress);
+    function test_initAlmSystem_upgradeController_incorrectAdminController() external {
+        vm.prank(SPARK_PROXY);
         mainnetController.revokeRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY);
-        vm.stopPrank();
 
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-controller"));
+        _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-admin-controller"));
     }
 
     /**********************************************************************************************/
     /*** Constructor tests                                                                      ***/
     /**********************************************************************************************/
 
-    function test_init_incorrectAlmProxy() external {
+    function test_initAlmSystem_upgradeController_incorrectAlmProxy() external {
         // Deploy new address that will not EVM revert on OZ ACL check
         controllerInst.almProxy = address(new ALMProxy(SPARK_PROXY));
 
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-almProxy"));
+        _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-almProxy"));
     }
 
-    function test_init_incorrectRateLimits() external {
+    function test_initAlmSystem_upgradeController_incorrectRateLimits() external {
         // Deploy new address that will not EVM revert on OZ ACL check
         controllerInst.rateLimits = address(new RateLimits(SPARK_PROXY));
 
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-rateLimits"));
+        _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-rateLimits"));
     }
 
-    function test_init_incorrectVault() external {
-        addresses.vault = mismatchAddress;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-vault"));
+    function test_initAlmSystem_upgradeController_incorrectVault() external {
+        checkAddresses.vault = mismatchAddress;
+        _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-vault"));
     }
 
-    function test_init_incorrectBuffer() external {
-        addresses.buffer = mismatchAddress;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-buffer"));
+    function test_initAlmSystem_upgradeController_incorrectPsm() external {
+        checkAddresses.psm = mismatchAddress;
+        _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-psm"));
     }
 
-    function test_init_incorrectPsm() external {
-        addresses.psm = mismatchAddress;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-psm"));
+    function test_initAlmSystem_upgradeController_incorrectDaiUsds() external {
+        checkAddresses.daiUsds = mismatchAddress;
+        _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-daiUsds"));
     }
 
-    function test_init_incorrectDaiUsds() external {
-        addresses.daiUsds = mismatchAddress;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-daiUsds"));
+    function test_initAlmSystem_upgradeController_incorrectCctp() external {
+        checkAddresses.cctp = mismatchAddress;
+        _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/incorrect-cctp"));
     }
 
-    function test_init_incorrectCctp() external {
-        addresses.cctpMessenger = mismatchAddress;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-cctpMessenger"));
-    }
-
-    function test_init_incorrectDai() external {
-        addresses.dai = mismatchAddress;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-dai"));
-    }
-
-    function test_init_incorrectUsdc() external {
-        addresses.usdc = mismatchAddress;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-usdc"));
-    }
-
-    function test_init_incorrectUsds() external {
-        addresses.usds = mismatchAddress;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/incorrect-usds"));
-    }
-
-    function test_init_controllerInactive() external {
+    function test_initAlmSystem_upgradeController_controllerInactive() external {
         // Cheating to set this outside of init scripts so that the controller can be frozen
         vm.startPrank(SPARK_PROXY);
         mainnetController.grantRole(FREEZER, freezer);
@@ -257,297 +227,164 @@ contract MainnetControllerDeployAndInitFailureTests is MainnetControllerDeployIn
         mainnetController.freeze();
         vm.stopPrank();
 
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/controller-not-active"));
+        _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/controller-not-active"));
     }
 
-    function test_init_oldControllerIsNewController() external {
-        addresses.oldController = controllerInst.controller;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-is-new-controller"));
-    }
-
-    // TODO: Skipping conversion factor test, can add later if needed
-
-    /**********************************************************************************************/
-    /*** Unlimited `maxAmount` rate limit boundary tests                                        ***/
-    /**********************************************************************************************/
-
-    function test_init_incorrectUsdsMintData_unlimitedBoundary() external {
-        rateLimitData.usdsMintData.maxAmount = type(uint256).max;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdsMintData"));
-
-        rateLimitData.usdsMintData.slope = 0;
-        _checkBothInitsSucceed();
-    }
-
-    function test_init_incorrectUsdcToUsdsData_unlimitedBoundary() external {
-        rateLimitData.usdsToUsdcData.maxAmount = type(uint256).max;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdsToUsdcData"));
-
-        rateLimitData.usdsToUsdcData.slope = 0;
-        _checkBothInitsSucceed();
-    }
-
-    function test_init_incorrectUsdcToCctpData_unlimitedBoundary() external {
-        rateLimitData.usdcToCctpData.maxAmount = type(uint256).max;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-usdcToCctpData"));
-
-        rateLimitData.usdcToCctpData.slope = 0;
-        _checkBothInitsSucceed();
-    }
-
-    function test_init_incorrectCctpToBaseDomain_unlimitedBoundary() external {
-        rateLimitData.cctpToBaseDomainData.maxAmount = type(uint256).max;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-rate-limit-cctpToBaseDomainData"));
-
-        rateLimitData.cctpToBaseDomainData.slope = 0;
-        _checkBothInitsSucceed();
+    function test_initAlmSystem_upgradeController_oldControllerIsNewController() external {
+        configAddresses.oldController = controllerInst.controller;
+        _checkInitAndUpgradeFail(abi.encodePacked("MainnetControllerInit/old-controller-is-new-controller"));
     }
 
     /**********************************************************************************************/
-    /*** `maxAmount` rate limit precision boundary tests                                        ***/
+    /*** Upgrade tests                                                                          ***/
     /**********************************************************************************************/
 
-    function test_init_incorrectUsdsMintData_maxAmountPrecisionBoundary() external {
-        rateLimitData.usdsMintData.maxAmount = 1e12 * 1e18 + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdsMintData"));
+    function test_upgradeController_oldControllerZeroAddress() external {
+        configAddresses.oldController = address(0);
 
-        rateLimitData.usdsMintData.maxAmount = 1e12 * 1e18;
-        _checkBothInitsSucceed();
+        vm.expectRevert("MainnetControllerInit/old-controller-zero-address");
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
     }
 
-    function test_init_incorrectUsdcToUsdsData_maxAmountPrecisionBoundary() external {
-        rateLimitData.usdsToUsdcData.maxAmount = 1e12 * 1e6 + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdsToUsdcData"));
-
-        rateLimitData.usdsToUsdcData.maxAmount = 1e12 * 1e6;
-        _checkBothInitsSucceed();
-    }
-
-    function test_init_incorrectUsdcToCctpData_maxAmountPrecisionBoundary() external {
-        rateLimitData.usdcToCctpData.maxAmount = 1e12 * 1e6 + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-usdcToCctpData"));
-
-        rateLimitData.usdcToCctpData.maxAmount = 1e12 * 1e6;
-        _checkBothInitsSucceed();
-    }
-
-    function test_init_incorrectCctpToBaseDomain_maxAmountPrecisionBoundary() external {
-        rateLimitData.cctpToBaseDomainData.maxAmount = 1e12 * 1e6 + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-max-amount-precision-cctpToBaseDomainData"));
-
-        rateLimitData.cctpToBaseDomainData.maxAmount = 1e12 * 1e6;
-        _checkBothInitsSucceed();
-    }
-
-    /**********************************************************************************************/
-    /*** `slope` rate limit precision boundary tests                                            ***/
-    /**********************************************************************************************/
-
-    function test_init_incorrectUsdsMintData_slopePrecisionBoundary() external {
-        rateLimitData.usdsMintData.slope = uint256(1e12 * 1e18) / 1 hours + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdsMintData"));
-
-        rateLimitData.usdsMintData.slope = uint256(1e12 * 1e18) / 1 hours;
-        _checkBothInitsSucceed();
-    }
-
-    function test_init_incorrectUsdcToUsdsData_slopePrecisionBoundary() external {
-        rateLimitData.usdsToUsdcData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdsToUsdcData"));
-
-        rateLimitData.usdsToUsdcData.slope = uint256(1e12 * 1e6) / 1 hours;
-        _checkBothInitsSucceed();
-    }
-
-    function test_init_incorrectUsdcToCctpData_slopePrecisionBoundary() external {
-        rateLimitData.usdcToCctpData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-usdcToCctpData"));
-
-        rateLimitData.usdcToCctpData.slope = uint256(1e12 * 1e6) / 1 hours;
-        _checkBothInitsSucceed();
-    }
-
-    function test_init_incorrectCctpToBaseDomain_slopePrecisionBoundary() external {
-        rateLimitData.cctpToBaseDomainData.slope = uint256(1e12 * 1e6) / 1 hours + 1;
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/invalid-slope-precision-cctpToBaseDomainData"));
-
-        rateLimitData.cctpToBaseDomainData.slope = uint256(1e12 * 1e6) / 1 hours;
-        _checkBothInitsSucceed();
-    }
-
-    /**********************************************************************************************/
-    /*** Old controller role check tests                                                        ***/
-    /**********************************************************************************************/
-
-    function test_init_oldControllerDoesNotHaveRoleInAlmProxy() external {
-        _deployNewControllerAfterExistingControllerInit();
+    function test_upgradeController_oldControllerDoesNotHaveRoleInAlmProxy() external {
+        configAddresses.oldController = oldController;
 
         // Revoke the old controller address in ALM proxy
-
         vm.startPrank(SPARK_PROXY);
-        almProxy.revokeRole(almProxy.CONTROLLER(), addresses.oldController);
-        vm.stopPrank();
+        almProxy.revokeRole(almProxy.CONTROLLER(), configAddresses.oldController);
+        vm.stopPrank(); 
 
-        // Try to init with the old controller address that is doesn't have the CONTROLLER role
-
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-not-almProxy-controller"));
+        // Try to upgrade with the old controller address that is doesn't have the CONTROLLER role
+        vm.expectRevert("MainnetControllerInit/old-controller-not-almProxy-controller");
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
     }
 
-    function test_init_oldControllerDoesNotHaveRoleInRateLimits() external {
-        _deployNewControllerAfterExistingControllerInit();
+    function test_upgradeController_oldControllerDoesNotHaveRoleInRateLimits() external {
+        configAddresses.oldController = oldController;
 
-        // Revoke the old controller address
-
+        // Revoke the old controller address in rate limits
         vm.startPrank(SPARK_PROXY);
-        rateLimits.revokeRole(rateLimits.CONTROLLER(), addresses.oldController);
+        rateLimits.revokeRole(rateLimits.CONTROLLER(), configAddresses.oldController);
         vm.stopPrank();
 
-        // Try to init with the old controller address that is doesn't have the CONTROLLER role
-
-        _checkBothInitsFail(abi.encodePacked("MainnetControllerInit/old-controller-not-rateLimits-controller"));
+        // Try to upgrade with the old controller address that is doesn't have the CONTROLLER role
+        vm.expectRevert("MainnetControllerInit/old-controller-not-rateLimits-controller");
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
+        );
     }
 
     /**********************************************************************************************/
     /*** Helper functions                                                                       ***/
     /**********************************************************************************************/
 
-    function _deployNewControllerAfterExistingControllerInit() internal {
-        // Successfully init first controller
-
-        vm.startPrank(SPARK_PROXY);
-        MainnetControllerInit.subDaoInitFull(
-            addresses,
-            controllerInst,
-            rateLimitData,
-            mintRecipients
-        );
-        vm.stopPrank();
-
-        // Deploy a new controller (controllerInst is used in init with new controller address)
-
-        controllerInst.controller = MainnetControllerDeploy.deployController(
-            SPARK_PROXY,
-            address(almProxy),
-            address(rateLimits),
+    function _checkInitAndUpgradeFail(bytes memory expectedError) internal {
+        vm.expectRevert(expectedError);
+        wrapper.initAlmSystem(
             vault,
-            PSM,
-            DAI_USDS,
-            CCTP_MESSENGER
-        );
-
-        addresses.oldController = address(mainnetController);
-    }
-
-    // Added this function to ensure that all the failure modes from `subDaoInitController`
-    // are also covered by `subDaoInitFull` calls
-    function _checkBothInitsFail(bytes memory expectedError) internal {
-        vm.expectRevert(expectedError);
-        wrapper.subDaoInitController(
-            addresses,
+            address(usds),
             controllerInst,
-            rateLimitData,
+            configAddresses,
+            checkAddresses,
             mintRecipients
         );
 
         vm.expectRevert(expectedError);
-        wrapper.subDaoInitFull(
-            addresses,
+        wrapper.upgradeController(
             controllerInst,
-            rateLimitData,
+            configAddresses,
+            checkAddresses,
             mintRecipients
         );
     }
 
-    function _checkBothInitsSucceed() internal {
-        wrapper.subDaoInitController(
-            addresses,
-            controllerInst,
-            rateLimitData,
-            mintRecipients
-        );
-
-        wrapper.subDaoInitFull(
-            addresses,
-            controllerInst,
-            rateLimitData,
-            mintRecipients
-        );
-    }
 }
 
-contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployInitTestBase {
+contract MainnetControllerInitAlmSystemSuccessTests is MainnetControllerInitAndUpgradeTestBase {
 
-    function test_deployAllAndInitFull() external {
-        // Perform new deployments against existing fork environment
+    LibraryWrapper wrapper;
 
-        ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
-            SPARK_PROXY,
-            vault,
-            PSM,
-            DAI_USDS,
-            CCTP_MESSENGER
+    ControllerInstance public controllerInst;
+
+    address public mismatchAddress = makeAddr("mismatchAddress");
+
+    Init.ConfigAddressParams configAddresses;
+    Init.CheckAddressParams  checkAddresses;
+    Init.MintRecipient[]     mintRecipients;
+
+    function setUp() public override {
+        super.setUp();
+
+        controllerInst = MainnetControllerDeploy.deployFull(
+            Ethereum.SPARK_PROXY,
+            address(vault),
+            Ethereum.PSM,
+            Ethereum.DAI_USDS,
+            Ethereum.CCTP_TOKEN_MESSENGER
         );
 
-        // Overwrite storage for all previous deployments in setUp and assert deployment
-
-        almProxy          = ALMProxy(payable(controllerInst.almProxy));
+        // Overwrite storage for all previous deployments in setUp and assert brand new deployment
         mainnetController = MainnetController(controllerInst.controller);
+        almProxy          = ALMProxy(payable(controllerInst.almProxy));
         rateLimits        = RateLimits(controllerInst.rateLimits);
 
-        assertEq(almProxy.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),          true);
-        assertEq(mainnetController.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY), true);
-        assertEq(rateLimits.hasRole(DEFAULT_ADMIN_ROLE, SPARK_PROXY),        true);
+        Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
 
-        assertEq(address(mainnetController.proxy()),      controllerInst.almProxy);
-        assertEq(address(mainnetController.rateLimits()), controllerInst.rateLimits);
-        assertEq(address(mainnetController.vault()),      vault);
-        assertEq(address(mainnetController.buffer()),     buffer);
-        assertEq(address(mainnetController.psm()),        PSM);
-        assertEq(address(mainnetController.daiUsds()),    DAI_USDS);
-        assertEq(address(mainnetController.cctp()),       CCTP_MESSENGER);
-        assertEq(address(mainnetController.dai()),        address(dai));
-        assertEq(address(mainnetController.usdc()),       address(usdc));
-        assertEq(address(mainnetController.usds()),       address(usds));
+        ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
 
-        assertEq(mainnetController.psmTo18ConversionFactor(), 1e12);
-        assertEq(mainnetController.active(),                  true);
+        mintRecipients.push(mintRecipients_[0]);
 
-        // Perform SubDAO initialization (from SPARK_PROXY during spell)
-        // Setting rate limits to different values from setUp to make assertions more robust
+        // Admin will be calling the library from its own address
+        vm.etch(SPARK_PROXY, address(new LibraryWrapper()).code);
 
-        (
-            MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData,
-            MintRecipient[]                         memory mintRecipients
-        ) = _getDefaultParams();
+        wrapper = LibraryWrapper(SPARK_PROXY);
+    }
+
+    function _getBlock() internal pure override returns (uint256) {
+        return 21430000;  // Dec 18, 2024
+    }
+
+    function test_initAlmSystem() public {
+        assertEq(mainnetController.hasRole(mainnetController.FREEZER(), freezer), false);
+        assertEq(mainnetController.hasRole(mainnetController.RELAYER(), relayer), false);
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)),     false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), false);
+
+        assertEq(mainnetController.mintRecipients(mintRecipients[0].domain),            bytes32(0));
+        assertEq(mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE), bytes32(0));
+
+        assertEq(IVaultLike(vault).wards(controllerInst.almProxy), 0);
+        assertEq(usds.allowance(buffer, controllerInst.almProxy),  0);
 
         vm.startPrank(SPARK_PROXY);
-        MainnetControllerInit.subDaoInitFull(
-            addresses,
+        wrapper.initAlmSystem(
+            address(vault),
+            address(usds),
             controllerInst,
-            rateLimitData,
+            configAddresses,
+            checkAddresses,
             mintRecipients
         );
-        vm.stopPrank();
-
-        // Assert SubDAO initialization
 
         assertEq(mainnetController.hasRole(mainnetController.FREEZER(), freezer), true);
         assertEq(mainnetController.hasRole(mainnetController.RELAYER(), relayer), true);
 
-        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)), true);
-
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)),     true);
         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), true);
-
-        bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
-            mainnetController.LIMIT_USDC_TO_DOMAIN(),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
-        );
-
-        _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimitData.usdsMintData);
-        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdsToUsdcData);
-        _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
-        _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
 
         assertEq(
             mainnetController.mintRecipients(mintRecipients[0].domain),
@@ -560,163 +397,115 @@ contract MainnetControllerDeployAndInitSuccessTests is MainnetControllerDeployIn
         );
 
         assertEq(IVaultLike(vault).wards(controllerInst.almProxy), 1);
-
-        assertEq(usds.allowance(buffer, controllerInst.almProxy), type(uint256).max);
-
-        // Perform Maker initialization (from PAUSE_PROXY during spell)
-
-        vm.startPrank(PAUSE_PROXY);
-        MainnetControllerInit.pauseProxyInit(PSM, controllerInst.almProxy);
-        vm.stopPrank();
-
-        // Assert Maker initialization
-
-        assertEq(IPSMLike(PSM).bud(controllerInst.almProxy), 1);
+        assertEq(usds.allowance(buffer, controllerInst.almProxy),  type(uint256).max);
     }
 
-    function test_deployAllAndInitController() external {
-        // Perform new deployments against existing fork environment
+    function test_pauseProxyInitAlmSystem() public {
+        // Update to call the library from the pause proxy
+        vm.etch(PAUSE_PROXY, address(new LibraryWrapper()).code);
+        wrapper = LibraryWrapper(PAUSE_PROXY);
 
-        ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
-            SPARK_PROXY,
-            vault,
-            PSM,
-            DAI_USDS,
-            CCTP_MESSENGER
-        );
+        assertEq(IPSMLike(Ethereum.PSM).bud(controllerInst.almProxy), 0);
 
-        // Overwrite storage for all previous deployments in setUp and assert deployment
-
-        almProxy          = ALMProxy(payable(controllerInst.almProxy));
-        mainnetController = MainnetController(controllerInst.controller);
-        rateLimits        = RateLimits(controllerInst.rateLimits);
-
-        (
-            MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData,
-            MintRecipient[]                         memory mintRecipients
-        ) = _getDefaultParams();
-
-        // Perform ONLY controller initialization, setting rate limits and updating ACL
-        // Setting rate limits to different values from setUp to make assertions more robust
-
-        vm.startPrank(SPARK_PROXY);
-        MainnetControllerInit.subDaoInitController(
-            addresses,
-            controllerInst,
-            rateLimitData,
-            mintRecipients
-        );
+        vm.startPrank(PAUSE_PROXY);
+        wrapper.pauseProxyInitAlmSystem(Ethereum.PSM, controllerInst.almProxy);
         vm.stopPrank();
 
-        assertEq(mainnetController.hasRole(mainnetController.FREEZER(), freezer), true);
-        assertEq(mainnetController.hasRole(mainnetController.RELAYER(), relayer), true);
+        assertEq(IPSMLike(Ethereum.PSM).bud(controllerInst.almProxy), 1);
+    }
 
-        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)), true);
+}
 
+contract MainnetControllerUpgradeControllerSuccessTests is MainnetControllerInitAndUpgradeTestBase {
+
+    LibraryWrapper wrapper;
+
+    ControllerInstance public controllerInst;
+
+    address public mismatchAddress = makeAddr("mismatchAddress");
+
+    Init.ConfigAddressParams configAddresses;
+    Init.CheckAddressParams  checkAddresses;
+    Init.MintRecipient[]     mintRecipients;
+
+    MainnetController newController;
+
+    function setUp() public override {
+        super.setUp();
+
+        Init.MintRecipient[] memory mintRecipients_ = new Init.MintRecipient[](1);
+
+        ( configAddresses, checkAddresses, mintRecipients_ ) = _getDefaultParams();
+
+        mintRecipients.push(mintRecipients_[0]);
+
+        newController = MainnetController(MainnetControllerDeploy.deployController({
+            admin      : Ethereum.SPARK_PROXY,
+            almProxy   : address(almProxy),
+            rateLimits : address(rateLimits),
+            vault      : address(vault),
+            psm        : Ethereum.PSM,
+            daiUsds    : Ethereum.DAI_USDS,
+            cctp       : Ethereum.CCTP_TOKEN_MESSENGER
+        }));
+
+        controllerInst = ControllerInstance({
+            almProxy   : address(almProxy),
+            controller : address(newController),
+            rateLimits : address(rateLimits)
+        });
+
+        configAddresses.oldController = address(mainnetController);  // Revoke from old controller
+
+        // Admin will be calling the library from its own address
+        vm.etch(SPARK_PROXY, address(new LibraryWrapper()).code);
+
+        wrapper = LibraryWrapper(SPARK_PROXY);
+    }
+
+    function _getBlock() internal pure override returns (uint256) {
+        return 21430000;  // Dec 18, 2024
+    }
+
+    function test_upgradeController() public {
+        assertEq(newController.hasRole(newController.FREEZER(), freezer), false);
+        assertEq(newController.hasRole(newController.RELAYER(), relayer), false);
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)),     true);
         assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), true);
 
-        bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(
-            mainnetController.LIMIT_USDC_TO_DOMAIN(),
-            CCTPForwarder.DOMAIN_ID_CIRCLE_BASE
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(newController)),     false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(newController)), false);
+
+        assertEq(newController.mintRecipients(mintRecipients[0].domain),            bytes32(0));
+        assertEq(newController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE), bytes32(0));
+
+        vm.startPrank(SPARK_PROXY);
+        wrapper.upgradeController(
+            controllerInst,
+            configAddresses,
+            checkAddresses,
+            mintRecipients
         );
 
-        _assertRateLimitData(mainnetController.LIMIT_USDS_MINT(),    rateLimitData.usdsMintData);
-        _assertRateLimitData(mainnetController.LIMIT_USDS_TO_USDC(), rateLimitData.usdsToUsdcData);
-        _assertRateLimitData(mainnetController.LIMIT_USDC_TO_CCTP(), rateLimitData.usdcToCctpData);
-        _assertRateLimitData(domainKeyBase,                          rateLimitData.cctpToBaseDomainData);
+        assertEq(newController.hasRole(newController.FREEZER(), freezer), true);
+        assertEq(newController.hasRole(newController.RELAYER(), relayer), true);
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(mainnetController)),     false);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(mainnetController)), false);
+
+        assertEq(almProxy.hasRole(almProxy.CONTROLLER(), address(newController)),     true);
+        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), address(newController)), true);
 
         assertEq(
-            mainnetController.mintRecipients(mintRecipients[0].domain),
+            newController.mintRecipients(mintRecipients[0].domain),
             mintRecipients[0].mintRecipient
         );
 
         assertEq(
-            mainnetController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
+            newController.mintRecipients(CCTPForwarder.DOMAIN_ID_CIRCLE_BASE),
             bytes32(uint256(uint160(makeAddr("baseAlmProxy"))))
         );
-    }
-
-    function test_init_transferAclToNewController() public {
-        // Deploy and init a controller
-
-        ControllerInstance memory controllerInst = MainnetControllerDeploy.deployFull(
-            SPARK_PROXY,
-            vault,
-            PSM,
-            DAI_USDS,
-            CCTP_MESSENGER
-        );
-
-        (
-            MainnetControllerInit.AddressParams     memory addresses,
-            MainnetControllerInit.InitRateLimitData memory rateLimitData,
-            MintRecipient[]                         memory mintRecipients
-        ) = _getDefaultParams();
-
-        vm.startPrank(SPARK_PROXY);
-        MainnetControllerInit.subDaoInitController(
-            addresses,
-            controllerInst,
-            rateLimitData,
-            mintRecipients
-        );
-        vm.stopPrank();
-
-        // Deploy a new controller (example of how an upgrade would work)
-
-        address newController = MainnetControllerDeploy.deployController(
-            SPARK_PROXY,
-            controllerInst.almProxy,
-            controllerInst.rateLimits,
-            vault,
-            PSM,
-            DAI_USDS,
-            CCTP_MESSENGER
-        );
-
-        // Overwrite storage for all previous deployments in setUp and assert deployment
-
-        almProxy          = ALMProxy(payable(controllerInst.almProxy));
-        mainnetController = MainnetController(controllerInst.controller);
-        rateLimits        = RateLimits(controllerInst.rateLimits);
-
-        address oldController = address(controllerInst.controller);
-
-        controllerInst.controller = newController;  // Overwrite struct for param
-
-        // All other info is the same, just need to transfer ACL
-        addresses.oldController = oldController;
-
-        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
-        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), true);
-        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
-        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), false);
-
-        vm.startPrank(SPARK_PROXY);
-        MainnetControllerInit.subDaoInitController(
-            addresses,
-            controllerInst,
-            rateLimitData,
-            mintRecipients
-        );
-        vm.stopPrank();
-
-        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
-        assertEq(almProxy.hasRole(almProxy.CONTROLLER(),     oldController), false);
-        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
-        assertEq(rateLimits.hasRole(rateLimits.CONTROLLER(), newController), true);
-    }
-
-    function _assertRateLimitData(bytes32 domainKey, RateLimitData memory expectedData) internal view {
-        IRateLimits.RateLimitData memory data = rateLimits.getRateLimitData(domainKey);
-
-        assertEq(data.maxAmount,   expectedData.maxAmount);
-        assertEq(data.slope,       expectedData.slope);
-        assertEq(data.lastAmount,  expectedData.maxAmount);
-        assertEq(data.lastUpdated, block.timestamp);
-
-        assertEq(rateLimits.getCurrentRateLimit(domainKey), expectedData.maxAmount);
     }
 
 }
