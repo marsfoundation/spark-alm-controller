@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "../../test/base-fork/ForkTestBase.t.sol";
 
-import { IRateLimits } from "../../src/interfaces/IRateLimits.sol";
+import { CCTPForwarder } from "xchain-helpers/forwarders/CCTPForwarder.sol";
 
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";
 import { ForeignControllerDeploy } from "../../deploy/ControllerDeploy.sol";

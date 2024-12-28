@@ -17,11 +17,11 @@ import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { ISUsds } from "sdai/src/ISUsds.sol";
 
-import { Ethereum } from "spark-address-registry/src/Ethereum.sol";
+import { Ethereum } from "spark-address-registry/Ethereum.sol";
 
-import { Bridge }                from "xchain-helpers/src/testing/Bridge.sol";
-import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
-import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
+import { Bridge }                from "xchain-helpers/testing/Bridge.sol";
+import { CCTPForwarder }         from "xchain-helpers/forwarders/CCTPForwarder.sol";
+import { Domain, DomainHelpers } from "xchain-helpers/testing/Domain.sol";
 
 import { MainnetControllerDeploy } from "../../deploy/ControllerDeploy.sol";
 import { ControllerInstance }      from "../../deploy/ControllerInstance.sol";

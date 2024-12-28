@@ -23,7 +23,7 @@ import { IERC20 }  from "forge-std/interfaces/IERC20.sol";
 import { Script }  from "forge-std/Script.sol";
 import { stdJson } from "forge-std/StdJson.sol";
 
-import { CCTPForwarder } from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
+import { CCTPForwarder } from "xchain-helpers/forwarders/CCTPForwarder.sol";
 
 import {
     ControllerInstance,
