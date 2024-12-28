@@ -17,15 +17,15 @@ import { Usds } from "usds/src/Usds.sol";
 
 import { SUsds } from "sdai/src/SUsds.sol";
 
-import { Base }     from "spark-address-registry/src/Base.sol";
-import { Ethereum } from "spark-address-registry/src/Ethereum.sol";
+import { Base }     from "spark-address-registry/Base.sol";
+import { Ethereum } from "spark-address-registry/Ethereum.sol";
 
 import { PSM3 } from "spark-psm/src/PSM3.sol";
 
-import { Bridge }                from "xchain-helpers/src/testing/Bridge.sol";
-import { Domain, DomainHelpers } from "xchain-helpers/src/testing/Domain.sol";
-import { CCTPBridgeTesting }     from "xchain-helpers/src/testing/bridges/CCTPBridgeTesting.sol";
-import { CCTPForwarder }         from "xchain-helpers/src/forwarders/CCTPForwarder.sol";
+import { Bridge }                from "xchain-helpers/testing/Bridge.sol";
+import { Domain, DomainHelpers } from "xchain-helpers/testing/Domain.sol";
+import { CCTPBridgeTesting }     from "xchain-helpers/testing/bridges/CCTPBridgeTesting.sol";
+import { CCTPForwarder }         from "xchain-helpers/forwarders/CCTPForwarder.sol";
 
 import { MainnetControllerDeploy } from "../../../deploy/ControllerDeploy.sol";
 import { MainnetControllerInit }   from "../../../deploy/ControllerInit.sol";
