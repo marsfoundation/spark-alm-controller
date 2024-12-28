@@ -9,7 +9,7 @@ fs_permissions = [
     { access = "read", path = "./script/input/"},
     { access = "read-write", path = "./script/output/"}
 ]
-evm_version = 'paris'
+evm_version = 'shanghai'
 
 [fuzz]
 runs = 1000
