@@ -302,6 +302,8 @@ contract FullStagingDeploy is Script {
             slope     : USDC_UNIT_SIZE / 4 hours
         });
 
+        RateLimitData memory unlimitedRateLimit = RateLimitHelpers.unlimitedRateLimit();
+
         MainnetController mainnetController_ = MainnetController(mainnetController);
 
         bytes32 ausdcDepositKey  = RateLimitHelpers.makeAssetKey(mainnetController_.LIMIT_AAVE_DEPOSIT(),   AUSDC);
@@ -315,26 +317,24 @@ contract FullStagingDeploy is Script {
         bytes32 domainKeyBase = RateLimitHelpers.makeDomainKey(mainnetController_.LIMIT_USDC_TO_DOMAIN(), CCTPForwarder.DOMAIN_ID_CIRCLE_BASE);
 
         // USDS mint/burn and cross-chain transfer rate limits
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_MINT(),    rateLimits, rateLimitData18, "usdsMintData",         18);
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_TO_USDC(), rateLimits, rateLimitData6,  "usdsToUsdcData",       6);
-        RateLimitHelpers.setRateLimitData(domainKeyBase,                           rateLimits, rateLimitData6,  "cctpToBaseDomainData", 6);
+        RateLimitHelpers.setRateLimitData(domainKeyBase,                           rateLimits, rateLimitData6,     "cctpToBaseDomainData", 6);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDC_TO_CCTP(), rateLimits, unlimitedRateLimit, "usdsToCctpData",       6);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_MINT(),    rateLimits, rateLimitData18,    "usdsMintData",         18);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDS_TO_USDC(), rateLimits, rateLimitData6,     "usdsToUsdcData",       6);
 
         // Ethena-specific rate limits
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDE_MINT(),      rateLimits, rateLimitData6,  "usdeMintData",      6);
-        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDE_BURN(),      rateLimits, rateLimitData18, "usdeBurnData",      18);
         RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_SUSDE_COOLDOWN(), rateLimits, rateLimitData18, "susdeCooldownData", 18);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDE_BURN(),      rateLimits, rateLimitData18, "usdeBurnData",      18);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDE_MINT(),      rateLimits, rateLimitData6,  "usdeMintData",      6);
 
         // 4626 and AAVE deposit/withdraw rate limits
-        RateLimitHelpers.setRateLimitData(ausdcDepositKey, rateLimits, rateLimitData6,  "ausdcDepositData", 18);
-        RateLimitHelpers.setRateLimitData(ausdsDepositKey, rateLimits, rateLimitData6,  "ausdsDepositData", 18);
-        RateLimitHelpers.setRateLimitData(susdeDepositKey, rateLimits, rateLimitData18, "susdeDepositData", 18);
-        
-        // Unlimited rate limits
-        IRateLimits(rateLimits).setUnlimitedRateLimitData(ausdcWithdrawKey);
-        IRateLimits(rateLimits).setUnlimitedRateLimitData(ausdsWithdrawKey);
-        IRateLimits(rateLimits).setUnlimitedRateLimitData(mainnetController_.LIMIT_USDC_TO_CCTP());
-        IRateLimits(rateLimits).setUnlimitedRateLimitData(susdsDepositKey);
-        IRateLimits(rateLimits).setUnlimitedRateLimitData(susdsWithdrawKey);
+        RateLimitHelpers.setRateLimitData(ausdcDepositKey,  rateLimits, rateLimitData6,     "ausdcDepositData",  6);
+        RateLimitHelpers.setRateLimitData(ausdcWithdrawKey, rateLimits, unlimitedRateLimit, "ausdcWithdrawData", 6);
+        RateLimitHelpers.setRateLimitData(ausdsDepositKey,  rateLimits, rateLimitData18,    "ausdsDepositData",  18);
+        RateLimitHelpers.setRateLimitData(ausdsWithdrawKey, rateLimits, unlimitedRateLimit, "ausdcWithdrawData", 18);
+        RateLimitHelpers.setRateLimitData(susdeDepositKey,  rateLimits, rateLimitData18,    "susdeDepositData",  18);
+        RateLimitHelpers.setRateLimitData(susdsDepositKey,  rateLimits, unlimitedRateLimit, "susdsDepositData",  18);
+        RateLimitHelpers.setRateLimitData(susdsWithdrawKey, rateLimits, unlimitedRateLimit, "susdsWithdrawData", 18);
     }
 
     function _setBaseControllerRateLimits(address rateLimits) internal {
@@ -346,10 +346,7 @@ contract FullStagingDeploy is Script {
             maxAmount : USDC_UNIT_SIZE * 5,
             slope     : USDC_UNIT_SIZE / 4 hours
         });
-        RateLimitData memory unlimitedRateLimit = RateLimitData({
-            maxAmount : type(uint256).max,
-            slope     : 0
-        });
+        RateLimitData memory unlimitedRateLimit = RateLimitHelpers.unlimitedRateLimit();
 
         ForeignController foreignController = ForeignController(baseController);
 
@@ -378,18 +375,16 @@ contract FullStagingDeploy is Script {
         RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(psmWithdrawKey, susds), rateLimits, unlimitedRateLimit, "susdsWithdrawDataPsm", 18);
 
         // CCTP rate limits
-        RateLimitHelpers.setRateLimitData(domainKeyEthereum, rateLimits, rateLimitData6, "cctpToEthereumDomainData", 6);
+        RateLimitHelpers.setRateLimitData(domainKeyEthereum,                       rateLimits, rateLimitData6,     "cctpToEthereumDomainData", 6);
+        RateLimitHelpers.setRateLimitData(mainnetController_.LIMIT_USDC_TO_CCTP(), rateLimits, unlimitedRateLimit, "usdsToCctpData",           6);
 
         // AAVE rate limits
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(aaveDepositKey,  AUSDC_BASE), rateLimits, rateLimitData6, "usdcDepositDataAave",  6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(aaveDepositKey,  AUSDC_BASE), rateLimits, rateLimitData6,     "usdcDepositDataAave",  6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(aaveWithdrawKey, AUSDC_BASE), rateLimits, unlimitedRateLimit, "usdcWithdrawDataAave", 6);
         
         // Morpho rate limits
-        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(vaultDepositKey,  MORPHO_VAULT_USDC_BASE), rateLimits, rateLimitData6, "usdsDepositDataMorpho", 6);
-        
-        // Unlimited rate limits
-        IRateLimits(rateLimits).setUnlimitedRateLimitData(foreignController.LIMIT_USDC_TO_CCTP());
-        IRateLimits(rateLimits).setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(aaveWithdrawKey,  AUSDC_BASE));
-        IRateLimits(rateLimits).setUnlimitedRateLimitData(RateLimitHelpers.makeAssetKey(vaultWithdrawKey, MORPHO_VAULT_USDC_BASE));
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(vaultDepositKey,  MORPHO_VAULT_USDC_BASE), rateLimits, rateLimitData6,     "usdsDepositDataMorpho",  6);
+        RateLimitHelpers.setRateLimitData(RateLimitHelpers.makeAssetKey(vaultWithdrawKey, MORPHO_VAULT_USDC_BASE), rateLimits, unlimitedRateLimit, "usdsWithdrawDataMorpho", 6);
     }
 
     function _setUpBaseALMController() internal {

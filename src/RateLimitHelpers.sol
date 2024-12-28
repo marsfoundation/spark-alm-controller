@@ -18,6 +18,13 @@ library RateLimitHelpers {
         return keccak256(abi.encode(key, domain));
     }
 
+    function unlimitedRateLimit() internal pure returns (RateLimitData memory) {
+        return RateLimitData({
+            maxAmount : type(uint256).max,
+            slope     : 0
+        });
+    }   
+
     function setRateLimitData(
         bytes32       key,
         address       rateLimits,
