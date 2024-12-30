@@ -99,6 +99,17 @@ To run all tests, run the following command:
 forge test
 ```
 
+# Deployments (TODO)
+
+```
+export SPARK_PROXY=0x3300f198988e4C9C63F75dF86De36421f06af8c4
+
+cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_setBalance $SPARK_PROXY `cast to-wei 1000 | cast to-hex`
+cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_impersonateAccount $SPARK_PROXY
+
+ENV=production DATE=20241023 NEW_CONTROLLER=0x5cf73FDb7057E436A6eEaDFAd27E45E7ab6E431e forge script script/Upgrade.s.sol:UpgradeMainnetController --broadcast --unlocked --sender $SPARK_PROXY
+```
+
 ***
 *The IP in this repository was assigned to Mars SPC Limited in respect of the MarsOne SP*
 
