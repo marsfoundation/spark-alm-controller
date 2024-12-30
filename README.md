@@ -107,7 +107,7 @@ All commands to deploy:
 
 Can be found in the Makefile, with the nomenclature `make deploy-<domain>-<env>-<type>`.
 
-Deploy a full ALM system to base staging: `make deploy-base-staging-full`
+Deploy a full ALM system to base staging: `make deploy-base-production-full`
 Deploy a controller to mainnet production: `make deploy-mainnet-production-controller`
 
 To deploy a full staging environment from scratch, with a new allocation system and all necessary dependencies, run `make deploy-staging-full`.
