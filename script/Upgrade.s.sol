@@ -26,31 +26,29 @@ contract UpgradeMainnetController is Script {
 
         string memory fileSlug = string(abi.encodePacked("mainnet-", vm.envString("ENV")));
 
-        uint256 date = vm.envUint("DATE");
-
         address newController = vm.envAddress("NEW_CONTROLLER");
+        address oldController = vm.envAddress("OLD_CONTROLLER");
 
         vm.startBroadcast();
 
-        string memory inputConfig   = ScriptTools.readInput(fileSlug);
-        string memory releaseConfig = ScriptTools.readOutput(string(abi.encodePacked(fileSlug, "-release")), date);
+        string memory inputConfig = ScriptTools.readInput(fileSlug);
 
         ControllerInstance memory controllerInst = ControllerInstance({
-            almProxy   : releaseConfig.readAddress(".almProxy"),
+            almProxy   : inputConfig.readAddress(".almProxy"),
             controller : newController,
-            rateLimits : releaseConfig.readAddress(".rateLimits")
+            rateLimits : inputConfig.readAddress(".rateLimits")
         });
 
         MainnetInit.ConfigAddressParams memory configAddresses = MainnetInit.ConfigAddressParams({
             freezer       : inputConfig.readAddress(".freezer"),
             relayer       : inputConfig.readAddress(".relayer"),
-            oldController : releaseConfig.readAddress(".controller")
+            oldController : oldController
         });
 
         MainnetInit.CheckAddressParams memory checkAddresses = MainnetInit.CheckAddressParams({
             admin      : inputConfig.readAddress(".admin"),
-            proxy      : releaseConfig.readAddress(".almProxy"),
-            rateLimits : releaseConfig.readAddress(".rateLimits"),
+            proxy      : inputConfig.readAddress(".almProxy"),
+            rateLimits : inputConfig.readAddress(".rateLimits"),
             vault      : inputConfig.readAddress(".allocatorVault"),
             psm        : inputConfig.readAddress(".psm"),
             daiUsds    : inputConfig.readAddress(".daiUsds"),
@@ -59,12 +57,9 @@ contract UpgradeMainnetController is Script {
 
         MainnetInit.MintRecipient[] memory mintRecipients = new MainnetInit.MintRecipient[](1);
 
-        string memory baseReleaseConfig = ScriptTools.readOutput(
-            string(abi.encodePacked("base-", vm.envString("ENV"), "-release")), 
-            date
-        );
+        string memory baseInputConfig = ScriptTools.readInput(string(abi.encodePacked("base-", vm.envString("ENV"))));
 
-        address baseAlmProxy = baseReleaseConfig.readAddress(".almProxy");
+        address baseAlmProxy = baseInputConfig.readAddress(".almProxy");
 
         mintRecipients[0] = MainnetInit.MintRecipient({
             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_BASE,
@@ -75,8 +70,10 @@ contract UpgradeMainnetController is Script {
 
         vm.stopBroadcast();
 
+        console.log("ALMProxy updated at         ", controllerInst.almProxy);
+        console.log("RateLimits upgraded at      ", controllerInst.rateLimits);
         console.log("Controller upgraded at      ", newController);
-        console.log("Old controller deprecated at", releaseConfig.readAddress(".controller"));
+        console.log("Old Controller deprecated at", oldController);
     }
 
 }
@@ -92,11 +89,9 @@ contract UpgradeForeignController is Script {
 
         string memory chainName = vm.envString("CHAIN");
         string memory fileSlug  = string(abi.encodePacked(chainName, "-", vm.envString("ENV")));
-        string memory config    = ScriptTools.loadConfig(fileSlug);
-
-        uint256 date = vm.envUint("DATE");
 
         address newController = vm.envAddress("NEW_CONTROLLER");
+        address oldController = vm.envAddress("OLD_CONTROLLER");
 
         vm.createSelectFork(getChain(chainName).rpcUrl);
 
@@ -104,19 +99,18 @@ contract UpgradeForeignController is Script {
 
         vm.startBroadcast();
 
-        string memory inputConfig   = ScriptTools.readInput(fileSlug);
-        string memory releaseConfig = ScriptTools.readOutput(string(abi.encodePacked(fileSlug, "-release")), date);
+        string memory inputConfig = ScriptTools.readInput(fileSlug);
 
         ControllerInstance memory controllerInst = ControllerInstance({
-            almProxy   : releaseConfig.readAddress(".almProxy"),
+            almProxy   : inputConfig.readAddress(".almProxy"),
             controller : newController,
-            rateLimits : releaseConfig.readAddress(".rateLimits")
+            rateLimits : inputConfig.readAddress(".rateLimits")
         });
 
         ForeignInit.ConfigAddressParams memory configAddresses = ForeignInit.ConfigAddressParams({
             freezer       : inputConfig.readAddress(".freezer"),
             relayer       : inputConfig.readAddress(".relayer"),
-            oldController : releaseConfig.readAddress(".controller")
+            oldController : oldController
         });
 
         ForeignInit.CheckAddressParams memory checkAddresses = ForeignInit.CheckAddressParams({
@@ -130,12 +124,9 @@ contract UpgradeForeignController is Script {
 
         ForeignInit.MintRecipient[] memory mintRecipients = new ForeignInit.MintRecipient[](1);
 
-        string memory mainnetReleaseConfig = ScriptTools.readOutput(
-            string(abi.encodePacked("mainnet-", vm.envString("ENV"), "-release")), 
-            date
-        );
+        string memory mainnetInputConfig = ScriptTools.readInput(string(abi.encodePacked("mainnet-", vm.envString("ENV"))));
 
-        address mainnetAlmProxy = mainnetReleaseConfig.readAddress(".almProxy");
+        address mainnetAlmProxy = mainnetInputConfig.readAddress(".almProxy");
 
         mintRecipients[0] = ForeignInit.MintRecipient({
             domain        : CCTPForwarder.DOMAIN_ID_CIRCLE_ETHEREUM,
@@ -146,8 +137,10 @@ contract UpgradeForeignController is Script {
 
         vm.stopBroadcast();
 
+        console.log("ALMProxy updated at         ", controllerInst.almProxy);
+        console.log("RateLimits upgraded at      ", controllerInst.rateLimits);
         console.log("Controller upgraded at      ", newController);
-        console.log("Old controller deprecated at", releaseConfig.readAddress(".controller"));
+        console.log("Old controller deprecated at", oldController);
     }
 
 }

@@ -139,7 +139,10 @@ export SPARK_PROXY=0x3300f198988e4C9C63F75dF86De36421f06af8c4
 cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_setBalance $SPARK_PROXY `cast to-wei 1000 | cast to-hex`
 cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_impersonateAccount $SPARK_PROXY
 
-ENV=production DATE=20241023 NEW_CONTROLLER=0x5cf73FDb7057E436A6eEaDFAd27E45E7ab6E431e forge script script/Upgrade.s.sol:UpgradeMainnetController --broadcast --unlocked --sender $SPARK_PROXY
+ENV=production \
+OLD_CONTROLLER=0xb960F71ca3f1f57799F6e14501607f64f9B36F11 \
+NEW_CONTROLLER=0x5cf73FDb7057E436A6eEaDFAd27E45E7ab6E431e \
+forge script script/Upgrade.s.sol:UpgradeMainnetController --broadcast --unlocked --sender $SPARK_PROXY
 ```
 
 4. Upgrade base contracts impersonating as the `SPARK_EXEUCTOR`.
@@ -150,7 +153,11 @@ export SPARK_EXECUTOR=0xF93B7122450A50AF3e5A76E1d546e95Ac1d0F579
 cast rpc --rpc-url="$BASE_RPC_URL" anvil_setBalance $SPARK_EXECUTOR `cast to-wei 1000 | cast to-hex`
 cast rpc --rpc-url="$BASE_RPC_URL" anvil_impersonateAccount $SPARK_EXECUTOR
 
-CHAIN=base ENV=production DATE=20241023 NEW_CONTROLLER=0x5F032555353f3A1D16aA6A4ADE0B35b369da0440 forge script script/Upgrade.s.sol:UpgradeForeignController --broadcast --unlocked --sender $SPARK_EXECUTOR
+CHAIN=base \
+ENV=production \
+OLD_CONTROLLER=0xc07f705D0C0e9F8C79C5fbb748aC1246BBCC37Ba \
+NEW_CONTROLLER=0x5F032555353f3A1D16aA6A4ADE0B35b369da0440 \
+forge script script/Upgrade.s.sol:UpgradeForeignController --broadcast --unlocked --sender $SPARK_EXECUTOR
 ```
 
 
