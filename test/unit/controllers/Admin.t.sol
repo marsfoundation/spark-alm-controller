@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import "test/unit/UnitTestBase.t.sol";
+import { ForeignController } from "../../../src/ForeignController.sol";
+import { MainnetController } from "../../../src/MainnetController.sol";
 
-import { ForeignController } from "src/ForeignController.sol";
-import { MainnetController } from "src/MainnetController.sol";
+import { MockDaiUsds } from "../mocks/MockDaiUsds.sol";
+import { MockPSM }     from "../mocks/MockPSM.sol";
+import { MockVault }   from "../mocks/MockVault.sol";
 
-import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
-import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
-import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
-import { MockVault }   from "test/unit/mocks/MockVault.sol";
+import "../UnitTestBase.t.sol";
 
 contract MainnetControllerAdminTests is UnitTestBase {
 
@@ -23,7 +22,6 @@ contract MainnetControllerAdminTests is UnitTestBase {
     function setUp() public {
         MockDaiUsds daiUsds = new MockDaiUsds(makeAddr("dai"));
         MockPSM     psm     = new MockPSM(makeAddr("usdc"));
-        MockSUsds   susds   = new MockSUsds(makeAddr("susds"));
         MockVault   vault   = new MockVault(makeAddr("buffer"));
 
         mainnetController = new MainnetController(
@@ -33,8 +31,7 @@ contract MainnetControllerAdminTests is UnitTestBase {
             address(vault),
             address(psm),
             address(daiUsds),
-            makeAddr("cctp"),
-            address(susds)
+            makeAddr("cctp")
         );
     }
 

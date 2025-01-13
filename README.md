@@ -44,9 +44,14 @@ All functions below change the balance of funds in the ALMProxy contract and are
 - `ForeignController`: This contract currently implements logic to:
   - Deposit and withdraw on EVM compliant L2 PSM3 contracts (see [spark-psm](https://github.com/marsfoundation/spark-psm) for implementation).
   - Initiate a transfer of USDC to other domains using CCTP.
+  - Deposit, withdraw, and redeem from ERC4626 contracts.
+  - Deposit and withdraw from AAVE.
 - `MainnetController`: This contract currently implements logic to:
-  - Mint and burn USDS on Ethereum mainnet.
-  - Deposit, withdraw, redeem in the sUSDS contract.
+  - Mint and burn USDS.
+  - Deposit, withdraw, redeem from ERC4626 contracts.
+  - Deposit and withdraw from AAVE.
+  - Mint and burn USDe.
+  - Cooldown and unstake from sUSDe.
   - Swap USDS to USDC and vice versa using the mainnet PSM.
   - Transfer USDC to other domains using CCTP.
 
@@ -68,6 +73,24 @@ The rate limit is calculated as follows:
 
 This is a linear rate limit that increases over time with a maximum limit. This rate limit is derived from these values which can be set by and admin OR updated by the `CONTROLLER` role. The `CONTROLLER` updates these values to increase/decrease the rate limit based on the functionality within the contract (e.g., decrease the rate limit after minting USDS by the minted amount by decrementing `lastAmount` and setting `lastUpdated` to `block.timestamp`).
 
+## Trust Assumptions and Attack Mitigation
+Below are all stated trust assumptions for using this contract in production:
+- The `DEFAULT_ADMIN_ROLE` is fully trusted, to be run by governance.
+- The `RELAYER` role is assumed to be able to be fully compromised by a malicious actor. **This should be a major consideration during auditing engagements.**
+  - The logic in the smart contracts must prevent the movement of value anywhere outside of the ALM system of contracts.
+  - Any action must be limited to "reasonable" slippage/losses/opportunity cost by rate limits.
+  - The `FREEZER` must be able to stop the compromised `RELAYER` from performing more harmful actions within the max rate limits by using the `freeze()` function.
+- A compromised `RELAYER` can DOS Ethena unstaking, but this can be mitigated by freezing the Controller and reassigning the `RELAYER`. This is outlined in a test `test_compromisedRelayer_lockingFundsInEthenaSilo`.
+- Ethena USDe Mint/Burn is trusted to not honor requests with over 50bps slippage from a delegated signer.
+
+## Operational Requirements
+- All ERC-4626 vaults that are onboarded MUST have an initial burned shares amount that prevents rounding-based frontrunning attacks. These shares have to be unrecoverable so that they cannot be removed at a later date.
+- All ERC-20 tokens are to be non-rebasing with sufficiently high decimal precision.
+- Rate limits must be configured for specific ERC-4626 vaults and AAVE aTokens (vaults without rate limits set will revert). Unlimited rate limits can be used as an onboarding tool.
+- Rate limits must take into account:
+  - Risk tolerance for a given protocol
+  - Griefing attacks (e.g., repetitive transactions with high slippage by malicious relayer).
+
 ## Testing
 
 To run all tests, run the following command:
@@ -76,9 +99,71 @@ To run all tests, run the following command:
 forge test
 ```
 
+## Deployments
+All commands to deploy: 
+  - Either the full system or just the controller
+  - To mainnet or base 
+  - For staging or production
+
+Can be found in the Makefile, with the nomenclature `make deploy-<domain>-<env>-<type>`.
+
+Deploy a full ALM system to base production: `make deploy-base-production-full`
+Deploy a controller to mainnet production: `make deploy-mainnet-production-controller`
+
+To deploy a full staging environment from scratch, with a new allocation system and all necessary dependencies, run `make deploy-staging-full`.
+
+## Upgrade Simulations
+
+To perform upgrades against forks of mainnet and base for testing/simulation purposes, use the following instructions.
+
+1. Set up two anvil nodes forked against mainnet and base.
+```
+anvil --fork-url $MAINNET_RPC_URL
+```
+```
+anvil --fork-url $BASE_RPC_URL -p 8546
+```
+
+2. Point to local RPCs.
+
+```
+export MAINNET_RPC_URL=http://127.0.0.1:8545
+export BASE_RPC_URL=http://127.0.0.1:8546
+```
+
+3. Upgrade mainnet contracts impersonating as the `SPARK_PROXY`.
+
+```
+export SPARK_PROXY=0x3300f198988e4C9C63F75dF86De36421f06af8c4
+
+cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_setBalance $SPARK_PROXY `cast to-wei 1000 | cast to-hex`
+cast rpc --rpc-url="$MAINNET_RPC_URL" anvil_impersonateAccount $SPARK_PROXY
+
+ENV=production \
+OLD_CONTROLLER=0xb960F71ca3f1f57799F6e14501607f64f9B36F11 \
+NEW_CONTROLLER=0x5cf73FDb7057E436A6eEaDFAd27E45E7ab6E431e \
+forge script script/Upgrade.s.sol:UpgradeMainnetController --broadcast --unlocked --sender $SPARK_PROXY
+```
+
+4. Upgrade base contracts impersonating as the `SPARK_EXEUCTOR`.
+
+```
+export SPARK_EXECUTOR=0xF93B7122450A50AF3e5A76E1d546e95Ac1d0F579
+
+cast rpc --rpc-url="$BASE_RPC_URL" anvil_setBalance $SPARK_EXECUTOR `cast to-wei 1000 | cast to-hex`
+cast rpc --rpc-url="$BASE_RPC_URL" anvil_impersonateAccount $SPARK_EXECUTOR
+
+CHAIN=base \
+ENV=production \
+OLD_CONTROLLER=0xc07f705D0C0e9F8C79C5fbb748aC1246BBCC37Ba \
+NEW_CONTROLLER=0x5F032555353f3A1D16aA6A4ADE0B35b369da0440 \
+forge script script/Upgrade.s.sol:UpgradeForeignController --broadcast --unlocked --sender $SPARK_EXECUTOR
+```
+
+
 ***
 *The IP in this repository was assigned to Mars SPC Limited in respect of the MarsOne SP*
 
 <p align="center">
-  <img src="https://1827921443-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FjvdfbhgN5UCpMtP1l8r5%2Fuploads%2Fgit-blob-c029bb6c918f8c042400dbcef7102c4e5c1caf38%2Flogomark%20colour.svg?alt=media" height="150" />
+  <img src="https://github.com/user-attachments/assets/841397d0-0cd4-4464-b4b4-6024b6ad6c6d" height="120" />
 </p>

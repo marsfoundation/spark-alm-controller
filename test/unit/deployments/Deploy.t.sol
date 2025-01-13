@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
-import "test/unit/UnitTestBase.t.sol";
+import "../../../deploy/ControllerDeploy.sol";  // All imports needed so not importing explicitly
 
-import "deploy/ControllerDeploy.sol";  // All imports needed so not importing explicitly
+import { MockDaiUsds } from "../mocks/MockDaiUsds.sol";
+import { MockPSM }     from "../mocks/MockPSM.sol";
+import { MockVault }   from "../mocks/MockVault.sol";
 
-import { MockDaiUsds } from "test/unit/mocks/MockDaiUsds.sol";
-import { MockPSM }     from "test/unit/mocks/MockPSM.sol";
-import { MockSUsds }   from "test/unit/mocks/MockSUsds.sol";
-import { MockVault }   from "test/unit/mocks/MockVault.sol";
+import "../UnitTestBase.t.sol";
 
 contract ForeignControllerDeployTests is UnitTestBase {
 
@@ -76,7 +75,6 @@ contract MainnetControllerDeployTests is UnitTestBase {
     struct TestVars {
         address daiUsds;
         address psm;
-        address susds;
         address admin;
         address vault;
         address cctp;
@@ -87,7 +85,6 @@ contract MainnetControllerDeployTests is UnitTestBase {
 
         vars.daiUsds = address(new MockDaiUsds(makeAddr("dai")));
         vars.psm     = address(new MockPSM(makeAddr("usdc")));
-        vars.susds   = address(new MockSUsds(makeAddr("usds")));
         vars.vault   = address(new MockVault(makeAddr("buffer")));
 
         vars.admin = makeAddr("admin");
@@ -104,8 +101,7 @@ contract MainnetControllerDeployTests is UnitTestBase {
                 vars.vault,
                 vars.psm,
                 vars.daiUsds,
-                vars.cctp,
-                vars.susds
+                vars.cctp
             )
         );
 
@@ -118,10 +114,8 @@ contract MainnetControllerDeployTests is UnitTestBase {
         assertEq(address(controller.psm()),        vars.psm);
         assertEq(address(controller.daiUsds()),    vars.daiUsds);
         assertEq(address(controller.cctp()),       vars.cctp);
-        assertEq(address(controller.susds()),      vars.susds);
         assertEq(address(controller.dai()),        makeAddr("dai"));   // Dai param in MockDaiUsds
         assertEq(address(controller.usdc()),       makeAddr("usdc"));  // Gem param in MockPSM
-        assertEq(address(controller.usds()),       makeAddr("usds"));  // Usds param in MockSUsds
 
         assertEq(controller.psmTo18ConversionFactor(), 1e12);
         assertEq(controller.active(),                  true);
@@ -132,7 +126,6 @@ contract MainnetControllerDeployTests is UnitTestBase {
 
         vars.daiUsds = address(new MockDaiUsds(makeAddr("dai")));
         vars.psm     = address(new MockPSM(makeAddr("usdc")));
-        vars.susds   = address(new MockSUsds(makeAddr("usds")));
         vars.vault   = address(new MockVault(makeAddr("buffer")));
 
         vars.admin  = makeAddr("admin");
@@ -143,8 +136,7 @@ contract MainnetControllerDeployTests is UnitTestBase {
             vars.vault,
             vars.psm,
             vars.daiUsds,
-            vars.cctp,
-            vars.susds
+            vars.cctp
         );
 
         ALMProxy          almProxy   = ALMProxy(payable(instance.almProxy));
@@ -162,10 +154,8 @@ contract MainnetControllerDeployTests is UnitTestBase {
         assertEq(address(controller.psm()),        vars.psm);
         assertEq(address(controller.daiUsds()),    vars.daiUsds);
         assertEq(address(controller.cctp()),       vars.cctp);
-        assertEq(address(controller.susds()),      vars.susds);
         assertEq(address(controller.dai()),        makeAddr("dai"));   // Dai param in MockDaiUsds
         assertEq(address(controller.usdc()),       makeAddr("usdc"));  // Gem param in MockPSM
-        assertEq(address(controller.usds()),       makeAddr("usds"));  // Usds param in MockSUsds
 
         assertEq(controller.psmTo18ConversionFactor(), 1e12);
         assertEq(controller.active(),                  true);

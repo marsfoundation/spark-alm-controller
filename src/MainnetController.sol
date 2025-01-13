@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.21;
 
+import { IAToken }            from "aave-v3-origin/src/core/contracts/interfaces/IAToken.sol";
+import { IPool as IAavePool } from "aave-v3-origin/src/core/contracts/interfaces/IPool.sol";
+
 import { IERC20 }   from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 
 import { AccessControl } from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
-import { IALMProxy }   from "src/interfaces/IALMProxy.sol";
-import { ICCTPLike }   from "src/interfaces/CCTPInterfaces.sol";
-import { IRateLimits } from "src/interfaces/IRateLimits.sol";
+import { Ethereum } from "spark-address-registry/Ethereum.sol";
 
-import { RateLimitHelpers } from "src/RateLimitHelpers.sol";
+import { IALMProxy }   from "./interfaces/IALMProxy.sol";
+import { ICCTPLike }   from "./interfaces/CCTPInterfaces.sol";
+import { IRateLimits } from "./interfaces/IRateLimits.sol";
+
+import { RateLimitHelpers } from "./RateLimitHelpers.sol";
 
 interface IDaiUsdsLike {
     function dai() external view returns(address);
@@ -18,8 +23,15 @@ interface IDaiUsdsLike {
     function usdsToDai(address usr, uint256 wad) external;
 }
 
-interface ISUSDSLike is IERC4626 {
-    function usds() external view returns(address);
+interface IEthenaMinterLike {
+    function setDelegatedSigner(address delegateSigner) external;
+    function removeDelegatedSigner(address delegateSigner) external;
+}
+
+interface ISUSDELike is IERC4626 {
+    function cooldownAssets(uint256 usdeAmount) external;
+    function cooldownShares(uint256 susdeAmount) external;
+    function unstake(address receiver) external;
 }
 
 interface IVaultLike {
@@ -34,6 +46,10 @@ interface IPSMLike {
     function gem() external view returns(address);
     function sellGemNoFee(address usr, uint256 usdcAmount) external returns (uint256 usdsAmount);
     function to18ConversionFactor() external view returns (uint256);
+}
+
+interface IATokenWithPool is IAToken {
+    function POOL() external view returns(address);
 }
 
 contract MainnetController is AccessControl {
@@ -63,24 +79,33 @@ contract MainnetController is AccessControl {
     bytes32 public constant FREEZER = keccak256("FREEZER");
     bytes32 public constant RELAYER = keccak256("RELAYER");
 
+    bytes32 public constant LIMIT_4626_DEPOSIT   = keccak256("LIMIT_4626_DEPOSIT");
+    bytes32 public constant LIMIT_4626_WITHDRAW  = keccak256("LIMIT_4626_WITHDRAW");
+    bytes32 public constant LIMIT_AAVE_DEPOSIT   = keccak256("LIMIT_AAVE_DEPOSIT");
+    bytes32 public constant LIMIT_AAVE_WITHDRAW  = keccak256("LIMIT_AAVE_WITHDRAW");
+    bytes32 public constant LIMIT_SUSDE_COOLDOWN = keccak256("LIMIT_SUSDE_COOLDOWN");
     bytes32 public constant LIMIT_USDC_TO_CCTP   = keccak256("LIMIT_USDC_TO_CCTP");
     bytes32 public constant LIMIT_USDC_TO_DOMAIN = keccak256("LIMIT_USDC_TO_DOMAIN");
+    bytes32 public constant LIMIT_USDE_BURN      = keccak256("LIMIT_USDE_BURN");
+    bytes32 public constant LIMIT_USDE_MINT      = keccak256("LIMIT_USDE_MINT");
     bytes32 public constant LIMIT_USDS_MINT      = keccak256("LIMIT_USDS_MINT");
     bytes32 public constant LIMIT_USDS_TO_USDC   = keccak256("LIMIT_USDS_TO_USDC");
 
     address public immutable buffer;
 
-    IALMProxy    public immutable proxy;
-    IRateLimits  public immutable rateLimits;
-    ICCTPLike    public immutable cctp;
-    IDaiUsdsLike public immutable daiUsds;
-    IPSMLike     public immutable psm;
-    IVaultLike   public immutable vault;
+    IALMProxy         public immutable proxy;
+    ICCTPLike         public immutable cctp;
+    IDaiUsdsLike      public immutable daiUsds;
+    IEthenaMinterLike public immutable ethenaMinter;
+    IPSMLike          public immutable psm;
+    IRateLimits       public immutable rateLimits;
+    IVaultLike        public immutable vault;
 
     IERC20     public immutable dai;
     IERC20     public immutable usds;
+    IERC20     public immutable usde;
     IERC20     public immutable usdc;
-    ISUSDSLike public immutable susds;
+    ISUSDELike public immutable susde;
 
     uint256 public immutable psmTo18ConversionFactor;
 
@@ -99,8 +124,7 @@ contract MainnetController is AccessControl {
         address vault_,
         address psm_,
         address daiUsds_,
-        address cctp_,
-        address susds_
+        address cctp_
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
 
@@ -112,10 +136,13 @@ contract MainnetController is AccessControl {
         daiUsds    = IDaiUsdsLike(daiUsds_);
         cctp       = ICCTPLike(cctp_);
 
-        susds = ISUSDSLike(susds_ );
+        ethenaMinter = IEthenaMinterLike(Ethereum.ETHENA_MINTER);
+
+        susde = ISUSDELike(Ethereum.SUSDE);
         dai   = IERC20(daiUsds.dai());
         usdc  = IERC20(psm.gem());
-        usds  = IERC20(susds.usds());
+        usds  = IERC20(Ethereum.USDS);
+        usde  = IERC20(Ethereum.USDE);
 
         psmTo18ConversionFactor = psm.to18ConversionFactor();
 
@@ -203,53 +230,201 @@ contract MainnetController is AccessControl {
     }
 
     /**********************************************************************************************/
-    /*** Relayer sUSDS functions                                                                 ***/
+    /*** Relayer ERC4626 functions                                                              ***/
     /**********************************************************************************************/
 
-    function depositToSUSDS(uint256 usdsAmount)
-        external onlyRole(RELAYER) isActive returns (uint256 shares)
+    function depositERC4626(address token, uint256 amount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(
+            RateLimitHelpers.makeAssetKey(LIMIT_4626_DEPOSIT, token),
+            amount
+        )
+        returns (uint256 shares)
     {
-        // Approve USDS to sUSDS from the proxy (assumes the proxy has enough USDS).
+        // Note that whitelist is done by rate limits
+        IERC20 asset = IERC20(IERC4626(token).asset());
+
+        // Approve asset to token from the proxy (assumes the proxy has enough of the asset).
         proxy.doCall(
-            address(usds),
-            abi.encodeCall(usds.approve, (address(susds), usdsAmount))
+            address(asset),
+            abi.encodeCall(asset.approve, (token, amount))
         );
 
-        // Deposit USDS into sUSDS, proxy receives sUSDS shares, decode the resulting shares
+        // Deposit asset into the token, proxy receives token shares, decode the resulting shares
         shares = abi.decode(
             proxy.doCall(
-                address(susds),
-                abi.encodeCall(susds.deposit, (usdsAmount, address(proxy)))
+                token,
+                abi.encodeCall(IERC4626(token).deposit, (amount, address(proxy)))
             ),
             (uint256)
         );
     }
 
-    function withdrawFromSUSDS(uint256 usdsAmount)
-        external onlyRole(RELAYER) isActive returns (uint256 shares)
+    function withdrawERC4626(address token, uint256 amount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(
+            RateLimitHelpers.makeAssetKey(LIMIT_4626_WITHDRAW, token),
+            amount
+        )
+        returns (uint256 shares)
     {
-        // Withdraw USDS from sUSDS, decode resulting shares.
-        // Assumes proxy has adequate sUSDS shares.
+        // Withdraw asset from a token, decode resulting shares.
+        // Assumes proxy has adequate token shares.
         shares = abi.decode(
             proxy.doCall(
-                address(susds),
-                abi.encodeCall(susds.withdraw, (usdsAmount, address(proxy), address(proxy)))
+                token,
+                abi.encodeCall(IERC4626(token).withdraw, (amount, address(proxy), address(proxy)))
             ),
             (uint256)
         );
     }
 
-    function redeemFromSUSDS(uint256 susdsSharesAmount)
+    // NOTE: !!! Rate limited at end of function !!!
+    function redeemERC4626(address token, uint256 shares)
         external onlyRole(RELAYER) isActive returns (uint256 assets)
     {
-        // Redeem shares for USDS from sUSDS, decode the resulting assets.
-        // Assumes proxy has adequate sUSDS shares.
+        // Redeem shares for assets from the token, decode the resulting assets.
+        // Assumes proxy has adequate token shares.
         assets = abi.decode(
             proxy.doCall(
-                address(susds),
-                abi.encodeCall(susds.redeem, (susdsSharesAmount, address(proxy), address(proxy)))
+                token,
+                abi.encodeCall(IERC4626(token).redeem, (shares, address(proxy), address(proxy)))
             ),
             (uint256)
+        );
+
+        rateLimits.triggerRateLimitDecrease(
+            RateLimitHelpers.makeAssetKey(LIMIT_4626_WITHDRAW, token),
+            assets
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer Aave functions                                                                 ***/
+    /**********************************************************************************************/
+
+    function depositAave(address aToken, uint256 amount)
+        external
+        onlyRole(RELAYER)
+        isActive
+        rateLimited(
+            RateLimitHelpers.makeAssetKey(LIMIT_AAVE_DEPOSIT, aToken),
+            amount
+        )
+    {
+        IERC20    underlying = IERC20(IATokenWithPool(aToken).UNDERLYING_ASSET_ADDRESS());
+        IAavePool pool       = IAavePool(IATokenWithPool(aToken).POOL());
+
+        // Approve underlying to Aave pool from the proxy (assumes the proxy has enough underlying).
+        proxy.doCall(
+            address(underlying),
+            abi.encodeCall(underlying.approve, (address(pool), amount))
+        );
+
+        // Deposit underlying into Aave pool, proxy receives aTokens
+        proxy.doCall(
+            address(pool),
+            abi.encodeCall(pool.supply, (address(underlying), amount, address(proxy), 0))
+        );
+    }
+
+    // NOTE: !!! Rate limited at end of function !!!
+    function withdrawAave(address aToken, uint256 amount)
+        external onlyRole(RELAYER) isActive returns (uint256 amountWithdrawn)
+    {
+        IAavePool pool = IAavePool(IATokenWithPool(aToken).POOL());
+
+        // Withdraw underlying from Aave pool, decode resulting amount withdrawn.
+        // Assumes proxy has adequate aTokens.
+        amountWithdrawn = abi.decode(
+            proxy.doCall(
+                address(pool),
+                abi.encodeCall(
+                    pool.withdraw,
+                    (IATokenWithPool(aToken).UNDERLYING_ASSET_ADDRESS(), amount, address(proxy))
+                )
+            ),
+            (uint256)
+        );
+
+        rateLimits.triggerRateLimitDecrease(
+            RateLimitHelpers.makeAssetKey(LIMIT_AAVE_WITHDRAW, aToken),
+            amountWithdrawn
+        );
+    }
+
+    /**********************************************************************************************/
+    /*** Relayer Ethena functions                                                               ***/
+    /**********************************************************************************************/
+
+    function setDelegatedSigner(address delegatedSigner) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(ethenaMinter),
+            abi.encodeCall(ethenaMinter.setDelegatedSigner, (address(delegatedSigner)))
+        );
+    }
+
+    function removeDelegatedSigner(address delegatedSigner) external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(ethenaMinter),
+            abi.encodeCall(ethenaMinter.removeDelegatedSigner, (address(delegatedSigner)))
+        );
+    }
+
+    // Note that Ethena's mint/redeem per-block limits include other users
+    function prepareUSDeMint(uint256 usdcAmount)
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDE_MINT, usdcAmount)
+    {
+        proxy.doCall(
+            address(usdc),
+            abi.encodeCall(usdc.approve, (address(ethenaMinter), usdcAmount))
+        );
+    }
+
+    function prepareUSDeBurn(uint256 usdeAmount)
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_USDE_BURN, usdeAmount)
+    {
+        proxy.doCall(
+            address(usde),
+            abi.encodeCall(usde.approve, (address(ethenaMinter), usdeAmount))
+        );
+    }
+
+    function cooldownAssetsSUSDe(uint256 usdeAmount)
+        external onlyRole(RELAYER) isActive rateLimited(LIMIT_SUSDE_COOLDOWN, usdeAmount)
+    {
+        proxy.doCall(
+            address(susde),
+            abi.encodeCall(susde.cooldownAssets, (usdeAmount))
+        );
+    }
+
+    // NOTE: !!! Rate limited at end of function !!!
+    function cooldownSharesSUSDe(uint256 susdeAmount) 
+        external
+        onlyRole(RELAYER) 
+        isActive 
+        returns (uint256 cooldownAmount)
+    {
+        cooldownAmount = abi.decode(
+            proxy.doCall(
+                address(susde),
+                abi.encodeCall(susde.cooldownShares, (susdeAmount))
+            ),
+            (uint256)
+        );
+
+        rateLimits.triggerRateLimitDecrease(LIMIT_SUSDE_COOLDOWN, cooldownAmount);
+    }
+
+    function unstakeSUSDe() external onlyRole(RELAYER) isActive {
+        proxy.doCall(
+            address(susde),
+            abi.encodeCall(susde.unstake, (address(proxy)))
         );
     }
 
